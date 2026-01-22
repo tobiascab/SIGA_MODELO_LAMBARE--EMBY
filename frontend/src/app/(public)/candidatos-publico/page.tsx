@@ -434,7 +434,7 @@ export default function CandidatosPage() {
                             <Heart className="h-5 w-5 text-emerald-500 animate-pulse" />
                         </div>
                         <p className="text-slate-600 text-base font-medium">
-                            Cooperativa Reducto · Asamblea General Ordinaria 2026
+                            Cooperativa Lambaré · Asamblea General Ordinaria 2026
                         </p>
                         <p className="text-slate-500 text-sm mt-2">
                             Tu voto construye el futuro
@@ -617,10 +617,10 @@ ${fotoUrl}
 ${candidate.biografia ? `📝 "${candidate.biografia}"` : ""}
 
 ✨ *¡Conoce a todos los candidatos!*
-🔗 https://asamblea.coopreducto.coop.py/candidatos-publico
+🔗 https://asamblea.cloud/candidatos-publico
 
 ━━━━━━━━━━━━━━━━━━━
-*Cooperativa Reducto - Tu voto cuenta*`;
+*Cooperativa Lambaré - Tu voto cuenta*`;
 
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');

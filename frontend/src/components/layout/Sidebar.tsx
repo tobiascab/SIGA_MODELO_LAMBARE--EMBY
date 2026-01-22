@@ -309,7 +309,7 @@ export function Sidebar() {
             )}>
                 <div className="flex-shrink-0">
                     <img
-                        src={cooperativa.logo || "/logo.png"}
+                        src="/logo.png?v=fixed"
                         alt="Logo"
                         className={cn(
                             "object-contain rounded-full bg-white shadow-lg transition-all duration-300",
@@ -624,7 +624,7 @@ export function Sidebar() {
                 )}>
                     <div className="flex-shrink-0">
                         <img
-                            src={cooperativa.logo || "/logo.png"}
+                            src="/logo.png?v=fixed"
                             alt="Logo"
                             className={cn(
                                 "object-contain rounded-full bg-white shadow-lg transition-all duration-300",

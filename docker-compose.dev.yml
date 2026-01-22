@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # MySQL Database (internal only - no host port exposed)
+  db:
+    image: mysql:8.0
+    container_name: asamblea-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: America/Asuncion
+    volumes:
+      - asamblea_mysql_data:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - asamblea-network
+    command: >
+      --innodb-buffer-pool-size=2G --innodb-flush-log-at-trx-commit=2 --innodb-flush-method=O_DIRECT --max-connections=300 --thread-cache-size=32 --table-open-cache=4000 --sort-buffer-size=8M --read-buffer-size=2M --performance-schema=OFF --default-time-zone=-03:00
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # NO ports exposed to host - only accessible within Docker network
+
+    # Spring Boot Backend - DEV MODE
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend.dev
+    container_name: asamblea-backend
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8081:8081"
+      - "0.0.0.0:5005:5005" # Debug port
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/asamblea_db?createDatabaseIfNotExist=true&serverTimezone=America/Asuncion&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      BACKUP_DIRECTORY: /app/uploads/backups
+      JAVA_OPTS: "-Dbackup.directory=/app/uploads/backups"
+    volumes:
+      - ./backend:/app:rw
+      - ./uploads:/app/uploads
+      - maven-repo:/root/.m2
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - asamblea-network
+      - proxy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.asamblea-api.rule=Host(`asamblea.cloud`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.asamblea-api.entrypoints=websecure"
+      - "traefik.http.routers.asamblea-api.tls=true"
+      - "traefik.http.routers.asamblea-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.asamblea-api.service=asamblea-backend"
+      - "traefik.http.services.asamblea-backend.loadbalancer.server.port=8081"
+      - "traefik.docker.network=proxy"
+
+  # Next.js Frontend - DEV MODE
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.dev
+    container_name: asamblea-frontend
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:6002:6001"
+    environment:
+      NEXT_PUBLIC_API_URL: https://asamblea.cloud
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app:rw
+      - /app/node_modules
+      - ./uploads:/app/uploads
+    networks:
+      - asamblea-network
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.asamblea.rule=Host(`asamblea.cloud`)"
+      - "traefik.http.routers.asamblea.entrypoints=websecure"
+      - "traefik.http.routers.asamblea.tls=true"
+      - "traefik.http.routers.asamblea.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.asamblea.service=asamblea-frontend"
+      - "traefik.http.services.asamblea-frontend.loadbalancer.server.port=6001"
+      - "traefik.docker.network=proxy"
+
+  # Backend API exposed through Traefik
+  # API endpoint: https://asamblea.cloud/api/*
+
+networks:
+  asamblea-network:
+    driver: bridge
+    name: asamblea-network
+  proxy:
+    external: true
+
+volumes:
+  asamblea_mysql_data:
+    name: asamblea_mysql_data
+  maven-repo:
+    name: asamblea_maven_repo

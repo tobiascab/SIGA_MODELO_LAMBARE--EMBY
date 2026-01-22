@@ -28,7 +28,7 @@ COPY frontend/public ./public
 COPY frontend/src ./src
 
 # Set environment variable for backend URL
-ARG NEXT_PUBLIC_API_URL=https://asamblea.coopreducto.coop.py
+ARG NEXT_PUBLIC_API_URL=https://asamblea.cloud
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Build the application using cache for .next/cache

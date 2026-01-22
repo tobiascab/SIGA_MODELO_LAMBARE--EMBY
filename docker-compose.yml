@@ -59,12 +59,22 @@ services:
         condition: service_healthy
     networks:
       - asamblea-network
+      - proxy
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/api/configuracion" ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 120s
+    labels:
+      - "traefik.enable=true"
+      # Backend API Router - asamblea.cloud/api
+      - "traefik.http.routers.asamblea-backend.rule=Host(`asamblea.cloud`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.asamblea-backend.entrypoints=websecure"
+      - "traefik.http.routers.asamblea-backend.tls=true"
+      - "traefik.http.routers.asamblea-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.asamblea-backend.service=asamblea-backend"
+      - "traefik.http.services.asamblea-backend.loadbalancer.server.port=8081"
 
   # Next.js Frontend - Production Mode (Optimized)
   frontend:
@@ -72,13 +82,13 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        NEXT_PUBLIC_API_URL: https://asamblea.coopreducto.coop.py
+        NEXT_PUBLIC_API_URL: https://asamblea.cloud
     container_name: asamblea-frontend
     restart: unless-stopped
     ports:
       - "127.0.0.1:6002:6001"
     environment:
-      NEXT_PUBLIC_API_URL: https://asamblea.coopreducto.coop.py
+      NEXT_PUBLIC_API_URL: https://asamblea.cloud
       NODE_ENV: production
       PORT: 6001
       HOSTNAME: "0.0.0.0"
@@ -92,11 +102,39 @@ services:
       start_period: 30s
     networks:
       - asamblea-network
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      # Frontend Router - asamblea.cloud
+      - "traefik.http.routers.asamblea-frontend.rule=Host(`asamblea.cloud`) && !PathPrefix(`/api`)"
+      - "traefik.http.routers.asamblea-frontend.entrypoints=websecure"
+      - "traefik.http.routers.asamblea-frontend.tls=true"
+      - "traefik.http.routers.asamblea-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.asamblea-frontend.service=asamblea-frontend"
+      - "traefik.http.services.asamblea-frontend.loadbalancer.server.port=6001"
+      # Security Headers
+      - "traefik.http.routers.asamblea-frontend.middlewares=asamblea-security"
+      - "traefik.http.middlewares.asamblea-security.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.asamblea-security.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.asamblea-security.headers.forceSTSHeader=true"
+      - "traefik.http.middlewares.asamblea-security.headers.frameDeny=true"
+      - "traefik.http.middlewares.asamblea-security.headers.contentTypeNosniff=true"
+      # WWW redirect
+      - "traefik.http.routers.asamblea-www.rule=Host(`www.asamblea.cloud`)"
+      - "traefik.http.routers.asamblea-www.entrypoints=websecure"
+      - "traefik.http.routers.asamblea-www.tls=true"
+      - "traefik.http.routers.asamblea-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.asamblea-www.middlewares=asamblea-www-redirect"
+      - "traefik.http.middlewares.asamblea-www-redirect.redirectregex.regex=^https://www\\.asamblea\\.cloud/(.*)"
+      - "traefik.http.middlewares.asamblea-www-redirect.redirectregex.replacement=https://asamblea.cloud/$${1}"
+      - "traefik.http.middlewares.asamblea-www-redirect.redirectregex.permanent=true"
 
 networks:
   asamblea-network:
     driver: bridge
     name: asamblea-network
+  proxy:
+    external: true
 
 volumes:
   asamblea_mysql_data:

@@ -29,14 +29,14 @@ interface CooperativaContextType {
     refresh: () => Promise<void>;
 }
 
-// Datos por defecto (Cooperativa Reducto)
+// Datos por defecto (Cooperativa Multiactiva Lambaré)
 const defaultCooperativa: CooperativaData = {
-    nombre: "Cooperativa Reducto Ltda.",
-    nombreCorto: "Reducto",
+    nombre: "Cooperativa Multiactiva Lambaré Ltda.",
+    nombreCorto: "Lambaré",
     logo: "/logo.png",
     eslogan: "Sistema de Asambleas",
     direccion: "",
-    ciudad: "San Lorenzo",
+    ciudad: "Lambaré",
     pais: "Paraguay",
     telefono: "",
     email: "",

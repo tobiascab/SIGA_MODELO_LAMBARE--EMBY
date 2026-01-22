@@ -9,7 +9,7 @@ limit_req_zone $binary_remote_addr zone=login_limit:10m rate=3r/s;
 limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
 
 server {
-    server_name asamblea.coopreducto.coop.py;
+    server_name asamblea.cloud;
 
     # --- PERFORMANCE OPTIMIZATIONS ---
     gzip on;
@@ -36,7 +36,7 @@ server {
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     
     # Content Security Policy (CSP)
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' https://asamblea.coopreducto.coop.py;" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' https://asamblea.cloud;" always;
 
     # Ocultar versión de Nginx
     server_tokens off;
@@ -127,8 +127,8 @@ server {
     # --- SSL CONFIGURATION (managed by Certbot) ---
     listen [::]:443 ssl ipv6only=on;
     listen 443 ssl;
-    ssl_certificate /etc/letsencrypt/live/asamblea.coopreducto.coop.py/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/asamblea.coopreducto.coop.py/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/asamblea.cloud/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/asamblea.cloud/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
@@ -139,7 +139,7 @@ server {
 server {
     listen 80;
     listen [::]:80;
-    server_name asamblea.coopreducto.coop.py;
+    server_name asamblea.cloud;
     
     # Redirect all HTTP to HTTPS
     return 301 https://$host$request_uri;

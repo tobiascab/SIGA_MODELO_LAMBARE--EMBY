@@ -93,7 +93,7 @@ export default function PageTransition() {
                                 <div className="absolute inset-3 bg-white rounded-full flex items-center justify-center shadow-xl border-2 border-slate-100">
                                     <img
                                         src="/logo-cooperativa.png"
-                                        alt="Cooperativa Reducto"
+                                        alt="Cooperativa Lambaré"
                                         className="w-16 h-16 object-contain"
                                         onError={(e) => {
                                             // Fallback a logo.png

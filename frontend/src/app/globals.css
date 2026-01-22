@@ -6,51 +6,51 @@
   --background: #f8fafc;
   --foreground: #0f172a;
 
-  /* Custom Green Palette - User Requested Strict #009900 */
-  /* Premium Green Palette */
-  --premium-dark: #008000;
-  /* Darker shade of #009900 */
-  --premium-green: #009900;
-  /* Main Color requested */
-  --premium-light: #00b300;
+  /* Custom Burgundy Palette - User Requested #8B1914 */
+  /* Premium Burgundy Palette */
+  --premium-dark: #6B1410;
+  /* Darker shade of #8B1914 */
+  --premium-green: #8B1914;
+  /* Main Color requested (keeping variable name for compatibility) */
+  --premium-light: #A52019;
   /* Lighter shade for highlights */
   --premium-gold: #d4af37;
 
-  /* Legacy Emerald Map (Remapped to #009900) */
-  --emerald-50: #e6f9e6;
-  --emerald-100: #ccf2cc;
-  --emerald-200: #99e699;
-  --emerald-300: #66d966;
-  --emerald-400: #33cc33;
-  --emerald-500: #009900;
+  /* Burgundy Palette (Remapped from Emerald) */
+  --emerald-50: #fdf2f2;
+  --emerald-100: #fce4e4;
+  --emerald-200: #f9c9c9;
+  --emerald-300: #f29a9a;
+  --emerald-400: #e85b5b;
+  --emerald-500: #8B1914;
   /* MAIN REQUESTED COLOR */
-  --emerald-600: #008000;
-  --emerald-700: #006600;
-  --emerald-800: #004d00;
-  --emerald-900: #003300;
+  --emerald-600: #6B1410;
+  --emerald-700: #520F0C;
+  --emerald-800: #3D0B09;
+  --emerald-900: #290706;
 
-  --mint-500: #009900;
-  --teal-400: #009900;
-  --teal-500: #009900;
-  --teal-600: #008000;
+  --mint-500: #8B1914;
+  --teal-400: #8B1914;
+  --teal-500: #8B1914;
+  --teal-600: #6B1410;
 
   --card: #ffffff;
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #009900;
+  --primary: #8B1914;
   --primary-foreground: #ffffff;
-  --secondary: #e6f9e6;
-  --secondary-foreground: #009900;
+  --secondary: #fdf2f2;
+  --secondary-foreground: #8B1914;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #e6f9e6;
-  --accent-foreground: #009900;
+  --accent: #fdf2f2;
+  --accent-foreground: #8B1914;
   --destructive: #ef4444;
   --destructive-foreground: #f8fafc;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #009900;
+  --ring: #8B1914;
   --radius: 0.75rem;
 }
 
@@ -61,7 +61,7 @@
   --card-foreground: #f8fafc;
   --popover: #0f172a;
   --popover-foreground: #f8fafc;
-  --primary: #009900;
+  --primary: #A52019;
   --primary-foreground: #ffffff;
   --secondary: #1e293b;
   --secondary-foreground: #f8fafc;
@@ -73,7 +73,7 @@
   --destructive-foreground: #f8fafc;
   --border: #1e293b;
   --input: #1e293b;
-  --ring: #00cc00;
+  --ring: #C62B23;
 }
 
 @layer base {

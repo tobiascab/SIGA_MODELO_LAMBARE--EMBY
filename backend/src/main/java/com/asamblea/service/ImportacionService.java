@@ -45,7 +45,7 @@ public class ImportacionService {
     private final FuncionarioDirectivoService funcionarioService;
 
     // Buffer optimizado para SSDs modernos y streaming
-    private static final int BATCH_SIZE = 5000; // Lotes más grandes para UPSERTs
+    private static final int BATCH_SIZE = 500; // Reducido para evitar OOM
 
     // Índices dinámicos (se detectan en tiempo de ejecución)
     private static final String HDR_SOCIO_NRO = "NRO SOCIO";
@@ -53,11 +53,13 @@ public class ImportacionService {
     private static final String HDR_NOMBRE = "SOCIO NOMBRE";
     private static final String HDR_TELEFONO = "TELEFONO";
     private static final String HDR_SUCURSAL = "SUCURSAL";
-    private static final String HDR_APORTE = "APORTE";
-    private static final String HDR_SOLIDARIDAD = "SOLIDARIDAD";
-    private static final String HDR_FONDO = "FONDO";
-    private static final String HDR_INCOOP = "INCOOP";
-    private static final String HDR_CREDITO = "CREDITO";
+    // Antiguos headers opcionales (ya no parecen estar en el nuevo excel, pero se dejan por compatibilidad o se pueden quitar si molestan)
+    
+    // Nuevos Headers Padrón 2024
+    // Clasificación, Dirección, Barrio, Fecha Ingreso, Fecha Padrón
+    // Deuda Aporte, Aporte Cubierto, Deuda Solidaridad, Solidaridad Cubierto
+    // Deuda Sede Social, Sede Social Cubierto, Deuda Préstamo, Mayor día atraso Pmo
+    // Deuda Tarjeta Crédito, Mayor día atraso TC, Habilitado voz/voto, Mesa, Nro. Orden Padrón
 
     private final Map<String, ImportStatus> progressMap = new ConcurrentHashMap<>();
 
@@ -154,20 +156,31 @@ public class ImportacionService {
             log.info("Marcados {} socios como inactivos temporalmente", sociosMarcadosInactivos);
 
             // 3. Preparar inserción Batch con UPSERT (ON DUPLICATE KEY UPDATE)
-            // Incluye en_padron_actual = true para marcar los importados como activos
+            // Se han agregado todos los campos nuevos del padrón 2024
             String sql = "INSERT INTO socios (numero_socio, cedula, nombre_completo, telefono, id_sucursal, " +
-                    "aporte_al_dia, solidaridad_al_dia, fondo_al_dia, incoop_al_dia, credito_al_dia, created_at, en_padron_actual) "
-                    +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true) " +
+                    "aporte_al_dia, solidaridad_al_dia, fondo_al_dia, incoop_al_dia, credito_al_dia, " +
+                    "clasificacion, direccion, barrio, fecha_ingreso, fecha_padron, " +
+                    "deuda_aporte, aporte_cubierto, deuda_solidaridad, solidaridad_cubierto, " +
+                    "deuda_sede_social, sede_social_cubierto, deuda_prestamo, mayor_dia_atraso_pmo, " +
+                    "deuda_tarjeta_credito, mayor_dia_atraso_tc, habilitado_voz_voto, mesa, nro_orden_padron, " +
+                    "edad, ocupacion, profesion, grado_instruccion, ciudad, email, movil, " +
+                    "created_at, en_padron_actual) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true) " +
                     "ON DUPLICATE KEY UPDATE " +
                     "nombre_completo = VALUES(nombre_completo), " +
                     "telefono = VALUES(telefono), " +
                     "id_sucursal = VALUES(id_sucursal), " +
-                    "aporte_al_dia = VALUES(aporte_al_dia), " +
-                    "solidaridad_al_dia = VALUES(solidaridad_al_dia), " +
-                    "fondo_al_dia = VALUES(fondo_al_dia), " +
-                    "incoop_al_dia = VALUES(incoop_al_dia), " +
-                    "credito_al_dia = VALUES(credito_al_dia), " +
+                    // Actualizamos también los nuevos campos
+                    "clasificacion = VALUES(clasificacion), direccion = VALUES(direccion), barrio = VALUES(barrio), " +
+                    "fecha_ingreso = VALUES(fecha_ingreso), fecha_padron = VALUES(fecha_padron), " +
+                    "deuda_aporte = VALUES(deuda_aporte), aporte_cubierto = VALUES(aporte_cubierto), " +
+                    "deuda_solidaridad = VALUES(deuda_solidaridad), solidaridad_cubierto = VALUES(solidaridad_cubierto), " +
+                    "deuda_sede_social = VALUES(deuda_sede_social), sede_social_cubierto = VALUES(sede_social_cubierto), " +
+                    "deuda_prestamo = VALUES(deuda_prestamo), mayor_dia_atraso_pmo = VALUES(mayor_dia_atraso_pmo), " +
+                    "deuda_tarjeta_credito = VALUES(deuda_tarjeta_credito), mayor_dia_atraso_tc = VALUES(mayor_dia_atraso_tc), " +
+                    "habilitado_voz_voto = VALUES(habilitado_voz_voto), mesa = VALUES(mesa), nro_orden_padron = VALUES(nro_orden_padron), " +
+                    "edad = VALUES(edad), ocupacion = VALUES(ocupacion), profesion = VALUES(profesion), " +
+                    "grado_instruccion = VALUES(grado_instruccion), ciudad = VALUES(ciudad), email = VALUES(email), movil = VALUES(movil), " +
                     "en_padron_actual = true";
 
             int imported = 0;
@@ -222,14 +235,16 @@ public class ImportacionService {
                                 
                                 if (h.equals("DOC AGR")) continue; // IGNORAR EXPLÍCITAMENTE
                                 
-                                if (h.equals("DOC NUM") || h.equals("DOC. NUM.") || h.equals("CEDULA") || h.equals("CI")) {
+                                if (h.equals("DOC NUM") || h.equals("DOC. NUM.") || h.equals("CEDULA") || h.equals("CI") || h.equals("NRO. DOC") || h.equals("NRO.DOC")) {
                                     colMap.put("DOC NUM", cell.getColumnIndex());
-                                } else if (h.equals("SOCIO NOMBRE") || h.equals("SOCIO NOM") || h.equals("NOMBRE") || h.equals("SOCIO NON")) {
+                                } else if (h.equals("SOCIO NOMBRE") || h.equals("SOCIO NOM") || h.equals("NOMBRE") || h.equals("SOCIO NON") || h.equals("SOCIO") || h.equals("APELLIDOS Y NOMBRES")) {
                                     colMap.put("SOCIO NOMBRE", cell.getColumnIndex());
-                                } else if (h.equals("SOCIO NRO") || h.equals("NRO SOCIO") || h.equals("NUMERO SOCIO")) {
+                                } else if (h.equals("SOCIO NRO") || h.equals("NRO SOCIO") || h.equals("NUMERO SOCIO") || h.equals("SOCIO NRO.")) {
                                     colMap.put("NRO SOCIO", cell.getColumnIndex());
                                 } else if (h.equalsIgnoreCase("TELEFONO") || h.equalsIgnoreCase("TEL")) {
                                     colMap.put("TELEFONO", cell.getColumnIndex());
+                                } else if (h.equals("TEL.MOVIL 1") || h.equals("MOVIL") || h.equals("CELULAR")) {
+                                    colMap.put("MOVIL", cell.getColumnIndex());
                                 } else if (h.equalsIgnoreCase("SUCURSAL") || h.equals("SUC")) {
                                     colMap.put("SUCURSAL", cell.getColumnIndex());
                                 } else if (h.contains("APOR")) {
@@ -243,6 +258,39 @@ public class ImportacionService {
                                 } else if (h.contains("CRED")) {
                                     colMap.putIfAbsent("CREDITO", cell.getColumnIndex());
                                 }
+                                
+                                // --- MAPEADO DE NUEVOS CAMPOS 2024 ---
+                                // Nuevos campos enriquecidos (Enero 2026)
+                                if (h.equals("EDAD")) colMap.put("EDAD", cell.getColumnIndex());
+                                else if (h.equals("OCUPACIÓN") || h.equals("OCUPACION")) colMap.put("OCUPACION", cell.getColumnIndex());
+                                else if (h.equals("PROFESIÓN") || h.equals("PROFESION")) colMap.put("PROFESION", cell.getColumnIndex());
+                                else if (h.contains("GRADO") && (h.contains("INSTRU") || h.contains("ACAD"))) colMap.put("GRADO_INSTRUCCION", cell.getColumnIndex());
+                                else if (h.equals("CIUDAD")) colMap.put("CIUDAD", cell.getColumnIndex());
+                                else if (h.equals("EMAIL") || h.equals("CORREO") || h.equals("E-MAIL")) colMap.put("EMAIL", cell.getColumnIndex());
+                                if (h.contains("CLASIFICACI")) colMap.put("CLASIFICACION", cell.getColumnIndex());
+                                else if (h.equals("DIRECCIÓN") || h.equals("DIRECCION")) colMap.put("DIRECCION", cell.getColumnIndex());
+                                else if (h.equals("BARRIO")) colMap.put("BARRIO", cell.getColumnIndex());
+                                else if (h.contains("INGRESO")) colMap.put("FECHA_INGRESO", cell.getColumnIndex());
+                                else if (h.contains("FECHA PADR")) colMap.put("FECHA_PADRON", cell.getColumnIndex());
+                                
+                                // Deudas
+                                else if (h.contains("DEUDA APORTE")) colMap.put("DEUDA_APORTE", cell.getColumnIndex());
+                                else if (h.contains("APORTE CUBIERTO")) colMap.put("APORTE_CUBIERTO", cell.getColumnIndex());
+                                else if (h.contains("DEUDA SOLIDARI")) colMap.put("DEUDA_SOLIDARIDAD", cell.getColumnIndex());
+                                else if (h.contains("SOLIDARIDAD CUBIER")) colMap.put("SOLIDARIDAD_CUBIERTO", cell.getColumnIndex());
+                                else if (h.contains("DEUDA SEDE")) colMap.put("DEUDA_SEDE_SOCIAL", cell.getColumnIndex());
+                                else if (h.contains("SEDE SOCIAL CUBIERT")) colMap.put("SEDE_SOCIAL_CUBIERTO", cell.getColumnIndex());
+                                else if (h.contains("DEUDA PRÉSTAMO") || h.contains("DEUDA PRESTAMO")) colMap.put("DEUDA_PRESTAMO", cell.getColumnIndex());
+                                else if (h.contains("MAYOR DÍA ATRASO PMO") || h.contains("ATRASO PMO")) colMap.put("MAYOR_DIA_ATRASO_PMO", cell.getColumnIndex());
+                                else if (h.contains("DEUDA TARJETA") || h.contains("DEUDA TC")) colMap.put("DEUDA_TARJETA_CREDITO", cell.getColumnIndex());
+                                else if (h.contains("MAYOR DÍA ATRASO TC") || h.contains("ATRASO TC")) colMap.put("MAYOR_DIA_ATRASO_TC", cell.getColumnIndex());
+                                
+                                // CRITICO: Habilitado voz/voto
+                                else if (h.contains("HABILITADO VOZ") || h.contains("VOZ/VOTO")) colMap.put("HABILITADO_VOZ_VOTO", cell.getColumnIndex());
+                                
+                                // Logistica
+                                else if (h.equals("MESA")) colMap.put("MESA", cell.getColumnIndex());
+                                else if (h.contains("NRO. ORDEN") || h.contains("ORDEN PADR")) colMap.put("NRO_ORDEN_PADRON", cell.getColumnIndex());
                             }
                         }
                         log.info("Columnas detectadas: {}", colMap);
@@ -281,6 +329,36 @@ public class ImportacionService {
                         Integer idxFondo = colMap.get("FONDO");
                         Integer idxIncoop = colMap.get("INCOOP");
                         Integer idxCred = colMap.get("CREDITO");
+                        
+                        // Índices nuevos enriquecidos
+                        Integer idxEdad = colMap.get("EDAD");
+                        Integer idxOcupacion = colMap.get("OCUPACION");
+                        Integer idxProfesion = colMap.get("PROFESION");
+                        Integer idxGradoInst = colMap.get("GRADO_INSTRUCCION");
+                        Integer idxCiudad = colMap.get("CIUDAD");
+                        Integer idxEmail = colMap.get("EMAIL");
+                        
+                        // Índices nuevos
+                        Integer idxClasificacion = colMap.get("CLASIFICACION");
+                        Integer idxDireccion = colMap.get("DIRECCION");
+                        Integer idxBarrio = colMap.get("BARRIO");
+                        Integer idxFecIngreso = colMap.get("FECHA_INGRESO");
+                        Integer idxFecPadron = colMap.get("FECHA_PADRON");
+                        
+                        Integer idxDeudaAporte = colMap.get("DEUDA_APORTE");
+                        Integer idxAporteCubierto = colMap.get("APORTE_CUBIERTO");
+                        Integer idxDeudaSolid = colMap.get("DEUDA_SOLIDARIDAD");
+                        Integer idxSolidCubierto = colMap.get("SOLIDARIDAD_CUBIERTO");
+                        Integer idxDeudaSede = colMap.get("DEUDA_SEDE_SOCIAL");
+                        Integer idxSedeCubierto = colMap.get("SEDE_SOCIAL_CUBIERTO");
+                        Integer idxDeudaPmo = colMap.get("DEUDA_PRESTAMO");
+                        Integer idxAtrasoPmo = colMap.get("MAYOR_DIA_ATRASO_PMO");
+                        Integer idxDeudaTc = colMap.get("DEUDA_TARJETA_CREDITO");
+                        Integer idxAtrasoTc = colMap.get("MAYOR_DIA_ATRASO_TC");
+                        
+                        Integer idxHabVozVoto = colMap.get("HABILITADO_VOZ_VOTO");
+                        Integer idxMesa = colMap.get("MESA");
+                        Integer idxOrden = colMap.get("NRO_ORDEN_PADRON");
 
                         String nroSocio = idxSocio != null ? getRawValue(row, idxSocio) : null;
                         String cedula = idxCedula != null ? getRawValue(row, idxCedula) : null;
@@ -333,9 +411,21 @@ public class ImportacionService {
                             nuevosContador++;
                         }
 
-                        // F: Teléfono
+                        // F: Teléfono (Prioridad: MOVIL > TELEFONO, o combinados si se prefiere, aquí usamos el primero que tenga dato)
+                        Integer idxMovil = colMap.get("MOVIL");
                         String rawTel = idxTel != null ? getRawValue(row, idxTel) : null;
-                        String tel = procesarTelefonoParaguayo(rawTel);
+                        String rawMovil = idxMovil != null ? getRawValue(row, idxMovil) : null;
+                        
+                        String finalRawTel = rawTel;
+                        if (rawMovil != null && !rawMovil.isEmpty()) {
+                             // Si hay móvil, preferimos móvil o lo concatenamos? 
+                             // Por ahora, si 'Telefono' está vacío, usamos 'Movil'
+                             if (rawTel == null || rawTel.trim().isEmpty() || rawTel.length() < 6) {
+                                 finalRawTel = rawMovil;
+                             }
+                        }
+                        
+                        String tel = procesarTelefonoParaguayo(finalRawTel);
 
                         // G: Sucursal
                         String sucCod = idxSuc != null ? getRawValue(row, idxSuc) : null;
@@ -398,17 +488,49 @@ public class ImportacionService {
                             }
                         }
 
-                        // Booleanos H-L con fallback (si no existe la columna en el Excel, se asume true o false según criterio histórico)
-                        boolean aporte = idxAporte != null ? parseBoolean(getRawValue(row, idxAporte)) : true;
-                        boolean solidaridad = idxSolid != null ? parseBoolean(getRawValue(row, idxSolid)) : true;
-                        boolean fondo = idxFondo != null ? parseBoolean(getRawValue(row, idxFondo)) : true;
-                        boolean incoop = idxIncoop != null ? parseBoolean(getRawValue(row, idxIncoop)) : true;
-                        boolean credito = idxCred != null ? parseBoolean(getRawValue(row, idxCred)) : true;
+                        // Booleanos legacy (Si no hay columna explícita de deuda/estado, usamos lógica vieja o default)
+                        // Pero espera, el usuario dijo que la logica vieja de 5 campos boleanos ya no es la principal.
+                        // Podemos dejarlos en false por defecto si no se detectan, o true.
+                        // Mantendremos parseo por si acaso existen columnas viejas.
+                        boolean aporte = idxAporte != null ? parseBoolean(getRawValue(row, idxAporte)) : false;
+                        boolean solidaridad = idxSolid != null ? parseBoolean(getRawValue(row, idxSolid)) : false;
+                        boolean fondo = idxFondo != null ? parseBoolean(getRawValue(row, idxFondo)) : false;
+                        boolean incoop = idxIncoop != null ? parseBoolean(getRawValue(row, idxIncoop)) : false;
+                        boolean credito = idxCred != null ? parseBoolean(getRawValue(row, idxCred)) : false;
+
+                        // Extraccón de nuevos campos como String raw
+                        String clasificacion = idxClasificacion != null ? getRawValue(row, idxClasificacion) : null;
+                        String direccion = idxDireccion != null ? getRawValue(row, idxDireccion) : null;
+                        String barrio = idxBarrio != null ? getRawValue(row, idxBarrio) : null;
+                        String fIngreso = idxFecIngreso != null ? getRawValue(row, idxFecIngreso) : null;
+                        String fPadron = idxFecPadron != null ? getRawValue(row, idxFecPadron) : null;
+                        
+                        String dAporte = idxDeudaAporte != null ? getRawValue(row, idxDeudaAporte) : null;
+                        String aCubierto = idxAporteCubierto != null ? getRawValue(row, idxAporteCubierto) : null;
+                        String dSolid = idxDeudaSolid != null ? getRawValue(row, idxDeudaSolid) : null;
+                        String sCubierto = idxSolidCubierto != null ? getRawValue(row, idxSolidCubierto) : null;
+                        String dSede = idxDeudaSede != null ? getRawValue(row, idxDeudaSede) : null;
+                        String seCubierto = idxSedeCubierto != null ? getRawValue(row, idxSedeCubierto) : null;
+                        String dPmo = idxDeudaPmo != null ? getRawValue(row, idxDeudaPmo) : null;
+                        String atrPmo = idxAtrasoPmo != null ? getRawValue(row, idxAtrasoPmo) : null;
+                        String dTc = idxDeudaTc != null ? getRawValue(row, idxDeudaTc) : null;
+                        String atrTc = idxAtrasoTc != null ? getRawValue(row, idxAtrasoTc) : null;
+                        
+                        String habVozVoto = idxHabVozVoto != null ? getRawValue(row, idxHabVozVoto) : null;
+                        String mesa = idxMesa != null ? getRawValue(row, idxMesa) : null;
+                        String nroOrden = idxOrden != null ? getRawValue(row, idxOrden) : null;
+                        
+                        String edad = idxEdad != null ? getRawValue(row, idxEdad) : null;
+                        String ocupacion = idxOcupacion != null ? getRawValue(row, idxOcupacion) : null;
+                        String profesion = idxProfesion != null ? getRawValue(row, idxProfesion) : null;
+                        String gradoInst = idxGradoInst != null ? getRawValue(row, idxGradoInst) : null;
+                        String ciudad = idxCiudad != null ? getRawValue(row, idxCiudad) : null;
+                        String email = idxEmail != null ? getRawValue(row, idxEmail) : null;
+                        String movil = idxMovil != null ? getRawValue(row, idxMovil) : null;
 
                         ps.setString(1, nroSocio);
                         ps.setString(2, cedula);
-                        // nombre ya fue validado como no-null en línea 247-251, pero usamos
-                        // Objects.requireNonNull para satisfacer el análisis estático
+                        // nombre ya fue validado como no-null en línea 247-251
                         ps.setString(3, Objects.requireNonNull(nombre).trim().toUpperCase());
 
                         ps.setString(4, tel);
@@ -416,12 +538,43 @@ public class ImportacionService {
                             ps.setLong(5, sucId);
                         else
                             ps.setNull(5, java.sql.Types.BIGINT);
+                            
+                        // Campos booleanos viejos (se guardan por compatibilidad, aunque la logica real ahora es habVozVoto)
                         ps.setBoolean(6, aporte);
                         ps.setBoolean(7, solidaridad);
                         ps.setBoolean(8, fondo);
                         ps.setBoolean(9, incoop);
                         ps.setBoolean(10, credito);
-                        ps.setTimestamp(11, now);
+                        
+                        // Nuevos campos (11 al 28 + timestamp)
+                        ps.setString(11, clasificacion);
+                        ps.setString(12, direccion);
+                        ps.setString(13, barrio);
+                        ps.setString(14, fIngreso);
+                        ps.setString(15, fPadron);
+                        ps.setString(16, dAporte);
+                        ps.setString(17, aCubierto);
+                        ps.setString(18, dSolid);
+                        ps.setString(19, sCubierto);
+                        ps.setString(20, dSede);
+                        ps.setString(21, seCubierto);
+                        ps.setString(22, dPmo);
+                        ps.setString(23, atrPmo);
+                        ps.setString(24, dTc);
+                        ps.setString(25, atrTc);
+                        ps.setString(26, habVozVoto);
+                        ps.setString(27, mesa);
+                        ps.setString(28, nroOrden);
+                        
+                        ps.setString(29, edad);
+                        ps.setString(30, ocupacion);
+                        ps.setString(31, profesion);
+                        ps.setString(32, gradoInst);
+                        ps.setString(33, ciudad);
+                        ps.setString(34, email);
+                        ps.setString(35, movil);
+                        
+                        ps.setTimestamp(36, now);
 
                         ps.addBatch();
                         imported++;

@@ -306,7 +306,7 @@ export default function SucursalesReportPage() {
                 </div>
 
                 <div className="mt-8 text-center print:mt-12">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Cooperativa Reducto Ltda • Gestión Estratégica</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Cooperativa Multiactiva Lambaré Ltda • Gestión Estratégica</p>
                 </div>
             </div>
             {/* ESTILOS PARA IMPRESIÓN */}

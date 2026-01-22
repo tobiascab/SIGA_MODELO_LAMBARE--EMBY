@@ -25,12 +25,12 @@ public interface SocioRepository extends JpaRepository<Socio, Long> {
         @Query("SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE s.sucursal.id = :sucursalId")
         List<Socio> findBySucursalId(Long sucursalId);
 
-        // Contar total con Voz y Voto (los 4 campos en SI)
-        @Query("SELECT COUNT(s) FROM Socio s WHERE s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true")
+        // Contar total con Voz y Voto (campo habilitadoVozVoto contiene 'Voto')
+        @Query("SELECT COUNT(s) FROM Socio s WHERE LOWER(s.habilitadoVozVoto) LIKE '%voto%'")
         Long countConVozYVoto();
 
-        // Contar solo voz (al menos 1 campo en NO)
-        @Query("SELECT COUNT(s) FROM Socio s WHERE NOT (s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true)")
+        // Contar solo voz (campo habilitadoVozVoto NO contiene 'Voto' pero contiene 'Voz')
+        @Query("SELECT COUNT(s) FROM Socio s WHERE LOWER(s.habilitadoVozVoto) NOT LIKE '%voto%' AND LOWER(s.habilitadoVozVoto) LIKE '%voz%'")
         Long countSoloVoz();
 
         // Contar socios en padrón actual (excluye los dados de baja / fuera del último
@@ -38,20 +38,20 @@ public interface SocioRepository extends JpaRepository<Socio, Long> {
         @Query("SELECT COUNT(s) FROM Socio s WHERE s.enPadronActual = true")
         Long countEnPadronActual();
 
-        // Contar con Voz y Voto SOLO del padrón actual
-        @Query("SELECT COUNT(s) FROM Socio s WHERE s.enPadronActual = true AND s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true")
+        // Contar con Voz y Voto SOLO del padrón actual (habilitadoVozVoto contiene 'Voto')
+        @Query("SELECT COUNT(s) FROM Socio s WHERE s.enPadronActual = true AND LOWER(s.habilitadoVozVoto) LIKE '%voto%'")
         Long countConVozYVotoEnPadron();
 
-        // Contar solo voz SOLO del padrón actual
-        @Query("SELECT COUNT(s) FROM Socio s WHERE s.enPadronActual = true AND NOT (s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true)")
+        // Contar solo voz SOLO del padrón actual (habilitadoVozVoto NO contiene 'Voto' pero contiene 'Voz')
+        @Query("SELECT COUNT(s) FROM Socio s WHERE s.enPadronActual = true AND LOWER(s.habilitadoVozVoto) NOT LIKE '%voto%' AND LOWER(s.habilitadoVozVoto) LIKE '%voz%'")
         Long countSoloVozEnPadron();
 
         // Contar por sucursal
         @Query("SELECT COUNT(s) FROM Socio s WHERE s.sucursal.id = :sucursalId")
         Long countBySucursalId(Long sucursalId);
 
-        // Contar con voz y voto por sucursal
-        @Query("SELECT COUNT(s) FROM Socio s WHERE s.sucursal.id = :sucursalId AND s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true")
+        // Contar con voz y voto por sucursal (habilitadoVozVoto contiene 'Voto')
+        @Query("SELECT COUNT(s) FROM Socio s WHERE s.sucursal.id = :sucursalId AND LOWER(s.habilitadoVozVoto) LIKE '%voto%'")
         Long countConVozYVotoBySucursalId(Long sucursalId);
 
         // Buscar exacto por número de socio o cédula - CON SUCURSAL

@@ -570,7 +570,7 @@ export default function RankingReportPage() {
                 </div>
 
                 <div className="mt-8 text-center print:mt-12">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Cooperativa Reducto Ltda • Sistema de Gestión de Asambleas</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Cooperativa Multiactiva Lambaré Ltda • Sistema de Gestión de Asambleas</p>
                 </div>
             </div>
 

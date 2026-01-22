@@ -17,12 +17,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SIGA - Sistema de Gestión de Asambleas | Cooperativa Reducto",
-  description: "Sistema web profesional para gestión de asambleas cooperativas. Control de asistencia, votaciones, documentos y socios. Cooperativa Reducto Ltda. San Lorenzo, Paraguay.",
-  keywords: ["sistema de asambleas", "cooperativa", "gestión cooperativa", "control asistencia", "votaciones", "Paraguay", "SIGA", "Cooperativa Reducto"],
-  authors: [{ name: "Cooperativa Reducto Ltda" }],
+  title: "SIGA - Sistema de Gestión de Asambleas | Cooperativa Lambaré",
+  description: "Sistema web profesional para gestión de asambleas cooperativas. Control de asistencia, votaciones, documentos y socios. Cooperativa Multiactiva Lambaré Ltda. Paraguay.",
+  keywords: ["sistema de asambleas", "cooperativa", "gestión cooperativa", "control asistencia", "votaciones", "Paraguay", "SIGA", "Cooperativa Lambaré"],
+  authors: [{ name: "Cooperativa Multiactiva Lambaré Ltda" }],
   creator: "Avanzantec Group SRL",
-  publisher: "Cooperativa Reducto Ltda",
+  publisher: "Cooperativa Multiactiva Lambaré Ltda",
 
   twitter: {
     card: "summary_large_image",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     follow: true
   },
   alternates: {
-    canonical: "https://asamblea.coopreducto.coop.py"
+    canonical: "https://asamblea.cloud"
   },
   icons: {
     icon: "/logo.png",
@@ -50,14 +50,14 @@ export const metadata: Metadata = {
     description: "Plataforma integral para la gestión de asambleas cooperativas. Control de asistencia, votaciones y documentación.",
     type: "website",
     locale: "es_PY",
-    siteName: "SIGA Cooperativa Reducto",
-    url: "https://asamblea.coopreducto.coop.py",
+    siteName: "SIGA Cooperativa Lambaré",
+    url: "https://asamblea.cloud",
     images: [
       {
-        url: "/logo-cooperativa.png",
+        url: "/uploads/logos/logo_cooperativa.png",
         width: 800,
         height: 600,
-        alt: "Logo Cooperativa Reducto Ltda",
+        alt: "Logo Cooperativa Multiactiva Lambaré Ltda",
       },
     ],
   },
@@ -102,7 +102,7 @@ export default function RootLayout({
               "description": "Sistema web profesional para gestión de asambleas cooperativas",
               "applicationCategory": "BusinessApplication",
               "operatingSystem": "Any",
-              "url": "https://asamblea.coopreducto.coop.py",
+              "url": "https://asamblea.cloud",
               "offers": {
                 "@type": "Offer",
                 "price": "0",
@@ -110,11 +110,11 @@ export default function RootLayout({
               },
               "provider": {
                 "@type": "Organization",
-                "name": "Cooperativa Reducto Ltda",
-                "url": "https://asamblea.coopreducto.coop.py",
+                "name": "Cooperativa Multiactiva Lambaré Ltda",
+                "url": "https://asamblea.cloud",
                 "address": {
                   "@type": "PostalAddress",
-                  "addressLocality": "San Lorenzo",
+                  "addressLocality": "Lambaré",
                   "addressRegion": "Central",
                   "addressCountry": "PY"
                 }

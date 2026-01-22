@@ -125,7 +125,7 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
                                 <h2 className="text-2xl font-black text-slate-800 tracking-tight">Reporte de Usuarios & Actividad</h2>
                                 <p className="text-slate-400 text-sm font-bold uppercase tracking-widest flex items-center gap-2">
                                     <Activity size={12} className="text-emerald-500" />
-                                    Cooperativa Reducto
+                                    Cooperativa Lambaré
                                 </p>
                             </div>
                         </div>
@@ -274,7 +274,7 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
                     </div>
 
                     <div className="p-4 bg-slate-50 border-t border-slate-100 text-center text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                        Panel de Auditoría de Reducto • Datos actualizados en tiempo real
+                        Panel de Auditoría de Lambaré • Datos actualizados en tiempo real
                     </div>
                 </motion.div>
             </div>
