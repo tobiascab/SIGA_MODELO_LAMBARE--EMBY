@@ -934,7 +934,6 @@ const PWAInstallSection = () => {
     const [installing, setInstalling] = useState(false);
 
     useEffect(() => {
-        // Check if already installed
         if (window.matchMedia('(display-mode: standalone)').matches ||
             (window.navigator as any).standalone === true) {
             setIsInstalled(true);
@@ -947,8 +946,6 @@ const PWAInstallSection = () => {
         };
 
         window.addEventListener('beforeinstallprompt', handler);
-
-        // Listen for successful installs
         window.addEventListener('appinstalled', () => {
             setIsInstalled(true);
             setDeferredPrompt(null);
@@ -965,9 +962,7 @@ const PWAInstallSection = () => {
         try {
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                setIsInstalled(true);
-            }
+            if (outcome === 'accepted') setIsInstalled(true);
             setDeferredPrompt(null);
         } catch (err) {
             console.error('Error installing PWA:', err);
@@ -977,60 +972,159 @@ const PWAInstallSection = () => {
     };
 
     return (
-        <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-5 sm:p-6 shadow-xl border border-slate-700/50 overflow-hidden relative">
-            {/* Background decoration */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-500/10 to-transparent rounded-full translate-y-1/2 -translate-x-1/2" />
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="rounded-2xl overflow-hidden relative"
+        >
+            <div className="bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 p-5 sm:p-7 relative overflow-hidden">
+                {/* Decoraciones animadas */}
+                <motion.div
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-xl"
+                />
+                <motion.div
+                    animate={{ scale: [1, 1.3, 1], opacity: [0.05, 0.15, 0.05] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                    className="absolute -bottom-8 -left-8 w-32 h-32 bg-white/10 rounded-full blur-xl"
+                />
+                <motion.div
+                    animate={{ x: [0, 100], opacity: [0, 0.3, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                    className="absolute top-1/2 left-0 w-20 h-0.5 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                />
 
-            <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                    <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg shadow-emerald-500/20 shrink-0">
-                        <Smartphone className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                    </div>
-                    <div className="min-w-0">
-                        <h3 className="text-sm sm:text-base font-black text-white tracking-tight">
-                            Versión Móvil SIGA
-                        </h3>
-                        <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
-                            {isInstalled
-                                ? 'La aplicación ya está instalada en este dispositivo.'
-                                : 'Instala SIGA como app en tu dispositivo para acceso rápido.'}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="w-full sm:w-auto shrink-0">
-                    {isInstalled ? (
-                        <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                            <Check className="h-4 w-4 text-emerald-400" />
-                            <span className="text-xs sm:text-sm font-bold text-emerald-400">Instalada</span>
+                <div className="relative z-10 flex flex-col sm:flex-row items-center gap-5 sm:gap-6">
+                    {/* Ícono animado tipo teléfono */}
+                    <motion.div
+                        animate={{ y: [0, -6, 0] }}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                        className="relative shrink-0"
+                    >
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white/15 backdrop-blur-sm rounded-2xl sm:rounded-3xl border-2 border-white/20 flex items-center justify-center shadow-2xl shadow-black/20">
+                            <Smartphone className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
                         </div>
-                    ) : deferredPrompt ? (
-                        <button
-                            onClick={handleInstall}
-                            disabled={installing}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-xs sm:text-sm hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-50"
+                        {/* Punto de notificación */}
+                        {!isInstalled && (
+                            <motion.div
+                                animate={{ scale: [1, 1.3, 1] }}
+                                transition={{ duration: 1.5, repeat: Infinity }}
+                                className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-amber-400 rounded-full border-2 border-emerald-600 flex items-center justify-center"
+                            >
+                                <Download className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-800" />
+                            </motion.div>
+                        )}
+                        {isInstalled && (
+                            <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-emerald-400 rounded-full border-2 border-emerald-600 flex items-center justify-center"
+                            >
+                                <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-white" />
+                            </motion.div>
+                        )}
+                    </motion.div>
+
+                    {/* Contenido central */}
+                    <div className="flex-1 text-center sm:text-left min-w-0">
+                        <motion.h3
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="text-lg sm:text-xl font-black text-white tracking-tight"
                         >
-                            {installing ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <Download className="h-4 w-4" />
-                            )}
-                            Instalar App
-                        </button>
-                    ) : (
-                        <div className="flex flex-col items-start sm:items-end gap-1">
-                            <span className="text-[10px] sm:text-xs text-slate-500 font-medium">
-                                Abre desde <strong className="text-slate-300">Chrome/Safari</strong>
-                            </span>
-                            <span className="text-[10px] text-slate-500">
-                                para ver el botón de instalar
-                            </span>
-                        </div>
-                    )}
+                            {isInstalled ? '¡SIGA Instalada!' : 'Instalar SIGA Móvil'}
+                        </motion.h3>
+                        <motion.p
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-xs sm:text-sm text-emerald-100/80 mt-1 leading-relaxed"
+                        >
+                            {isInstalled
+                                ? 'La app está instalada en tu dispositivo. Accedé desde tu pantalla de inicio.'
+                                : 'Accedé más rápido desde tu celular. Sin necesidad de abrir el navegador.'}
+                        </motion.p>
+
+                        {/* Features mini */}
+                        {!isInstalled && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.5 }}
+                                className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3"
+                            >
+                                {['Acceso rápido', 'Sin navegador', 'Pantalla completa'].map((feat, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 backdrop-blur-sm rounded-lg text-[10px] sm:text-xs font-semibold text-white/90 border border-white/10">
+                                        <Check className="h-2.5 w-2.5 text-emerald-300" />
+                                        {feat}
+                                    </span>
+                                ))}
+                            </motion.div>
+                        )}
+                    </div>
+
+                    {/* Botón de acción */}
+                    <div className="w-full sm:w-auto shrink-0">
+                        {isInstalled ? (
+                            <motion.div
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="flex items-center justify-center gap-2 px-5 py-3 bg-white/15 backdrop-blur-sm border border-white/20 rounded-xl"
+                            >
+                                <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1, rotate: [0, 10, -10, 0] }}
+                                    transition={{ delay: 0.3, duration: 0.5 }}
+                                >
+                                    <Check className="h-5 w-5 text-emerald-200" />
+                                </motion.div>
+                                <span className="text-sm font-bold text-emerald-100">Instalada ✓</span>
+                            </motion.div>
+                        ) : deferredPrompt ? (
+                            <motion.button
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                transition={{ delay: 0.4 }}
+                                onClick={handleInstall}
+                                disabled={installing}
+                                className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-7 py-3.5 bg-white text-emerald-700 rounded-xl font-black text-sm sm:text-base shadow-2xl shadow-black/20 hover:bg-emerald-50 transition-colors disabled:opacity-50 group"
+                            >
+                                {installing ? (
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                    <motion.div
+                                        animate={{ y: [0, 3, 0] }}
+                                        transition={{ duration: 1.5, repeat: Infinity }}
+                                    >
+                                        <Download className="h-5 w-5" />
+                                    </motion.div>
+                                )}
+                                {installing ? 'Instalando...' : 'Instalar Ahora'}
+                            </motion.button>
+                        ) : (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.4 }}
+                                className="flex flex-col items-center sm:items-end gap-1.5 px-4 py-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/10"
+                            >
+                                <span className="text-xs text-white/80 font-semibold text-center sm:text-right">
+                                    Abrí desde <strong className="text-white">Chrome</strong> o <strong className="text-white">Safari</strong>
+                                </span>
+                                <span className="text-[10px] text-white/50 text-center sm:text-right">
+                                    para ver el botón de instalar
+                                </span>
+                            </motion.div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 };
 
@@ -1532,8 +1626,8 @@ export default function ConfiguracionPage() {
                     <button
                         onClick={handleToggleNotifications}
                         className={`relative inline-flex h-8 w-14 sm:h-9 sm:w-16 items-center rounded-full transition-all shadow-inner shrink-0 ${notificationsEnabled
-                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                                : 'bg-slate-300'
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                            : 'bg-slate-300'
                             }`}
                     >
                         <span
