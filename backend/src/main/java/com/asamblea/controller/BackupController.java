@@ -25,6 +25,9 @@ public class BackupController {
     @Autowired
     private BackupService backupService;
 
+    @Autowired
+    private com.asamblea.service.LogAuditoriaService auditService;
+
     /**
      * Obtiene la configuración actual de backups
      */
@@ -43,9 +46,20 @@ public class BackupController {
      * Actualiza la configuración de backups
      */
     @PutMapping("/config")
-    public ResponseEntity<?> actualizarConfiguracion(@RequestBody ConfiguracionBackupDTO dto) {
+    public ResponseEntity<?> actualizarConfiguracion(@RequestBody ConfiguracionBackupDTO dto,
+            Authentication auth, jakarta.servlet.http.HttpServletRequest request) {
         try {
             ConfiguracionBackupDTO config = backupService.actualizarConfiguracion(dto);
+
+            // Auditoría
+            auditService.registrar(
+                    "BACKUP",
+                    "ACTUALIZAR_CONFIGURACION",
+                    String.format("Actualizó configuración de backups. Habilitado: %b",
+                            dto.getBackupAutomaticoActivo()),
+                    auth.getName(),
+                    request.getRemoteAddr());
+
             return ResponseEntity.ok(config);
         } catch (Exception e) {
             logger.error("Error al actualizar configuración de backup: {}", e.getMessage());
@@ -63,7 +77,7 @@ public class BackupController {
             if (codigo == null || codigo.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Código requerido"));
             }
-            
+
             boolean valido = backupService.verificarCodigoAcceso(codigo);
             return ResponseEntity.ok(Map.of("valido", valido));
         } catch (Exception e) {
@@ -76,14 +90,22 @@ public class BackupController {
      * Crea un backup manual
      */
     @PostMapping("/crear")
-    public ResponseEntity<?> crearBackup(Authentication auth) {
+    public ResponseEntity<?> crearBackup(Authentication auth, jakarta.servlet.http.HttpServletRequest request) {
         try {
             String usuario = auth.getName();
             BackupHistorialDTO backup = backupService.crearBackup(usuario, TipoBackup.MANUAL);
+
+            // Auditoría
+            auditService.registrar(
+                    "BACKUP",
+                    "CREAR_BACKUP",
+                    String.format("Creó backup manual: %s", backup.getNombreArchivo()),
+                    usuario,
+                    request.getRemoteAddr());
+
             return ResponseEntity.ok(Map.of(
-                "mensaje", "Backup creado exitosamente",
-                "backup", backup
-            ));
+                    "mensaje", "Backup creado exitosamente",
+                    "backup", backup));
         } catch (Exception e) {
             logger.error("Error al crear backup: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
@@ -111,22 +133,29 @@ public class BackupController {
     public ResponseEntity<?> restaurarBackup(
             @PathVariable Long id,
             @RequestBody Map<String, String> request,
-            Authentication auth) {
+            Authentication auth,
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         try {
             String confirmacion = request.get("confirmacion");
             if (!"RESTAURAR".equals(confirmacion)) {
                 return ResponseEntity.badRequest().body(Map.of(
-                    "error", "Debe escribir 'RESTAURAR' para confirmar"
-                ));
+                        "error", "Debe escribir 'RESTAURAR' para confirmar"));
             }
-            
+
             String usuario = auth.getName();
             backupService.restaurarBackup(id, usuario);
-            
+
+            // Auditoría
+            auditService.registrar(
+                    "BACKUP",
+                    "RESTAURAR_BACKUP",
+                    String.format("Restauró backup con ID: %d", id),
+                    usuario,
+                    httpRequest.getRemoteAddr());
+
             return ResponseEntity.ok(Map.of(
-                "mensaje", "Backup restaurado exitosamente",
-                "advertencia", "Se recomienda reiniciar la aplicación para aplicar todos los cambios"
-            ));
+                    "mensaje", "Backup restaurado exitosamente",
+                    "advertencia", "Se recomienda reiniciar la aplicación para aplicar todos los cambios"));
         } catch (Exception e) {
             logger.error("Error al restaurar backup: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
@@ -134,7 +163,8 @@ public class BackupController {
     }
 
     /**
-     * Obtiene información sobre el último backup de seguridad disponible para deshacer
+     * Obtiene información sobre el último backup de seguridad disponible para
+     * deshacer
      */
     @GetMapping("/undo-info")
     public ResponseEntity<?> getUndoInfo() {
@@ -144,9 +174,8 @@ public class BackupController {
                 return ResponseEntity.ok(Map.of("disponible", false));
             }
             return ResponseEntity.ok(Map.of(
-                "disponible", true,
-                "backup", backup
-            ));
+                    "disponible", true,
+                    "backup", backup));
         } catch (Exception e) {
             logger.error("Error al obtener info de undo: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
@@ -157,15 +186,22 @@ public class BackupController {
      * Deshace la última restauración (restaura el backup de seguridad)
      */
     @PostMapping("/undo")
-    public ResponseEntity<?> undoRestoration(Authentication auth) {
+    public ResponseEntity<?> undoRestoration(Authentication auth, jakarta.servlet.http.HttpServletRequest request) {
         try {
             String usuario = auth.getName();
             backupService.restaurarUltimoUndo(usuario);
-            
+
+            // Auditoría
+            auditService.registrar(
+                    "BACKUP",
+                    "UNDO_RESTAURACION",
+                    "Deshizo la última restauración de base de datos",
+                    usuario,
+                    request.getRemoteAddr());
+
             return ResponseEntity.ok(Map.of(
-                "mensaje", "Restauración deshecha exitosamente. El sistema ha vuelto al estado anterior.",
-                "advertencia", "Se recomienda recargar la página."
-            ));
+                    "mensaje", "Restauración deshecha exitosamente. El sistema ha vuelto al estado anterior.",
+                    "advertencia", "Se recomienda recargar la página."));
         } catch (Exception e) {
             logger.error("Error al deshacer restauración: {}", e.getMessage());
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));

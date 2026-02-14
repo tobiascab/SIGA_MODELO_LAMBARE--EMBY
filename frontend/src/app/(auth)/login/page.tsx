@@ -183,7 +183,7 @@ export default function LoginPage() {
 
                                 <div className="min-w-0">
                                     <h1 className="text-base font-black text-white leading-tight">
-                                        Cooperativa Lambaré
+                                        Cooperativa Multiactiva Lambaré Ltda.
                                     </h1>
                                     <div className="flex items-center gap-2 mt-0.5">
                                         <span className="text-xs font-black text-white/90 tracking-widest">SIGA</span>
@@ -309,7 +309,7 @@ export default function LoginPage() {
                                         <div className="h-40 w-40 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center shadow-2xl border-4 border-white/30 overflow-hidden relative">
                                             <Image
                                                 src="/logo-cooperativa.webp"
-                                                alt="Logo oficial de Cooperativa Multiactiva Lambaré Ltda"
+                                                alt="Logo oficial de Cooperativa Multiactiva Lambaré Ltda. Ltda"
                                                 width={144}
                                                 height={144}
                                                 priority
@@ -330,7 +330,7 @@ export default function LoginPage() {
                                             SIGA
                                         </p>
                                         <p className="text-emerald-100 text-lg font-bold">
-                                            Lambaré 2026
+                                            Lambaré - 2026
                                         </p>
                                     </div>
                                 </div>

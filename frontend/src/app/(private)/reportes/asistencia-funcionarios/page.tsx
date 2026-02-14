@@ -57,7 +57,7 @@ interface ReporteAsistencia {
     };
 }
 
-export default function ReporteAsistenciaFuncionariosPage() {
+export default function ReporteAsistenciaOperadoresPage() {
     const [operadores, setOperadores] = useState<Operador[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -205,12 +205,12 @@ export default function ReporteAsistenciaFuncionariosPage() {
 
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(18);
-        doc.text('COOPERATIVA REDUCTO LTDA', 42, 22);
+        doc.text('COOPERATIVA MULTIACTIVA LAMBARÉ LTDA.', 42, 22);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text('SIGA - Reporte de Asistencia', 42, 30);
         doc.setFontSize(8);
-        doc.text(`Fecha: ${fechaHora}`, pageWidth-14, 36, { align: 'right' });
+        doc.text(`Fecha: ${fechaHora}`, pageWidth - 14, 36, { align: 'right' });
 
         // Título
         doc.setTextColor(17, 94, 89);
@@ -223,7 +223,7 @@ export default function ReporteAsistenciaFuncionariosPage() {
 
         // Info operador
         doc.setFillColor(240, 253, 250);
-        doc.roundedRect(14, 64, pageWidth-28, 28, 3, 3, 'F');
+        doc.roundedRect(14, 64, pageWidth - 28, 28, 3, 3, 'F');
 
         doc.setTextColor(100, 116, 139);
         doc.setFontSize(8);
@@ -242,10 +242,10 @@ export default function ReporteAsistenciaFuncionariosPage() {
         const total = reporteDetalle.stats.total;
         const vyv = reporteDetalle.stats.vyv;
         const soloVoz = reporteDetalle.stats.soloVoz;
-        const porcVyV = total> 0 ? Math.round((vyv /total) * 100):0;
-        const porcSoloVoz = total> 0 ? Math.round((soloVoz /total) * 100):0;
+        const porcVyV = total > 0 ? Math.round((vyv / total) * 100) : 0;
+        const porcSoloVoz = total > 0 ? Math.round((soloVoz / total) * 100) : 0;
 
-        const statsX = pageWidth-115;
+        const statsX = pageWidth - 115;
         doc.setFillColor(13, 148, 136);
         doc.roundedRect(statsX, 68, 30, 20, 2, 2, 'F');
         doc.setTextColor(255, 255, 255);
@@ -318,20 +318,20 @@ export default function ReporteAsistenciaFuncionariosPage() {
 
         // Pie
         const finalY = (doc as any).lastAutoTable.finalY + 10;
-        if (finalY <pageHeight-35) {
+        if (finalY < pageHeight - 35) {
             doc.setFillColor(248, 250, 252);
-            doc.roundedRect(14, finalY, pageWidth-28, 18, 3, 3, 'F');
+            doc.roundedRect(14, finalY, pageWidth - 28, 18, 3, 3, 'F');
             doc.setFontSize(7);
             doc.setTextColor(100, 116, 139);
             doc.text('Documento generado por SIGA - Sistema Integral de Gestión de Asamblea', 20, finalY + 7);
             doc.text(`Generado el: ${fechaHora}`, 20, finalY + 13);
 
             doc.setFillColor(13, 148, 136);
-            doc.roundedRect(pageWidth-45, finalY + 2, 25, 14, 2, 2, 'F');
+            doc.roundedRect(pageWidth - 45, finalY + 2, 25, 14, 2, 2, 'F');
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
-            doc.text('SIGA', pageWidth-40, finalY + 11);
+            doc.text('SIGA', pageWidth - 40, finalY + 11);
         }
 
         doc.save(`reporte_asistencia_${selectedOperador.username}_${now.toISOString().slice(0, 10)}.pdf`);
@@ -466,14 +466,14 @@ export default function ReporteAsistenciaFuncionariosPage() {
                         <Loader2 className="h-10 w-10 text-teal-500 animate-spin mx-auto mb-4" />
                         <p className="text-slate-500 font-medium">Cargando operadores...</p>
                     </div>
-                ):filteredOperadores.length === 0 ? (
+                ) : filteredOperadores.length === 0 ? (
                     <div className="p-12 text-center">
                         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Users className="h-10 w-10 text-slate-300" />
                         </div>
                         <p className="text-slate-500 font-medium">No se encontraron operadores</p>
                     </div>
-                ):(
+                ) : (
                     <div className="divide-y divide-slate-100">
                         {filteredOperadores.map((operador) => (
                             <div key={operador.id}>
@@ -507,7 +507,7 @@ export default function ReporteAsistenciaFuncionariosPage() {
                                             </div>
                                             {selectedOperador?.id === operador.id ? (
                                                 <ChevronUp className="h-5 w-5 text-slate-400" />
-                                            ):(
+                                            ) : (
                                                 <ChevronDown className="h-5 w-5 text-slate-400" />
                                             )}
                                         </div>
@@ -528,7 +528,7 @@ export default function ReporteAsistenciaFuncionariosPage() {
                                                     <Loader2 className="h-8 w-8 text-teal-500 animate-spin mx-auto mb-2" />
                                                     <p className="text-slate-500 text-sm">Cargando detalle...</p>
                                                 </div>
-                                            ):reporteDetalle ? (
+                                            ) : reporteDetalle ? (
                                                 <div className="p-4 sm:p-6">
                                                     {/* Stats */}
                                                     <div className="grid grid-cols-3 gap-3 mb-6">
@@ -577,7 +577,7 @@ export default function ReporteAsistenciaFuncionariosPage() {
                                                                             <td className="px-2 py-2 text-center">
                                                                                 <span className={`px-2 py-1 rounded-lg text-xs font-bold ${asist.esVyV
                                                                                     ? 'bg-emerald-100 text-teal-500'
-                                                                                   :'bg-amber-100 text-amber-700'
+                                                                                    : 'bg-amber-100 text-amber-700'
                                                                                     }`}>
                                                                                     {asist.condicion}
                                                                                 </span>
@@ -589,7 +589,7 @@ export default function ReporteAsistenciaFuncionariosPage() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                            ):(
+                                            ) : (
                                                 <div className="p-8 text-center">
                                                     <p className="text-slate-500">No hay datos disponibles</p>
                                                 </div>

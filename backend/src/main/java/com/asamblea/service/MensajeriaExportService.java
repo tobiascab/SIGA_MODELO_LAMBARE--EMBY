@@ -126,11 +126,7 @@ public class MensajeriaExportService {
             SELECT numero_socio, cedula, nombre_completo, telefono
             FROM socios
             WHERE en_padron_actual = true
-              AND aporte_al_dia = true
-              AND solidaridad_al_dia = true
-              AND fondo_al_dia = true
-              AND incoop_al_dia = true
-              AND credito_al_dia = true
+              AND LOWER(habilitado_voz_voto) LIKE '%voto%'
             ORDER BY nombre_completo
         """;
         return jdbcTemplate.queryForList(sql);
@@ -214,13 +210,11 @@ public class MensajeriaExportService {
         
         Integer totalVyV = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM socios WHERE en_padron_actual = true " +
-            "AND aporte_al_dia = true AND solidaridad_al_dia = true AND fondo_al_dia = true " +
-            "AND incoop_al_dia = true AND credito_al_dia = true", Integer.class);
+            "AND LOWER(habilitado_voz_voto) LIKE '%voto%'", Integer.class);
         
         Integer conTelefono = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM socios WHERE en_padron_actual = true " +
-            "AND aporte_al_dia = true AND solidaridad_al_dia = true AND fondo_al_dia = true " +
-            "AND incoop_al_dia = true AND credito_al_dia = true " +
+            "AND LOWER(habilitado_voz_voto) LIKE '%voto%' " +
             "AND telefono IS NOT NULL AND telefono != '' AND telefono != 'Actualizar Nro' AND telefono LIKE '+595%'", 
             Integer.class);
         

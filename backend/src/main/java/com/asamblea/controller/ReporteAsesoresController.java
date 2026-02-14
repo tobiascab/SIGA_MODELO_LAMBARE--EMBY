@@ -26,6 +26,7 @@ public class ReporteAsesoresController {
     private final UsuarioRepository usuarioRepository;
     private final JdbcTemplate jdbcTemplate;
     private final ReporteExportService exportService;
+    private final com.asamblea.service.LogAuditoriaService auditService;
 
     // Constantes de metas
     private static final int META_MINIMA = 20;
@@ -40,9 +41,17 @@ public class ReporteAsesoresController {
      * Excluye: SUPER_ADMIN y socios específicos de prueba/sistema
      */
     @GetMapping
-    public ResponseEntity<?> getReporteAsesores(Authentication auth) {
+    public ResponseEntity<?> getReporteAsesores(Authentication auth, jakarta.servlet.http.HttpServletRequest request) {
         if (auth == null)
             return ResponseEntity.status(401).build();
+
+        // Auditoría
+        auditService.registrar(
+                "REPORTES",
+                "GENERAR_REPORTE_ASESORES",
+                "Generó reporte de cumplimiento de metas de asesores",
+                auth.getName(),
+                request.getRemoteAddr());
 
         // Obtener todos los usuarios activos, excluyendo SUPER_ADMIN y socios de
         // sistema
@@ -161,12 +170,21 @@ public class ReporteAsesoresController {
     @GetMapping("/pdf")
     public ResponseEntity<byte[]> exportarPdf(
             @RequestParam(required = false) String filtro,
-            Authentication auth) {
+            Authentication auth,
+            jakarta.servlet.http.HttpServletRequest request) {
         if (auth == null)
             return ResponseEntity.status(401).build();
 
+        // Auditoría
+        auditService.registrar(
+                "REPORTES",
+                "EXPORTAR_PDF_ASESORES",
+                "Exportó reporte de asesores en PDF (Filtro: " + (filtro != null ? filtro : "Ninguno") + ")",
+                auth.getName(),
+                request.getRemoteAddr());
+
         // Reutilizar la lógica del endpoint principal
-        ResponseEntity<?> response = getReporteAsesores(auth);
+        ResponseEntity<?> response = getReporteAsesores(auth, request);
         if (response.getStatusCode().isError()) {
             return ResponseEntity.status(response.getStatusCode()).build();
         }
@@ -271,11 +289,7 @@ public class ReporteAsesoresController {
                 INNER JOIN socios s ON asig.socio_id = s.id
                 LEFT JOIN sucursales suc ON s.id_sucursal = suc.id
                 WHERE la.user_id = ?
-                AND s.aporte_al_dia = true
-                AND s.solidaridad_al_dia = true
-                AND s.fondo_al_dia = true
-                AND s.incoop_al_dia = true
-                AND s.credito_al_dia = true
+                AND LOWER(s.habilitado_voz_voto) LIKE '%voto%'
                 ORDER BY asig.fecha_asignacion DESC
                 """;
 
@@ -286,16 +300,13 @@ public class ReporteAsesoresController {
                 SELECT s.numero_socio, s.cedula, s.nombre_completo,
                        COALESCE(suc.nombre, 'N/A') as sucursal,
                        asig.fecha_asignacion,
-                       s.aporte_al_dia, s.solidaridad_al_dia, s.fondo_al_dia,
-                       s.incoop_al_dia, s.credito_al_dia
+                       s.habilitado_voz_voto
                 FROM asignaciones_socios asig
                 INNER JOIN listas_asignacion la ON asig.lista_id = la.id
                 INNER JOIN socios s ON asig.socio_id = s.id
                 LEFT JOIN sucursales suc ON s.id_sucursal = suc.id
                 WHERE la.user_id = ?
-                AND NOT (s.aporte_al_dia = true AND s.solidaridad_al_dia = true
-                         AND s.fondo_al_dia = true AND s.incoop_al_dia = true
-                         AND s.credito_al_dia = true)
+                AND (LOWER(s.habilitado_voz_voto) NOT LIKE '%voto%' OR s.habilitado_voz_voto IS NULL)
                 ORDER BY asig.fecha_asignacion DESC
                 """;
 
@@ -316,6 +327,17 @@ public class ReporteAsesoresController {
                 sucursalUsuario,
                 sociosVyV,
                 sociosSoloVoz);
+
+        // Auditoría
+        auditService.registrar(
+                "REPORTES",
+                "EXPORTAR_PDF_USUARIO_DETALLE",
+                "Exportó detalle de socios asignados para el usuario: " + usuario.getNombreCompleto(),
+                auth.getName(),
+                ((jakarta.servlet.http.HttpServletRequest) org.springframework.web.context.request.RequestContextHolder
+                        .currentRequestAttributes()
+                        .resolveReference(org.springframework.web.context.request.RequestAttributes.REFERENCE_REQUEST))
+                        .getRemoteAddr());
 
         String filename = "reporte_" + usuario.getNombreCompleto().replaceAll("\\s+", "_") + ".pdf";
 

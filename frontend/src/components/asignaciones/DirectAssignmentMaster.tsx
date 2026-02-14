@@ -74,14 +74,14 @@ export default function DirectAssignmentMaster() {
     useEffect(() => {
         const timer = setTimeout(() => {
             const isNumeric = /^\d+$/.test(searchSocio);
-            const minLength = isNumeric ? 1:2;
+            const minLength = isNumeric ? 1 : 2;
 
-            if (searchSocio.length>= minLength) {
+            if (searchSocio.length >= minLength) {
                 performSearchSocio(searchSocio);
             } else if (searchSocio.length === 0) {
                 setSocioEncontrado(null);
             }
-        }, /^\d+$/.test(searchSocio) ? 100:300);
+        }, /^\d+$/.test(searchSocio) ? 100 : 300);
 
         return () => clearTimeout(timer);
     }, [searchSocio]);
@@ -124,7 +124,7 @@ export default function DirectAssignmentMaster() {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            if (Array.isArray(res.data) && res.data.length> 0) {
+            if (Array.isArray(res.data) && res.data.length > 0) {
                 setSocioEncontrado(res.data[0]);
             }
         } catch (error) {
@@ -164,7 +164,7 @@ export default function DirectAssignmentMaster() {
                                 <div class="flex justify-between items-center pt-2 mt-2 border-t border-red-200/50">
                                     <span class="text-slate-500 font-medium">Fecha/Hora:</span>
                                     <span class="font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
-                                        ${socioEncontrado.fechaAsignacion ? new Date(socioEncontrado.fechaAsignacion).toLocaleString():'N/A'}
+                                        ${socioEncontrado.fechaAsignacion ? new Date(socioEncontrado.fechaAsignacion).toLocaleString() : 'N/A'}
                                     </span>
                                 </div>
                             </div>
@@ -213,10 +213,10 @@ export default function DirectAssignmentMaster() {
             });
 
             // Actualizar contador visualmente
-            setSelectedTarget(prev => prev ? ({ ...prev, total: prev.total + 1 }):null);
+            setSelectedTarget(prev => prev ? ({ ...prev, total: prev.total + 1 }) : null);
 
             // Actualizar lista global también para cuando volvamos al paso 1
-            setResponsables(prev => prev.map(r => r.id === selectedTarget.id ? { ...r, total: r.total + 1 }:r));
+            setResponsables(prev => prev.map(r => r.id === selectedTarget.id ? { ...r, total: r.total + 1 } : r));
 
             // RESETEO RÁPIDO PARA SEGUIR ASIGNANDO
             setSocioEncontrado(null);
@@ -282,7 +282,7 @@ export default function DirectAssignmentMaster() {
                                             <span class="text-sm text-slate-600">Fecha/Hora</span>
                                         </div>
                                         <span class="font-mono font-bold text-slate-800 text-xs bg-white px-2 py-1 rounded-lg border border-slate-200">
-                                            ${data.fechaAsignacion ? new Date(data.fechaAsignacion).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }):'N/A'}
+                                            ${data.fechaAsignacion ? new Date(data.fechaAsignacion).toLocaleString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                                         </span>
                                     </div>
                                 </div>
@@ -320,14 +320,14 @@ export default function DirectAssignmentMaster() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto p-4 min-h-screen">
+        <div className="max-w-4xl mx-auto p-2 sm:p-4 min-h-screen">
 
             {/* HEADER */}
-            <header className="mb-8 text-center md:text-left">
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            <header className="mb-4 sm:mb-8 text-center md:text-left">
+                <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">
                     Asignación <span className="text-emerald-500">Admin</span>
                 </h1>
-                <p className="text-slate-500 font-medium">Sistema rápido de distribución de socios.</p>
+                <p className="text-xs sm:text-base text-slate-500 font-medium">Sistema rápido de distribución de socios.</p>
             </header>
 
             {/* ERROR DE ESTADO (Por seguridad) */}
@@ -339,16 +339,16 @@ export default function DirectAssignmentMaster() {
                     <div className="bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
 
                         {/* Buscador de Responsable Header */}
-                        <div className="p-6 bg-slate-50 border-b border-slate-100">
-                            <label className="block text-sm font-bold text-emerald-500 uppercase tracking-wider mb-2">
+                        <div className="p-3 sm:p-6 bg-slate-50 border-b border-slate-100">
+                            <label className="block text-xs sm:text-sm font-bold text-emerald-500 uppercase tracking-wider mb-2">
                                 Paso 1: Selecciona Responsable
                             </label>
                             <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
                                 <input
                                     type="text"
                                     placeholder="Buscar por Nombre, Usuario..."
-                                    className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-xl text-lg font-bold text-slate-800 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none transition-all"
+                                    className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 bg-white border border-slate-200 rounded-xl text-sm sm:text-lg font-bold text-slate-800 focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none transition-all"
                                     value={searchResponsable}
                                     onChange={e => setSearchResponsable(e.target.value)}
                                     autoFocus
@@ -362,31 +362,31 @@ export default function DirectAssignmentMaster() {
                                 <div className="p-8 text-center text-slate-400">
                                     No se encontraron responsables.
                                 </div>
-                            ):(
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 sm:gap-2">
                                     {filteredResponsables.map((resp) => (
                                         <button
                                             key={resp.id}
                                             onClick={() => selectResponsable(resp)}
-                                            className="flex items-center p-4 bg-white hover:bg-emerald-50 border border-transparent hover:border-emerald-200 rounded-xl transition-all group text-left"
+                                            className="flex items-center p-3 sm:p-4 bg-white hover:bg-emerald-50 border border-transparent hover:border-emerald-200 rounded-xl transition-all group text-left"
                                         >
-                                            <div className="h-12 w-12 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-xl group-hover:bg-emerald-500 group-hover:text-white transition-colors mr-4 shrink-0">
+                                            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-base sm:text-xl group-hover:bg-emerald-500 group-hover:text-white transition-colors mr-3 sm:mr-4 shrink-0">
                                                 {resp.responsable.charAt(0)}
                                             </div>
-                                            <div>
-                                                <div className="font-bold text-slate-800 text-lg leading-tight group-hover:text-teal-500">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-bold text-slate-800 text-sm sm:text-lg leading-tight group-hover:text-teal-500 truncate">
                                                     {resp.responsable}
                                                 </div>
-                                                <div className="text-sm text-slate-400 flex items-center gap-2">
-                                                    <UserCircle2 className="h-3 w-3" />
-                                                    {resp.responsableUser}
+                                                <div className="text-xs sm:text-sm text-slate-400 flex items-center gap-1.5 truncate">
+                                                    <UserCircle2 className="h-3 w-3 shrink-0" />
+                                                    <span className="truncate">{resp.responsableUser}</span>
                                                 </div>
                                             </div>
-                                            <div className="ml-auto flex flex-col items-end">
+                                            <div className="ml-auto flex flex-col items-end shrink-0">
                                                 <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-xs font-bold mb-1">
                                                     {resp.total}
                                                 </span>
-                                                <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-emerald-500" />
+                                                <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300 group-hover:text-emerald-500" />
                                             </div>
                                         </button>
                                     ))}
@@ -402,44 +402,45 @@ export default function DirectAssignmentMaster() {
                 <div className="animate-in slide-in-from-right duration-300">
 
                     {/* BARRA SUPERIOR CON RESPONSABLE SELECCIONADO */}
-                    <div className="flex items-center justify-between bg-slate-900 text-white p-4 rounded-t-2xl shadow-lg">
-                        <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between bg-slate-900 text-white p-3 sm:p-4 rounded-t-2xl shadow-lg">
+                        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
                             <button
                                 onClick={() => setStep(1)}
-                                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors shrink-0"
                                 title="Cambiar Responsable"
                             >
-                                <ArrowLeft className="h-6 w-6" />
+                                <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" />
                             </button>
-                            <div>
-                                <div className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
-                                    Asignando socios a:
+                            <div className="min-w-0">
+                                <div className="text-[9px] sm:text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
+                                    Asignando a:
                                 </div>
-                                <div className="text-xl font-bold flex items-center gap-2">
-                                    {selectedTarget.responsable}
-                                    <span className="bg-white/10 text-xs px-2 py-0.5 rounded font-mono text-slate-300">
+                                <div className="text-sm sm:text-xl font-bold flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                                    <span className="truncate">{selectedTarget.responsable}</span>
+                                    <span className="bg-white/10 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded font-mono text-slate-300 hidden sm:inline">
                                         {selectedTarget.responsableUser}
                                     </span>
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-emerald-500 px-4 py-2 rounded-lg font-bold">
-                            Total: {selectedTarget.total}
+                        <div className="bg-emerald-500 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg font-bold text-xs sm:text-base shrink-0 ml-2">
+                            {selectedTarget.total}
                         </div>
                     </div>
 
-                    <div className="bg-white border-x border-b border-slate-200 shadow-xl rounded-b-2xl p-6 md:p-10 space-y-8 min-h-[400px]">
+                    <div className="bg-white border-x border-b border-slate-200 shadow-xl rounded-b-2xl p-3 sm:p-6 md:p-10 space-y-4 sm:space-y-8 min-h-[300px] sm:min-h-[400px]">
 
-                        {/* Buscador de SOCIO GIGANTE */}
+                        {/* Buscador de SOCIO */}
                         <div className="relative">
-                            <div className="text-sm font-bold text-slate-400 uppercase mb-2">Paso 2: Buscar Socio</div>
+                            <div className="text-xs sm:text-sm font-bold text-slate-400 uppercase mb-1.5 sm:mb-2">Paso 2: Buscar Socio</div>
                             <div className="relative">
-                                <Search className={`absolute left-5 top-1/2 -translate-y-1/2 h-8 w-8 transition-colors ${searchingSocio ? 'text-emerald-500 animate-pulse':'text-slate-300'}`} />
+                                <Search className={`absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-8 sm:w-8 transition-colors ${searchingSocio ? 'text-emerald-500 animate-pulse' : 'text-slate-300'}`} />
                                 <input
                                     ref={socioInputRef}
                                     type="text"
-                                    placeholder="Ingresa Cédula o N° Socio..."
-                                    className="w-full pl-16 pr-4 py-6 bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white rounded-2xl text-3xl md:text-4xl font-black text-slate-800 placeholder:text-slate-300 outline-none transition-all shadow-inner"
+                                    inputMode="numeric"
+                                    placeholder="Cédula o N° Socio..."
+                                    className="w-full pl-10 sm:pl-16 pr-10 sm:pr-4 py-3.5 sm:py-6 bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white rounded-xl sm:rounded-2xl text-xl sm:text-3xl md:text-4xl font-black text-slate-800 placeholder:text-slate-300 outline-none transition-all shadow-inner"
                                     value={searchSocio}
                                     onChange={e => setSearchSocio(e.target.value)}
                                     onKeyDown={(e) => {
@@ -451,13 +452,13 @@ export default function DirectAssignmentMaster() {
                                 {searchSocio && (
                                     <button
                                         onClick={() => { setSearchSocio(""); setSocioEncontrado(null); socioInputRef.current?.focus(); }}
-                                        className="absolute right-5 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-200 rounded-full text-slate-400"
+                                        className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 hover:bg-slate-200 rounded-full text-slate-400"
                                     >
-                                        <X className="h-6 w-6" />
+                                        <X className="h-5 w-5 sm:h-6 sm:w-6" />
                                     </button>
                                 )}
                             </div>
-                            <p className="mt-2 text-slate-400 text-sm">
+                            <p className="mt-1.5 sm:mt-2 text-slate-400 text-xs sm:text-sm hidden sm:block">
                                 Presiona <kbd className="bg-slate-100 border border-slate-300 rounded px-1 text-xs">ENTER</kbd> para búsqueda inmediata.
                             </p>
                         </div>
@@ -471,7 +472,7 @@ export default function DirectAssignmentMaster() {
                                 </div>
                             )}
 
-                            {!socioEncontrado && !searchingSocio && searchSocio.length> 2 && (
+                            {!socioEncontrado && !searchingSocio && searchSocio.length > 2 && (
                                 <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
                                     <div className="text-4xl mb-2">🤷‍♂️</div>
                                     <p className="text-slate-500 font-bold">No se encontró al socio</p>
@@ -480,41 +481,41 @@ export default function DirectAssignmentMaster() {
                             )}
 
                             {socioEncontrado && (
-                                <div className={`rounded-2xl border p-6 md:p-8 animate-in zoom-in-95 duration-200 ${socioEncontrado.yaAsignado ? 'bg-red-50 border-red-200':'bg-emerald-50/50 border-emerald-100'}`}>
-                                    <div className="flex flex-col md:flex-row items-center gap-6">
+                                <div className={`rounded-xl sm:rounded-2xl border p-3 sm:p-6 md:p-8 animate-in zoom-in-95 duration-200 ${socioEncontrado.yaAsignado ? 'bg-red-50 border-red-200' : 'bg-emerald-50/50 border-emerald-100'}`}>
+                                    <div className="flex flex-col md:flex-row items-center gap-3 sm:gap-6">
 
                                         {/* Datos Socio */}
-                                        <div className="flex-1 text-center md:text-left">
+                                        <div className="flex-1 text-center md:text-left min-w-0 w-full">
                                             {socioEncontrado.yaAsignado ? (
-                                                <div className="inline-block bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded mb-2 uppercase animate-pulse">
+                                                <div className="inline-block bg-red-100 text-red-700 text-[10px] sm:text-xs font-bold px-2 py-1 rounded mb-1.5 sm:mb-2 uppercase animate-pulse">
                                                     ⚠️ YA ASIGNADO
                                                 </div>
-                                            ):(
-                                                <div className="inline-block bg-emerald-100 text-teal-500 text-xs font-bold px-2 py-1 rounded mb-2 uppercase">
+                                            ) : (
+                                                <div className="inline-block bg-emerald-100 text-teal-500 text-[10px] sm:text-xs font-bold px-2 py-1 rounded mb-1.5 sm:mb-2 uppercase">
                                                     Socio Encontrado
                                                 </div>
                                             )}
 
-                                            <h3 className="text-3xl font-black text-slate-800 mb-2">
+                                            <h3 className="text-lg sm:text-3xl font-black text-slate-800 mb-1 sm:mb-2 truncate">
                                                 {socioEncontrado.nombreCompleto}
                                             </h3>
-                                            <div className="flex items-center justify-center md:justify-start gap-4 text-slate-600 font-medium">
+                                            <div className="flex items-center justify-center md:justify-start gap-2 sm:gap-4 text-xs sm:text-base text-slate-600 font-medium">
                                                 <span>CI: <strong className="text-slate-900">{socioEncontrado.cedula}</strong></span>
                                                 <span>•</span>
-                                                <span>Socio N°: <strong className="text-slate-900">{socioEncontrado.numeroSocio}</strong></span>
+                                                <span>N°: <strong className="text-slate-900">{socioEncontrado.numeroSocio}</strong></span>
                                             </div>
 
                                             {/* ALERTA DE YA ASIGNADO */}
                                             {socioEncontrado.yaAsignado && (
-                                                <div className="mt-4 bg-white/80 p-4 rounded-xl border border-red-100 text-red-700 shadow-sm">
-                                                    <div className="font-bold flex items-center gap-2 mb-2 text-red-800">
-                                                        <X className="h-5 w-5" />
+                                                <div className="mt-2 sm:mt-4 bg-white/80 p-2.5 sm:p-4 rounded-lg sm:rounded-xl border border-red-100 text-red-700 shadow-sm">
+                                                    <div className="font-bold flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-2 text-red-800 text-xs sm:text-base">
+                                                        <X className="h-4 w-4 sm:h-5 sm:w-5" />
                                                         No se puede re-asignar
                                                     </div>
-                                                    <div className="text-sm space-y-1">
-                                                        <div>👤 Registrado por: <strong className="text-slate-900">{socioEncontrado.asignadoAUsuario}</strong></div>
-                                                        <div>📋 Lista: <strong>{socioEncontrado.asignadoA}</strong></div>
-                                                        <div>🕒 Fecha: <span className="font-mono text-red-600">{socioEncontrado.fechaAsignacion ? new Date(socioEncontrado.fechaAsignacion).toLocaleString():'N/A'}</span></div>
+                                                    <div className="text-[11px] sm:text-sm space-y-0.5 sm:space-y-1">
+                                                        <div>👤 <strong className="text-slate-900">{socioEncontrado.asignadoAUsuario}</strong></div>
+                                                        <div>📋 <strong>{socioEncontrado.asignadoA}</strong></div>
+                                                        <div>🕒 <span className="font-mono text-red-600">{socioEncontrado.fechaAsignacion ? new Date(socioEncontrado.fechaAsignacion).toLocaleString() : 'N/A'}</span></div>
                                                     </div>
                                                 </div>
                                             )}
@@ -524,16 +525,16 @@ export default function DirectAssignmentMaster() {
                                         <div className="shrink-0 w-full md:w-auto">
                                             <button
                                                 onClick={handleAssign}
-                                                disabled={loading} // SE PERMITE CLIC AUNQUE ESTÉ ASIGNADO PARA VER EL DETALLE
-                                                className={`w-full md:w-auto text-xl font-bold py-4 px-8 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${socioEncontrado.yaAsignado
+                                                disabled={loading}
+                                                className={`w-full md:w-auto text-sm sm:text-xl font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 ${socioEncontrado.yaAsignado
                                                     ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/30'
-                                                   :'bg-slate-900 hover:bg-emerald-500 text-white hover:shadow-emerald-500/30 active:scale-95'
+                                                    : 'bg-slate-900 hover:bg-emerald-500 text-white hover:shadow-emerald-500/30 active:scale-95'
                                                     }`}
                                             >
-                                                {loading ? <Loader2 className="animate-spin" />:(
+                                                {loading ? <Loader2 className="animate-spin" /> : (
                                                     <>
-                                                        {socioEncontrado.yaAsignado ? "ASIGNAR (Verificar)":"ASIGNAR"}
-                                                        {socioEncontrado.yaAsignado ? <ShieldAlert className="h-6 w-6" />:<Check className="h-6 w-6" />}
+                                                        {socioEncontrado.yaAsignado ? "VERIFICAR" : "ASIGNAR"}
+                                                        {socioEncontrado.yaAsignado ? <ShieldAlert className="h-5 w-5 sm:h-6 sm:w-6" /> : <Check className="h-5 w-5 sm:h-6 sm:w-6" />}
                                                     </>
                                                 )}
                                             </button>

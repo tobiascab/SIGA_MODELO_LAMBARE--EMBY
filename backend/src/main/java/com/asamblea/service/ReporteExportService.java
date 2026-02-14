@@ -72,8 +72,8 @@ public class ReporteExportService {
             // Usar Spring ClassPathResource que funciona mejor en Docker/JAR
             // Prioridad: JPG (sin transparencia) funciona mejor con OpenPDF
             String[] paths = {
-                    "images/logo_reducto_flat.jpg",
-                    "images/logo_reducto_oficial.png",
+                    "images/logo.png",
+                    "images/logo.png",
                     "images/logo_cooperativa.png"
             };
 
@@ -125,7 +125,7 @@ public class ReporteExportService {
         titleCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
         titleCell.setPaddingLeft(12);
 
-        titleCell.addElement(new Paragraph("COOPERATIVA REDUCTO LTDA.", FONT_TITLE_COOP));
+        titleCell.addElement(new Paragraph("COOPERATIVA MULTIACTIVA LAMBARÉ LTDA.", FONT_TITLE_COOP));
         titleCell.addElement(new Paragraph("de Microfinanza", FONT_SUBTITLE_COOP));
         titleCell.addElement(new Paragraph("Sistema Integrado de Gestión de Asambleas", FONT_SYSTEM));
         headerTable.addCell(titleCell);
@@ -198,7 +198,7 @@ public class ReporteExportService {
         writer.setPageEvent(new com.lowagie.text.pdf.PdfPageEventHelper() {
             public void onEndPage(PdfWriter writer, Document document) {
                 PdfPCell cell = new PdfPCell(new Phrase(
-                        "Página " + document.getPageNumber() + " - Generado por Sistema SIGA • Cooperativa Reducto",
+                        "Página " + document.getPageNumber() + " - Generado por Sistema SIGA • Cooperativa Multiactiva Lambaré Ltda.",
                         new Font(Font.HELVETICA, 8, Font.NORMAL, Color.GRAY)));
                 cell.setBorder(0);
                 cell.setHorizontalAlignment(Element.ALIGN_CENTER);
@@ -794,27 +794,11 @@ public class ReporteExportService {
                             Element.ALIGN_LEFT);
                     addCell(tableSV, String.valueOf(socio.get("sucursal")), FONT_BODY, bg, Element.ALIGN_CENTER);
 
-                    // Mostrar qué está en mora
-                    StringBuilder mora = new StringBuilder();
-                    Boolean aporte = (Boolean) socio.get("aporte_al_dia");
-                    Boolean solid = (Boolean) socio.get("solidaridad_al_dia");
-                    Boolean fondo = (Boolean) socio.get("fondo_al_dia");
-                    Boolean incoop = (Boolean) socio.get("incoop_al_dia");
-                    Boolean credito = (Boolean) socio.get("credito_al_dia");
-
-                    if (aporte != null && !aporte)
-                        mora.append("AP ");
-                    if (solid != null && !solid)
-                        mora.append("SO ");
-                    if (fondo != null && !fondo)
-                        mora.append("FO ");
-                    if (incoop != null && !incoop)
-                        mora.append("IN ");
-                    if (credito != null && !credito)
-                        mora.append("CR ");
+                    // Mostrar estado habilitado_voz_voto
+                    String hvv = socio.get("habilitado_voz_voto") != null ? String.valueOf(socio.get("habilitado_voz_voto")) : "Sin datos";
 
                     Font fontMora = new Font(Font.HELVETICA, 8, Font.BOLD, new Color(239, 68, 68));
-                    addCell(tableSV, mora.toString().trim(), fontMora, bg, Element.ALIGN_CENTER);
+                    addCell(tableSV, hvv, fontMora, bg, Element.ALIGN_CENTER);
                     alternate = !alternate;
                 }
                 document.add(tableSV);
@@ -1284,27 +1268,11 @@ public class ReporteExportService {
                 addCell(table, String.valueOf(socio.get("sucursal")), FONT_BODY, bg, Element.ALIGN_CENTER);
 
                 if (!isVyV) {
-                    // Mostrar qué está en mora
-                    StringBuilder mora = new StringBuilder();
-                    Object aporte = socio.get("aporte_al_dia");
-                    Object solid = socio.get("solidaridad_al_dia");
-                    Object fondo = socio.get("fondo_al_dia");
-                    Object incoop = socio.get("incoop_al_dia");
-                    Object credito = socio.get("credito_al_dia");
-
-                    if (aporte != null && !Boolean.TRUE.equals(aporte) && !Integer.valueOf(1).equals(aporte))
-                        mora.append("AP ");
-                    if (solid != null && !Boolean.TRUE.equals(solid) && !Integer.valueOf(1).equals(solid))
-                        mora.append("SO ");
-                    if (fondo != null && !Boolean.TRUE.equals(fondo) && !Integer.valueOf(1).equals(fondo))
-                        mora.append("FO ");
-                    if (incoop != null && !Boolean.TRUE.equals(incoop) && !Integer.valueOf(1).equals(incoop))
-                        mora.append("IN ");
-                    if (credito != null && !Boolean.TRUE.equals(credito) && !Integer.valueOf(1).equals(credito))
-                        mora.append("CR ");
+                    // Mostrar estado habilitado_voz_voto
+                    String hvv = socio.get("habilitado_voz_voto") != null ? String.valueOf(socio.get("habilitado_voz_voto")) : "Sin datos";
 
                     Font fontMora = new Font(Font.HELVETICA, 8, Font.BOLD, new Color(239, 68, 68));
-                    addCell(table, mora.toString().trim(), fontMora, bg, Element.ALIGN_CENTER);
+                    addCell(table, hvv, fontMora, bg, Element.ALIGN_CENTER);
                 }
 
                 alternate = !alternate;
@@ -1487,24 +1455,10 @@ public class ReporteExportService {
                     Font fontVyV = new Font(Font.HELVETICA, 9, Font.BOLD, new Color(16, 185, 129));
                     addCell(table, "VOZ Y VOTO", fontVyV, bg, Element.ALIGN_CENTER);
                 } else {
-                    // Mostrar qué está en mora
+                    // Mostrar estado habilitado_voz_voto
                     StringBuilder mora = new StringBuilder("SOLO VOZ: ");
-                    Object aporte = socio.get("aporte_al_dia");
-                    Object solid = socio.get("solidaridad_al_dia");
-                    Object fondo = socio.get("fondo_al_dia");
-                    Object incoop = socio.get("incoop_al_dia");
-                    Object credito = socio.get("credito_al_dia");
-
-                    if (aporte != null && !Boolean.TRUE.equals(aporte) && !Integer.valueOf(1).equals(aporte))
-                        mora.append("AP ");
-                    if (solid != null && !Boolean.TRUE.equals(solid) && !Integer.valueOf(1).equals(solid))
-                        mora.append("SO ");
-                    if (fondo != null && !Boolean.TRUE.equals(fondo) && !Integer.valueOf(1).equals(fondo))
-                        mora.append("FO ");
-                    if (incoop != null && !Boolean.TRUE.equals(incoop) && !Integer.valueOf(1).equals(incoop))
-                        mora.append("IN ");
-                    if (credito != null && !Boolean.TRUE.equals(credito) && !Integer.valueOf(1).equals(credito))
-                        mora.append("CR ");
+                    String hvv = socio.get("habilitado_voz_voto") != null ? String.valueOf(socio.get("habilitado_voz_voto")) : "Sin datos";
+                    mora.append(hvv);
 
                     Font fontMora = new Font(Font.HELVETICA, 8, Font.BOLD, new Color(245, 158, 11));
                     addCell(table, mora.toString().trim(), fontMora, bg, Element.ALIGN_CENTER);

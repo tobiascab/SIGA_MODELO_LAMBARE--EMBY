@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
     Clock, Users, UserCheck, Target, TrendingUp, Activity,
     Bell, Zap, MapPin, RefreshCw, CheckCircle2, Award, Crown, Medal,
-    Building2, BarChart3, PieChart as PieIcon, AlertTriangle, Shield
+    Building2, BarChart3, PieChart as PieIcon, AlertTriangle, Shield, MessageCircle, Phone
 } from "lucide-react";
 import {
     XAxis, YAxis, CartesianGrid, Tooltip,
@@ -21,6 +21,15 @@ interface Asistencia {
     vozVoto: boolean;
     fechaHora: string;
     sucursal?: string;
+    // Campos extendidos
+    telefono?: string;
+    email?: string;
+    direccion?: string;
+    barrio?: string;
+    ciudad?: string;
+    profesion?: string;
+    ocupacion?: string;
+    edad?: string;
 }
 
 interface Stats {
@@ -73,7 +82,16 @@ interface RegistrosPorSucursal {
     totalRegistros: number;
     conVozYVoto: number;
     soloVoz: number;
+    soloVoz: number;
 }
+
+// Helper para WhatsApp
+const getWhatsAppLink = (phone: string | null) => {
+    if (!phone) return undefined;
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone) return undefined;
+    return `https://wa.me/${cleanPhone}`;
+};
 
 export default function DashboardEnVivoPage() {
     const [stats, setStats] = useState<Stats | null>(null);
@@ -92,7 +110,7 @@ export default function DashboardEnVivoPage() {
     const [registrosSoloVoz, setRegistrosSoloVoz] = useState(0);
     const [registrosPorSucursal, setRegistrosPorSucursal] = useState<RegistrosPorSucursal[]>([]);
 
-    // METAS DATA (Asesores vs Funcionarios)
+    // METAS DATA (Asesores vs Operadores)
     const [metasData, setMetasData] = useState<{
         meta: number;
         registradosVozYVoto: number;
@@ -124,14 +142,26 @@ export default function DashboardEnVivoPage() {
             const headers = { Authorization: `Bearer ${token}` };
 
             const [statsRes, asistenciasRes, rankingRes, sucursalesRes, metasRes] = await Promise.all([
-                axios.get("/api/socios/estadisticas", { headers }),
-                axios.get("/api/asistencia/hoy", { headers }),
-                axios.get("/api/asistencia/ranking-operadores", { headers }),
-                axios.get("/api/socios/estadisticas/por-sucursal", { headers }),
+                axios.get("/api/socios/estadisticas", { headers }).catch(e => { console.error("Error stats", e); return { data: null }; }),
+                axios.get("/api/asistencia/hoy", { headers }).catch(e => { console.error("Error asistencias", e); return { data: [] }; }),
+                axios.get("/api/asistencia/ranking-operadores", { headers }).catch(e => { console.error("Error ranking", e); return { data: [] }; }),
+                axios.get("/api/socios/estadisticas/por-sucursal", { headers }).catch(e => { console.error("Error sucursales", e); return { data: [] }; }),
                 axios.get("/api/dashboard/metas", { headers }).catch(() => ({ data: null })),
             ]);
 
-            setStats(statsRes.data);
+            if (statsRes.data) {
+                setStats(statsRes.data);
+            } else {
+                // Fallback to avoid infinite loading if stats fail
+                setStats({
+                    totalPadron: 0,
+                    conVozYVoto: 0,
+                    soloVoz: 0,
+                    presentes: 0,
+                    presentesVyV: 0
+                });
+            }
+
             setRankingOperadores(rankingRes.data || []);
             setSucursalesStats(sucursalesRes.data || []);
             if (metasRes.data) setMetasData(metasRes.data);
@@ -181,12 +211,12 @@ export default function DashboardEnVivoPage() {
                     sucursalMap[suc].soloVoz++;
                 }
             });
-            const regsPorSuc = Object.values(sucursalMap).sort((a, b) => b.totalRegistros-a.totalRegistros);
+            const regsPorSuc = Object.values(sucursalMap).sort((a, b) => b.totalRegistros - a.totalRegistros);
             setRegistrosPorSucursal(regsPorSuc);
             // =====================================================
 
-            const quorum = Math.floor(statsRes.data.totalPadron /2) + 1;
-            if (statsRes.data.presentes>= quorum && !quorumReached) {
+            const quorum = Math.floor(statsRes.data.totalPadron / 2) + 1;
+            if (statsRes.data.presentes >= quorum && !quorumReached) {
                 setQuorumReached(true);
             }
         } catch (error) {
@@ -216,11 +246,11 @@ export default function DashboardEnVivoPage() {
         );
     }
 
-    const quorumNecesario = Math.floor(stats.totalPadron /2) + 1;
-    const faltanParaQuorum = Math.max(0, quorumNecesario-stats.presentes);
-    const porcentajeQuorum = Math.min((stats.presentes /quorumNecesario) * 100, 100);
-    const porcentajeAsistencia = stats.totalPadron> 0 ? (stats.presentes /stats.totalPadron) * 100:0;
-    const presentesSoloVoz = stats.presentes-stats.presentesVyV;
+    const quorumNecesario = Math.floor(stats.totalPadron / 2) + 1;
+    const faltanParaQuorum = Math.max(0, quorumNecesario - stats.presentes);
+    const porcentajeQuorum = Math.min((stats.presentes / quorumNecesario) * 100, 100);
+    const porcentajeAsistencia = stats.totalPadron > 0 ? (stats.presentes / stats.totalPadron) * 100 : 0;
+    const presentesSoloVoz = stats.presentes - stats.presentesVyV;
 
     const distribucionPresentes = [
         { name: 'Con V&V', value: stats.presentesVyV, color: '#10b981' },
@@ -233,13 +263,13 @@ export default function DashboardEnVivoPage() {
     ];
 
     const topSucursales = [...sucursalesStats]
-        .sort((a, b) => b.padron-a.padron)
+        .sort((a, b) => b.padron - a.padron)
         .slice(0, 6)
         .map(s => ({
             name: s.sucursal?.substring(0, 12) || 'N/A',
             padron: s.padron,
             vyv: s.vozVoto,
-            soloVoz: s.soloVoz || (s.presentes-s.vozVoto),
+            soloVoz: s.soloVoz || (s.presentes - s.vozVoto),
             presentes: s.presentes || 0,
         }));
 
@@ -263,11 +293,11 @@ export default function DashboardEnVivoPage() {
                             initial={{ opacity: 0, y: -50, scale: 0.9 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -50, scale: 0.9 }}
-                            className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 text-white px-10 py-5 rounded-3xl shadow-2xl shadow-emerald-500/30 flex items-center gap-4 border border-white/20"
+                            className="fixed top-2 left-2 right-2 sm:top-6 sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2 z-50 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 text-white px-4 py-3 sm:px-10 sm:py-5 rounded-2xl sm:rounded-3xl shadow-2xl shadow-emerald-500/30 flex items-center gap-2 sm:gap-4 border border-white/20"
                         >
-                            <CheckCircle2 className="h-7 w-7" />
-                            <span className="font-bold text-xl tracking-tight">¡QUÓRUM ALCANZADO!</span>
-                            <Zap className="h-7 w-7 animate-pulse" />
+                            <CheckCircle2 className="h-5 w-5 sm:h-7 sm:w-7" />
+                            <span className="font-bold text-sm sm:text-xl tracking-tight">¡QUÓRUM ALCANZADO!</span>
+                            <Zap className="h-5 w-5 sm:h-7 sm:w-7 animate-pulse" />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -276,15 +306,15 @@ export default function DashboardEnVivoPage() {
                 <motion.header
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
+                    className="mb-4 sm:mb-8"
                 >
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                        <div className="flex items-center gap-5">
-                            <div className="p-4 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl shadow-xl shadow-teal-500/30">
-                                <Activity className="h-8 w-8 text-white" />
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-6">
+                        <div className="flex items-center gap-3 sm:gap-5">
+                            <div className="p-2 sm:p-4 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-xl sm:rounded-2xl shadow-xl shadow-teal-500/30">
+                                <Activity className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-3xl lg:text-4xl font-black bg-gradient-to-r from-slate-800 via-slate-700 to-teal-500 bg-clip-text text-transparent tracking-tight">
+                                <h1 className="text-xl sm:text-3xl lg:text-4xl font-black bg-gradient-to-r from-slate-800 via-slate-700 to-teal-500 bg-clip-text text-transparent tracking-tight">
                                     Centro de Monitoreo
                                 </h1>
                                 <p className="text-slate-500 text-sm flex items-center gap-2 mt-1 font-medium">
@@ -323,26 +353,26 @@ export default function DashboardEnVivoPage() {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="mb-8 relative"
+                        className="mb-4 sm:mb-8 relative"
                     >
-                        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-[2rem] p-4 md:p-8 text-white shadow-2xl shadow-slate-900/50 border border-slate-700/50 relative overflow-hidden">
+                        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl sm:rounded-[2rem] p-3 sm:p-4 md:p-8 text-white shadow-2xl shadow-slate-900/50 border border-slate-700/50 relative overflow-hidden">
                             {/* Decorative elements */}
                             <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-teal-500/10 to-emerald-500/10 rounded-full blur-3xl" />
                             <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-full blur-3xl" />
 
                             <div className="relative z-10">
                                 {/* Header */}
-                                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8 gap-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-4 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl shadow-xl shadow-emerald-500/30">
-                                            <Target className="h-8 w-8 text-white" />
+                                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4 sm:mb-8 gap-3 sm:gap-4">
+                                    <div className="flex items-center gap-3 sm:gap-4">
+                                        <div className="p-2 sm:p-4 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl sm:rounded-2xl shadow-xl shadow-emerald-500/30">
+                                            <Target className="h-5 w-5 sm:h-8 sm:w-8 text-white" />
                                         </div>
                                         <div>
-                                            <h2 className="text-2xl lg:text-3xl font-black tracking-tight">Progreso de Metas</h2>
-                                            <p className="text-slate-400 text-sm">Registros de Voz y Voto hacia la meta global</p>
+                                            <h2 className="text-lg sm:text-2xl lg:text-3xl font-black tracking-tight">Progreso de Metas</h2>
+                                            <p className="text-slate-400 text-xs hidden sm:block">Registros de Voz y Voto hacia la meta global</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3 bg-white/5 rounded-2xl px-6 py-3 border border-white/10">
+                                    <div className="flex items-center gap-3 bg-white/5 rounded-xl sm:rounded-2xl px-3 py-2 sm:px-6 sm:py-3 border border-white/10">
                                         <div className="text-right">
                                             <p className="text-2xl md:text-4xl lg:text-5xl font-black text-emerald-400">{metasData.registradosVozYVoto}</p>
                                             <p className="text-xs text-slate-400 uppercase tracking-widest">de {metasData.meta} objetivo</p>
@@ -351,12 +381,12 @@ export default function DashboardEnVivoPage() {
                                 </div>
 
                                 {/* Main Progress Bar */}
-                                <div className="mb-8">
-                                    <div className="flex justify-between mb-3">
-                                        <span className="text-sm font-bold text-slate-300">Meta Global</span>
-                                        <span className="text-2xl font-black text-emerald-400">{metasData.porcentajeMeta.toFixed(1)}%</span>
+                                <div className="mb-4 sm:mb-8">
+                                    <div className="flex justify-between mb-2 sm:mb-3">
+                                        <span className="text-xs sm:text-sm font-bold text-slate-300">Meta Global</span>
+                                        <span className="text-lg sm:text-2xl font-black text-emerald-400">{metasData.porcentajeMeta.toFixed(1)}%</span>
                                     </div>
-                                    <div className="h-6 bg-slate-700/50 rounded-full overflow-hidden relative shadow-inner">
+                                    <div className="h-4 sm:h-6 bg-slate-700/50 rounded-full overflow-hidden relative shadow-inner">
                                         <motion.div
                                             initial={{ width: 0 }}
                                             animate={{ width: `${Math.min(metasData.porcentajeMeta, 100)}%` }}
@@ -368,7 +398,7 @@ export default function DashboardEnVivoPage() {
                                     </div>
                                 </div>
 
-                                {/* Segmented Progress: Asesores vs Funcionarios */}
+                                {/* Segmented Progress: Asesores vs Operadores */}
                                 {(metasData.asesores || metasData.funcionarios) && (
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                         {metasData.asesores && (
@@ -410,7 +440,7 @@ export default function DashboardEnVivoPage() {
                                                         <div className="p-2 bg-emerald-500/30 rounded-xl">
                                                             <Award className="h-5 w-5 text-emerald-300" />
                                                         </div>
-                                                        <span className="font-bold text-emerald-200">Funcionarios</span>
+                                                        <span className="font-bold text-emerald-200">Operadores</span>
                                                     </div>
                                                     <span className="text-2xl font-black text-emerald-400">{metasData.funcionarios.porcentajeMeta.toFixed(1)}%</span>
                                                 </div>
@@ -436,21 +466,21 @@ export default function DashboardEnVivoPage() {
                 )}
 
                 {/* KPIs Premium Grid-6 Tarjetas */}
-                <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mb-6 md:mb-8">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6 md:mb-8">
                     {/* 1. Total Padrón */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
                         whileHover={{ y: -8, scale: 1.03 }}
-                        className="bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-3xl p-5 text-white relative overflow-hidden shadow-xl shadow-violet-500/30 border border-white/10 cursor-pointer"
+                        className="bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-2xl sm:rounded-3xl p-3 sm:p-5 text-white relative overflow-hidden shadow-xl shadow-violet-500/30 border border-white/10 cursor-pointer"
                     >
                         <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
                         <div className="relative">
                             <div className="p-2.5 bg-white/20 backdrop-blur rounded-xl w-fit mb-3">
                                 <Users className="h-5 w-5" />
                             </div>
-                            <div className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{stats.totalPadron.toLocaleString()}</div>
+                            <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{stats.totalPadron.toLocaleString()}</div>
                             <p className="text-violet-100 text-xs font-bold mt-1 uppercase tracking-wider">Total Padrón</p>
                         </div>
                     </motion.div>
@@ -461,14 +491,14 @@ export default function DashboardEnVivoPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.15 }}
                         whileHover={{ y: -8, scale: 1.03 }}
-                        className="bg-gradient-to-br from-emerald-500 via-emerald-500 to-teal-500 rounded-3xl p-5 text-white relative overflow-hidden shadow-xl shadow-emerald-500/30 border border-white/10 cursor-pointer"
+                        className="bg-gradient-to-br from-emerald-500 via-emerald-500 to-teal-500 rounded-2xl sm:rounded-3xl p-3 sm:p-5 text-white relative overflow-hidden shadow-xl shadow-emerald-500/30 border border-white/10 cursor-pointer"
                     >
                         <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
                         <div className="relative">
                             <div className="p-2.5 bg-white/20 backdrop-blur rounded-xl w-fit mb-3">
                                 <Shield className="h-5 w-5" />
                             </div>
-                            <div className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{stats.conVozYVoto.toLocaleString()}</div>
+                            <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{stats.conVozYVoto.toLocaleString()}</div>
                             <p className="text-emerald-100 text-xs font-bold mt-1 uppercase tracking-wider">Con Voz y Voto</p>
                         </div>
                     </motion.div>
@@ -479,14 +509,14 @@ export default function DashboardEnVivoPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
                         whileHover={{ y: -8, scale: 1.03 }}
-                        className="bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-3xl p-5 text-white relative overflow-hidden shadow-xl shadow-amber-500/30 border border-white/10 cursor-pointer"
+                        className="bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-2xl sm:rounded-3xl p-3 sm:p-5 text-white relative overflow-hidden shadow-xl shadow-amber-500/30 border border-white/10 cursor-pointer"
                     >
                         <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
                         <div className="relative">
                             <div className="p-2.5 bg-white/20 backdrop-blur rounded-xl w-fit mb-3">
                                 <AlertTriangle className="h-5 w-5" />
                             </div>
-                            <div className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{stats.soloVoz.toLocaleString()}</div>
+                            <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{stats.soloVoz.toLocaleString()}</div>
                             <p className="text-amber-100 text-xs font-bold mt-1 uppercase tracking-wider">Solo Voz</p>
                         </div>
                     </motion.div>
@@ -497,7 +527,7 @@ export default function DashboardEnVivoPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.25 }}
                         whileHover={{ y: -8, scale: 1.03 }}
-                        className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-3xl p-5 text-white relative overflow-hidden shadow-xl shadow-blue-500/30 border border-white/10 cursor-pointer"
+                        className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-2xl sm:rounded-3xl p-3 sm:p-5 text-white relative overflow-hidden shadow-xl shadow-blue-500/30 border border-white/10 cursor-pointer"
                     >
                         <span className="absolute top-3 right-3 flex h-3 w-3">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -507,7 +537,7 @@ export default function DashboardEnVivoPage() {
                             <div className="p-2.5 bg-white/20 backdrop-blur rounded-xl w-fit mb-3">
                                 <UserCheck className="h-5 w-5" />
                             </div>
-                            <div className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{stats.presentes}</div>
+                            <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{stats.presentes}</div>
                             <p className="text-blue-100 text-xs font-bold mt-1 uppercase tracking-wider">Presentes Ahora</p>
                         </div>
                     </motion.div>
@@ -518,7 +548,7 @@ export default function DashboardEnVivoPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
                         whileHover={{ y: -8, scale: 1.03 }}
-                        className="bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500 rounded-3xl p-5 text-white relative overflow-hidden shadow-xl shadow-green-500/30 border border-white/10 cursor-pointer"
+                        className="bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500 rounded-2xl sm:rounded-3xl p-3 sm:p-5 text-white relative overflow-hidden shadow-xl shadow-green-500/30 border border-white/10 cursor-pointer"
                     >
                         <span className="absolute top-3 right-3 flex h-3 w-3">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -528,7 +558,7 @@ export default function DashboardEnVivoPage() {
                             <div className="p-2.5 bg-white/20 backdrop-blur rounded-xl w-fit mb-3">
                                 <Shield className="h-5 w-5" />
                             </div>
-                            <div className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{stats.presentesVyV}</div>
+                            <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{stats.presentesVyV}</div>
                             <p className="text-green-100 text-xs font-bold mt-1 uppercase tracking-wider">Presentes V&V</p>
                         </div>
                     </motion.div>
@@ -539,7 +569,7 @@ export default function DashboardEnVivoPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.35 }}
                         whileHover={{ y: -8, scale: 1.03 }}
-                        className="bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 rounded-3xl p-5 text-white relative overflow-hidden shadow-xl shadow-orange-500/30 border border-white/10 cursor-pointer"
+                        className="bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 rounded-2xl sm:rounded-3xl p-3 sm:p-5 text-white relative overflow-hidden shadow-xl shadow-orange-500/30 border border-white/10 cursor-pointer"
                     >
                         <span className="absolute top-3 right-3 flex h-3 w-3">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -549,7 +579,7 @@ export default function DashboardEnVivoPage() {
                             <div className="p-2.5 bg-white/20 backdrop-blur rounded-xl w-fit mb-3">
                                 <AlertTriangle className="h-5 w-5" />
                             </div>
-                            <div className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{presentesSoloVoz}</div>
+                            <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black tracking-tight">{presentesSoloVoz}</div>
                             <p className="text-orange-100 text-xs font-bold mt-1 uppercase tracking-wider">Presentes Solo Voz</p>
                         </div>
                     </motion.div>
@@ -583,9 +613,9 @@ export default function DashboardEnVivoPage() {
                                 initial={{ width: 0 }}
                                 animate={{ width: `${porcentajeAsistencia}%` }}
                                 transition={{ duration: 1.5, ease: "easeOut" }}
-                                className={`h-full rounded-full relative overflow-hidden ${porcentajeAsistencia>= 50
+                                className={`h-full rounded-full relative overflow-hidden ${porcentajeAsistencia >= 50
                                     ? 'bg-gradient-to-r from-emerald-400 via-teal-500 to-emerald-500'
-                                   :'bg-gradient-to-r from-blue-400 via-indigo-500 to-violet-500'
+                                    : 'bg-gradient-to-r from-blue-400 via-indigo-500 to-violet-500'
                                     }`}
                             >
                                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 animate-shimmer" />
@@ -619,7 +649,7 @@ export default function DashboardEnVivoPage() {
                             <div>
                                 <div className="flex items-baseline gap-1">
                                     <span className="text-4xl lg:text-5xl font-black text-emerald-400 tracking-tight">
-                                        {(Math.floor(stats.presentesVyV /2) + 1).toLocaleString()}
+                                        {(Math.floor(stats.presentesVyV / 2) + 1).toLocaleString()}
                                     </span>
                                     <span className="text-lg font-bold text-slate-300">votos</span>
                                 </div>
@@ -649,7 +679,7 @@ export default function DashboardEnVivoPage() {
                             </div>
                             <h2 className="text-lg font-bold text-slate-800">Evolución de Asistencia por Hora</h2>
                         </div>
-                        {evolucionHora.length> 0 ? (
+                        {evolucionHora.length > 0 ? (
                             <ResponsiveContainer width="100%" height={280}>
                                 <AreaChart data={evolucionHora}>
                                     <defs>
@@ -665,7 +695,7 @@ export default function DashboardEnVivoPage() {
                                     <Area type="monotone" dataKey="presentes" stroke="#0d9488" strokeWidth={3} fillOpacity={1} fill="url(#colorPresentes)" name="Presentes" />
                                 </AreaChart>
                             </ResponsiveContainer>
-                        ):(
+                        ) : (
                             <div className="h-[280px] flex items-center justify-center text-slate-400">
                                 <p>Sin datos de evolución</p>
                             </div>
@@ -787,7 +817,7 @@ export default function DashboardEnVivoPage() {
                             </div>
                             <div>
                                 <h2 className="text-xl font-black text-slate-800">Registros por Usuarios</h2>
-                                <p className="text-xs text-slate-500">Check-ins cargados por funcionarios/directivos • NO es el padrón</p>
+                                <p className="text-xs text-slate-500">Check-ins cargados por operadores/directivos • NO es el padrón</p>
                             </div>
                         </div>
                         {/* Totales premium */}
@@ -819,7 +849,7 @@ export default function DashboardEnVivoPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {registrosPorSucursal.length> 0 ? (
+                                {registrosPorSucursal.length > 0 ? (
                                     registrosPorSucursal.slice(0, 10).map((reg, idx) => (
                                         <motion.tr
                                             key={reg.sucursal}
@@ -856,7 +886,7 @@ export default function DashboardEnVivoPage() {
                                             </td>
                                         </motion.tr>
                                     ))
-                                ):(
+                                ) : (
                                     <tr>
                                         <td colSpan={4} className="py-10 text-center text-slate-400">
                                             <UserCheck className="h-12 w-12 mx-auto mb-3 opacity-20" />
@@ -865,7 +895,7 @@ export default function DashboardEnVivoPage() {
                                     </tr>
                                 )}
                             </tbody>
-                            {registrosPorSucursal.length> 0 && (
+                            {registrosPorSucursal.length > 0 && (
                                 <tfoot className="bg-slate-50 border-t border-slate-200 font-bold text-slate-700">
                                     <tr>
                                         <td className="py-3 px-4 text-sm">TOTAL REGISTROS</td>
@@ -880,7 +910,7 @@ export default function DashboardEnVivoPage() {
 
                     {/* Tarjetas de Registros por Sucursal - Mobile */}
                     <div className="md:hidden space-y-3">
-                        {registrosPorSucursal.length> 0 ? (
+                        {registrosPorSucursal.length > 0 ? (
                             registrosPorSucursal.slice(0, 10).map((reg, idx) => (
                                 <motion.div
                                     key={reg.sucursal}
@@ -919,13 +949,13 @@ export default function DashboardEnVivoPage() {
                                     </div>
                                 </motion.div>
                             ))
-                        ):(
+                        ) : (
                             <div className="py-10 text-center text-slate-400">
                                 <UserCheck className="h-12 w-12 mx-auto mb-3 opacity-20" />
                                 <p className="text-sm">Sin registros cargados hoy</p>
                             </div>
                         )}
-                        {registrosPorSucursal.length> 0 && (
+                        {registrosPorSucursal.length > 0 && (
                             <div className="bg-slate-100 rounded-2xl p-4 border border-slate-200 mt-4">
                                 <div className="flex items-center justify-between">
                                     <span className="font-bold text-sm text-slate-700">TOTAL</span>
@@ -962,7 +992,7 @@ export default function DashboardEnVivoPage() {
                             <h2 className="text-lg font-bold text-slate-800">Últimas Llegadas</h2>
                         </div>
                         <div className="space-y-3 max-h-[380px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-200">
-                            {ultimasLlegadas.length> 0 ? (
+                            {ultimasLlegadas.length > 0 ? (
                                 ultimasLlegadas.map((llegada, index) => (
                                     <motion.div
                                         key={llegada.id}
@@ -972,32 +1002,59 @@ export default function DashboardEnVivoPage() {
                                         className="bg-slate-50 rounded-2xl p-4 border border-slate-100 hover:shadow-md transition-all duration-300"
                                     >
                                         <div className="flex items-center justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-slate-700 text-sm truncate">
-                                                    {llegada.socioNombre || 'Sin nombre'}
-                                                </p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-xs font-bold text-slate-400 bg-white px-2 py-0.5 rounded-lg border border-slate-200">#{llegada.socioNumero}</span>
-                                                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider ${llegada.vozVoto ? 'bg-emerald-100 text-emerald-500':'bg-amber-100 text-amber-600'
-                                                        }`}>
-                                                        {llegada.vozVoto ? 'Voz y Voto':'Solo Voz'}
+                                            <div className="flex-1 min-w-0 pr-3">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <p className="font-black text-slate-800 text-sm truncate uppercase">
+                                                        {llegada.socioNombre || 'Sin nombre'}
+                                                    </p>
+                                                    <span className="text-[10px] font-bold text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-100">
+                                                        {new Date(llegada.fechaHora).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>
+
+                                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                                    <span className="text-[10px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                                        #{llegada.socioNumero}
+                                                    </span>
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${llegada.vozVoto ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                        {llegada.vozVoto ? 'Voz y Voto' : 'Solo Voz'}
+                                                    </span>
+                                                </div>
+
+                                                {/* Contacto y WhatsApp */}
+                                                {(llegada.telefono || llegada.barrio) && (
+                                                    <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-slate-200/60">
+                                                        {llegada.telefono && getWhatsAppLink(llegada.telefono) && (
+                                                            <a
+                                                                href={getWhatsAppLink(llegada.telefono)!}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1 px-2 py-1 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-md transition-colors shadow-sm group"
+                                                            >
+                                                                <MessageCircle className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                                                                <span className="text-[10px] font-bold">WhatsApp</span>
+                                                            </a>
+                                                        )}
+                                                        {llegada.barrio && (
+                                                            <span className="flex items-center gap-1 text-[10px] text-slate-500 font-medium truncate max-w-[120px]">
+                                                                <MapPin className="w-3 h-3 text-slate-400" />
+                                                                {llegada.barrio}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <span className="text-xs text-slate-400 font-bold bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
-                                                {new Date(llegada.fechaHora).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
                                         </div>
                                     </motion.div>
                                 ))
-                            ):(
+                            ) : (
                                 <div className="text-center py-10 text-slate-400">
                                     <Clock className="h-12 w-12 mx-auto mb-3 opacity-20" />
                                     <p className="text-sm">Esperando registros...</p>
                                 </div>
                             )}
                         </div>
-                        {ultimasLlegadas.length> 0 && (
+                        {ultimasLlegadas.length > 0 && (
                             <div className="mt-4 pt-4 border-t border-slate-100">
                                 <p className="text-center text-xs text-slate-400 flex items-center justify-center gap-2">
                                     <span className="relative flex h-2 w-2">
@@ -1021,7 +1078,7 @@ export default function DashboardEnVivoPage() {
                             </div>
                             <h2 className="text-lg font-bold text-slate-800">Ranking de Operadores</h2>
                         </div>
-                        {rankingOperadores.length> 0 ? (
+                        {rankingOperadores.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {rankingOperadores.slice(0, 6).map((operador, index) => (
                                     <motion.div
@@ -1032,11 +1089,11 @@ export default function DashboardEnVivoPage() {
                                         whileHover={{ y: -3, scale: 1.02 }}
                                         className={`relative rounded-2xl p-4 border transition-all duration-300 ${index === 0
                                             ? 'bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200 shadow-lg shadow-amber-100'
-                                           :index === 1
+                                            : index === 1
                                                 ? 'bg-gradient-to-br from-slate-50 to-gray-100 border-slate-200 shadow-lg shadow-slate-100'
-                                               :index === 2
+                                                : index === 2
                                                     ? 'bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200 shadow-lg shadow-orange-100'
-                                                   :'bg-slate-50 border-slate-100'
+                                                    : 'bg-slate-50 border-slate-100'
                                             }`}
                                     >
                                         {index < 3 && (
@@ -1045,7 +1102,7 @@ export default function DashboardEnVivoPage() {
                                                     index === 1 ? 'bg-gradient-to-br from-slate-400 to-gray-500 shadow-slate-200' :
                                                         'bg-gradient-to-br from-orange-400 to-amber-500 shadow-orange-200'
                                                     }`}>
-                                                    {index === 0 ? <Crown className="h-4 w-4 text-white" />:<Medal className="h-4 w-4 text-white" />}
+                                                    {index === 0 ? <Crown className="h-4 w-4 text-white" /> : <Medal className="h-4 w-4 text-white" />}
                                                 </div>
                                             </div>
                                         )}
@@ -1079,7 +1136,7 @@ export default function DashboardEnVivoPage() {
                                     </motion.div>
                                 ))}
                             </div>
-                        ):(
+                        ) : (
                             <div className="text-center py-10 text-slate-400">
                                 <Award className="h-12 w-12 mx-auto mb-3 opacity-30" />
                                 <p className="text-sm">Sin registros de operadores</p>
@@ -1093,7 +1150,7 @@ export default function DashboardEnVivoPage() {
                     {[
                         { icon: Building2, value: sucursalesStats.length, label: 'Sucursales', color: 'from-indigo-500 to-purple-600', shadow: 'shadow-indigo-200' },
                         { icon: Users, value: rankingOperadores.length, label: 'Operadores Activos', color: 'from-blue-500 to-cyan-600', shadow: 'shadow-blue-200' },
-                        { icon: TrendingUp, value: `${(stats.conVozYVoto> 0 ? ((stats.conVozYVoto /stats.totalPadron) * 100):0).toFixed(1)}%`, label: 'Ratio V&V General', color: 'from-emerald-500 to-teal-500', shadow: 'shadow-emerald-200' },
+                        { icon: TrendingUp, value: `${(stats.conVozYVoto > 0 ? ((stats.conVozYVoto / stats.totalPadron) * 100) : 0).toFixed(1)}%`, label: 'Ratio V&V General', color: 'from-emerald-500 to-teal-500', shadow: 'shadow-emerald-200' },
                         { icon: AlertTriangle, value: stats.soloVoz.toLocaleString(), label: 'Solo Voz (Total)', color: 'from-amber-500 to-orange-600', shadow: 'shadow-amber-200' },
                     ].map((metric, index) => (
                         <motion.div

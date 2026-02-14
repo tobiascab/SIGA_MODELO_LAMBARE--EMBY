@@ -34,6 +34,9 @@ public class DashboardController {
     @Autowired
     private ReporteExportService exportService;
 
+    @Autowired
+    private com.asamblea.service.LogAuditoriaService auditService;
+
     @GetMapping("/metas")
     public ResponseEntity<?> getMetas(Authentication authentication, @RequestParam(required = false) Long userId) {
         try {
@@ -163,7 +166,8 @@ public class DashboardController {
     @GetMapping("/export-socios-pdf")
     public ResponseEntity<byte[]> exportSociosPdf(
             Authentication authentication,
-            @RequestParam(defaultValue = "vyv") String tipo) {
+            @RequestParam(defaultValue = "vyv") String tipo,
+            jakarta.servlet.http.HttpServletRequest request) {
 
         try {
             String username = authentication.getName();
@@ -172,6 +176,15 @@ public class DashboardController {
             if (currentUser == null) {
                 return ResponseEntity.status(401).build();
             }
+
+            // Auditoría
+            auditService.registrar(
+                    "DASHBOARD",
+                    "EXPORTAR_PDF",
+                    String.format("Exportó lista de socios asignados (%s) en PDF",
+                            tipo.equalsIgnoreCase("vyv") ? "VOZ Y VOTO" : "SOLO VOZ"),
+                    currentUser.getUsername(),
+                    request.getRemoteAddr());
 
             // Solo SUPER_ADMIN puede ver datos globales
             boolean isGlobal = currentUser.getRol() == Usuario.Rol.SUPER_ADMIN;
@@ -194,11 +207,7 @@ public class DashboardController {
                                 LEFT JOIN sucursales suc ON s.id_sucursal = suc.id
                                 INNER JOIN listas_asignacion la ON a.lista_id = la.id
                                 INNER JOIN usuarios u ON la.user_id = u.id
-                                WHERE s.aporte_al_dia = 1
-                                  AND s.solidaridad_al_dia = 1
-                                  AND s.fondo_al_dia = 1
-                                  AND s.incoop_al_dia = 1
-                                  AND s.credito_al_dia = 1
+                                WHERE LOWER(s.habilitado_voz_voto) LIKE '%voto%'
                                 ORDER BY CAST(s.numero_socio AS UNSIGNED), s.nombre_completo
                             """;
                 } else {
@@ -212,11 +221,7 @@ public class DashboardController {
                                 INNER JOIN listas_asignacion la ON a.lista_id = la.id
                                 INNER JOIN usuarios u ON la.user_id = u.id
                                 WHERE la.user_id = %d
-                                  AND s.aporte_al_dia = 1
-                                  AND s.solidaridad_al_dia = 1
-                                  AND s.fondo_al_dia = 1
-                                  AND s.incoop_al_dia = 1
-                                  AND s.credito_al_dia = 1
+                                  AND LOWER(s.habilitado_voz_voto) LIKE '%%voto%%'
                                 ORDER BY CAST(s.numero_socio AS UNSIGNED), s.nombre_completo
                             """.formatted(currentUser.getId());
                 }
@@ -229,18 +234,13 @@ public class DashboardController {
                                 SELECT s.numero_socio, s.cedula, s.nombre_completo,
                                        COALESCE(suc.nombre, 'Sin Sucursal') as sucursal,
                                        u.nombre_completo as asignado_por,
-                                       s.aporte_al_dia, s.solidaridad_al_dia, s.fondo_al_dia,
-                                       s.incoop_al_dia, s.credito_al_dia
+                                       s.habilitado_voz_voto
                                 FROM asignaciones_socios a
                                 INNER JOIN socios s ON a.socio_id = s.id
                                 LEFT JOIN sucursales suc ON s.id_sucursal = suc.id
                                 INNER JOIN listas_asignacion la ON a.lista_id = la.id
                                 INNER JOIN usuarios u ON la.user_id = u.id
-                                WHERE NOT (s.aporte_al_dia = 1
-                                  AND s.solidaridad_al_dia = 1
-                                  AND s.fondo_al_dia = 1
-                                  AND s.incoop_al_dia = 1
-                                  AND s.credito_al_dia = 1)
+                                WHERE (LOWER(s.habilitado_voz_voto) NOT LIKE '%voto%' OR s.habilitado_voz_voto IS NULL)
                                 ORDER BY CAST(s.numero_socio AS UNSIGNED), s.nombre_completo
                             """;
                 } else {
@@ -248,19 +248,14 @@ public class DashboardController {
                                 SELECT s.numero_socio, s.cedula, s.nombre_completo,
                                        COALESCE(suc.nombre, 'Sin Sucursal') as sucursal,
                                        u.nombre_completo as asignado_por,
-                                       s.aporte_al_dia, s.solidaridad_al_dia, s.fondo_al_dia,
-                                       s.incoop_al_dia, s.credito_al_dia
+                                       s.habilitado_voz_voto
                                 FROM asignaciones_socios a
                                 INNER JOIN socios s ON a.socio_id = s.id
                                 LEFT JOIN sucursales suc ON s.id_sucursal = suc.id
                                 INNER JOIN listas_asignacion la ON a.lista_id = la.id
                                 INNER JOIN usuarios u ON la.user_id = u.id
                                 WHERE la.user_id = %d
-                                  AND NOT (s.aporte_al_dia = 1
-                                  AND s.solidaridad_al_dia = 1
-                                  AND s.fondo_al_dia = 1
-                                  AND s.incoop_al_dia = 1
-                                  AND s.credito_al_dia = 1)
+                                  AND (LOWER(s.habilitado_voz_voto) NOT LIKE '%%voto%%' OR s.habilitado_voz_voto IS NULL)
                                 ORDER BY CAST(s.numero_socio AS UNSIGNED), s.nombre_completo
                             """.formatted(currentUser.getId());
                 }

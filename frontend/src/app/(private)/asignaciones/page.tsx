@@ -37,6 +37,8 @@ interface Socio {
     fondoAlDia: boolean;
     incoopAlDia: boolean;
     creditoAlDia: boolean;
+    estadoVozVoto?: boolean;
+    habilitadoVozVoto?: string;
 }
 
 interface ListaAsignacion {
@@ -474,7 +476,9 @@ export default function AsignacionesPage() {
     };
 
     const tieneVozYVoto = (socio: Socio) => {
-        return socio.aporteAlDia && socio.solidaridadAlDia && socio.fondoAlDia && socio.incoopAlDia && socio.creditoAlDia;
+        if (socio.estadoVozVoto !== undefined) return socio.estadoVozVoto;
+        if (socio.habilitadoVozVoto) return socio.habilitadoVozVoto.toLowerCase().includes('voto');
+        return false;
     };
 
     if (loading) {
@@ -507,7 +511,11 @@ export default function AsignacionesPage() {
                 onCancelAdd={() => { setShowConfirmModal(false); setSearchedSocio(null); setSocioSearchTerm(""); }}
                 onRemoveSocio={handleRemoveSocio}
                 onSearchTermChange={setSocioSearchTerm}
-                tieneVozYVoto={(socio) => socio.aporteAlDia && socio.solidaridadAlDia && socio.fondoAlDia && socio.incoopAlDia && socio.creditoAlDia}
+                tieneVozYVoto={(socio) => {
+                    if (socio.estadoVozVoto !== undefined) return socio.estadoVozVoto;
+                    if (socio.habilitadoVozVoto) return socio.habilitadoVozVoto.toLowerCase().includes('voto');
+                    return false;
+                }}
                 onDeleteLista={handleDeleteLista}
                 onUpdateLista={handleUpdateLista}
             />

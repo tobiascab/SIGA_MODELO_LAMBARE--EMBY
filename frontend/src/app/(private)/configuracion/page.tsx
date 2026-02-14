@@ -27,7 +27,9 @@ import {
     Clock,
     Calendar,
     Plus,
-    Star
+    Star,
+    Smartphone,
+    Download
 } from "lucide-react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
@@ -367,6 +369,68 @@ const ConfiguracionGestionListas = () => {
                 className="px-4 py-2 bg-teal-500 text-white text-xs font-bold rounded-lg hover:bg-teal-600 transition-colors"
             >
                 Acceder
+            </button>
+        </div>
+    );
+};
+
+// Componente para Control de Check-in (Nuevo)
+const ConfiguracionCheckin = () => {
+    const { isCheckinHabilitado, updateConfig } = useConfig();
+    const [enabled, setEnabled] = useState(isCheckinHabilitado);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        setEnabled(isCheckinHabilitado);
+    }, [isCheckinHabilitado]);
+
+    const handleToggle = async () => {
+        const newValue = !enabled;
+        setSaving(true);
+        try {
+            await updateConfig("CHECKIN_HABILITADO", newValue ? "true" : "false");
+            setEnabled(newValue);
+
+            Swal.fire({
+                title: newValue ? '✅ Check-in HABILITADO' : '🔒 Check-in CERRADO',
+                html: newValue
+                    ? '<p class="text-slate-600">Los operadores ahora pueden <b>registrar asistencia y realizar check-in</b> normalmente.</p>'
+                    : '<p class="text-slate-600">Se ha bloqueado el acceso al registro. Nadie podrá registrarse hasta que el módulo sea habilitado nuevamente.</p>',
+                icon: newValue ? 'success' : 'warning',
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: newValue ? '#10b981' : '#f59e0b',
+                padding: '2em',
+                customClass: {
+                    popup: 'rounded-[2rem] shadow-2xl'
+                }
+            });
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition-colors">
+            <div className="flex items-center gap-4">
+                <div className={`p-2.5 rounded-lg transition-colors ${enabled ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-red-100 text-red-600'}`}>
+                    <Check className="h-5 w-5" />
+                </div>
+                <div>
+                    <h3 className="text-sm font-bold text-slate-800">Estado del Check-in</h3>
+                    <p className="text-xs text-slate-500">Cierra el registro global al terminar la Asamblea.</p>
+                </div>
+            </div>
+
+            <button
+                onClick={handleToggle}
+                disabled={saving}
+                className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${enabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+            >
+                <span className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${enabled ? 'translate-x-5' : 'translate-x-0'}`}>
+                    {saving && <Loader2 className="h-4 w-4 m-1 animate-spin text-emerald-500" />}
+                </span>
             </button>
         </div>
     );
@@ -738,7 +802,14 @@ const ConfiguracionModoPrueba = () => {
 
 // Subcomponente para Opciones de Reset
 const ResetOptionsPanel = ({ isAdminMode, accessCode, setAccessCode, checkAccess, setIsAdminMode, loading, handleReset }: any) => {
-    const [options, setOptions] = useState({
+    const [options, setOptions] = useState<{
+        socios: boolean;
+        asignaciones: boolean;
+        listas: boolean;
+        usuarios: boolean;
+        asistencias: boolean;
+        importaciones: boolean;
+    }>({
         socios: true,
         asignaciones: true,
         listas: true,
@@ -751,11 +822,11 @@ const ResetOptionsPanel = ({ isAdminMode, accessCode, setAccessCode, checkAccess
     useEffect(() => {
         const newOptions = { ...options };
         // Si borras listas, borras asignaciones
-        if (newOptions.listas && !newOptions.asignaciones) setOptions(prev => ({ ...prev, asignaciones: true }));
+        if (newOptions.listas && !newOptions.asignaciones) setOptions((prev: any) => ({ ...prev, asignaciones: true }));
     }, [options.listas]);
 
     const toggleOption = (key: keyof typeof options) => {
-        setOptions(prev => ({ ...prev, [key]: !prev[key] }));
+        setOptions((prev: any) => ({ ...prev, [key]: !prev[key] }));
     };
 
     const onResetClick = () => {
@@ -856,6 +927,113 @@ const ResetOptionsPanel = ({ isAdminMode, accessCode, setAccessCode, checkAccess
     );
 }
 
+// Sección de Instalación PWA - Visible para TODOS los usuarios
+const PWAInstallSection = () => {
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [isInstalled, setIsInstalled] = useState(false);
+    const [installing, setInstalling] = useState(false);
+
+    useEffect(() => {
+        // Check if already installed
+        if (window.matchMedia('(display-mode: standalone)').matches ||
+            (window.navigator as any).standalone === true) {
+            setIsInstalled(true);
+            return;
+        }
+
+        const handler = (e: Event) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+
+        window.addEventListener('beforeinstallprompt', handler);
+
+        // Listen for successful installs
+        window.addEventListener('appinstalled', () => {
+            setIsInstalled(true);
+            setDeferredPrompt(null);
+        });
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handler);
+        };
+    }, []);
+
+    const handleInstall = async () => {
+        if (!deferredPrompt) return;
+        setInstalling(true);
+        try {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setIsInstalled(true);
+            }
+            setDeferredPrompt(null);
+        } catch (err) {
+            console.error('Error installing PWA:', err);
+        } finally {
+            setInstalling(false);
+        }
+    };
+
+    return (
+        <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-5 sm:p-6 shadow-xl border border-slate-700/50 overflow-hidden relative">
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-500/10 to-transparent rounded-full translate-y-1/2 -translate-x-1/2" />
+
+            <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                    <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg shadow-emerald-500/20 shrink-0">
+                        <Smartphone className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                        <h3 className="text-sm sm:text-base font-black text-white tracking-tight">
+                            Versión Móvil SIGA
+                        </h3>
+                        <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5">
+                            {isInstalled
+                                ? 'La aplicación ya está instalada en este dispositivo.'
+                                : 'Instala SIGA como app en tu dispositivo para acceso rápido.'}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="w-full sm:w-auto shrink-0">
+                    {isInstalled ? (
+                        <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                            <Check className="h-4 w-4 text-emerald-400" />
+                            <span className="text-xs sm:text-sm font-bold text-emerald-400">Instalada</span>
+                        </div>
+                    ) : deferredPrompt ? (
+                        <button
+                            onClick={handleInstall}
+                            disabled={installing}
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold text-xs sm:text-sm hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95 disabled:opacity-50"
+                        >
+                            {installing ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Download className="h-4 w-4" />
+                            )}
+                            Instalar App
+                        </button>
+                    ) : (
+                        <div className="flex flex-col items-start sm:items-end gap-1">
+                            <span className="text-[10px] sm:text-xs text-slate-500 font-medium">
+                                Abre desde <strong className="text-slate-300">Chrome/Safari</strong>
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                                para ver el botón de instalar
+                            </span>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function ConfiguracionPage() {
     const [user, setUser] = useState<any>(null);
     const [confirmText, setConfirmText] = useState("");
@@ -891,6 +1069,9 @@ export default function ConfiguracionPage() {
     const [closingSessions, setClosingSessions] = useState(false);
     const router = useRouter();
 
+    // Notificaciones globales
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
     // Handler para reiniciar guía
     const handleResetTour = () => {
         resetAllTours();
@@ -916,6 +1097,10 @@ export default function ConfiguracionPage() {
             setTelefono(u.telefono || "");
             setFotoPerfil(u.fotoPerfil || "");
         }
+
+        // Cargar preferencia de notificaciones
+        const notifPref = localStorage.getItem("notifications_enabled");
+        setNotificationsEnabled(notifPref !== "false");
     }, []);
 
     const handleFotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1001,6 +1186,22 @@ export default function ConfiguracionPage() {
         } finally {
             setSavingPass(false);
         }
+    };
+
+    const handleToggleNotifications = () => {
+        const newValue = !notificationsEnabled;
+        setNotificationsEnabled(newValue);
+        localStorage.setItem("notifications_enabled", String(newValue));
+
+        Swal.fire({
+            title: newValue ? '¡Notificaciones Activadas!' : 'Notificaciones Desactivadas',
+            text: newValue
+                ? 'Volverás a recibir mensajes y estadísticas al iniciar sesión.'
+                : 'No recibirás más notificaciones automáticas. Puedes reactivarlas cuando quieras.',
+            icon: newValue ? 'success' : 'info',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#10b981'
+        });
     };
 
     const handleLogoutAllSessions = async () => {
@@ -1145,7 +1346,7 @@ export default function ConfiguracionPage() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             // Actualizar localmente
-            setFoundSocios(prev => prev.map(s =>
+            setFoundSocios((prev: any[]) => prev.map((s: any) =>
                 s.id === socioId ? { ...s, [field]: !currentValue } : s
             ));
         } catch (error) {
@@ -1312,6 +1513,43 @@ export default function ConfiguracionPage() {
                 </div>
             </div>
 
+            {/* Sección Notificaciones - Visible para TODOS */}
+            <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 p-5 sm:p-6 border border-indigo-100 shadow-sm">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                        <div className="p-2.5 sm:p-3 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl shadow-lg shadow-indigo-200 shrink-0">
+                            <Bell className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                            <h2 className="text-base sm:text-lg font-bold text-slate-800">Notificaciones del Sistema</h2>
+                            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                                {notificationsEnabled
+                                    ? 'Recibes mensajes de bienvenida y estadísticas al iniciar sesión.'
+                                    : 'No recibirás notificaciones automáticas.'}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleToggleNotifications}
+                        className={`relative inline-flex h-8 w-14 sm:h-9 sm:w-16 items-center rounded-full transition-all shadow-inner shrink-0 ${notificationsEnabled
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                                : 'bg-slate-300'
+                            }`}
+                    >
+                        <span
+                            className={`inline-block h-6 w-6 sm:h-7 sm:w-7 transform rounded-full bg-white shadow-lg transition-transform flex items-center justify-center ${notificationsEnabled ? 'translate-x-7 sm:translate-x-8' : 'translate-x-1'
+                                }`}
+                        >
+                            {notificationsEnabled ? (
+                                <Check className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
+                            ) : (
+                                <X className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400" />
+                            )}
+                        </span>
+                    </button>
+                </div>
+            </div>
+
             {/* Sección Cerrar Todas las Sesiones */}
             <div className="rounded-2xl bg-gradient-to-br from-red-50 to-orange-50 p-6 border border-red-100 shadow-sm">
                 <div className="flex items-center justify-between flex-wrap gap-4">
@@ -1342,6 +1580,9 @@ export default function ConfiguracionPage() {
                 <ConfiguracionSpotlight />
             </div>
 
+            {/* Sección Instalar App Móvil - Visible para TODOS los usuarios */}
+            <PWAInstallSection />
+
             {isSuperAdmin && (
                 <>
                     <div className="h-px bg-slate-100 my-8"></div>
@@ -1350,6 +1591,7 @@ export default function ConfiguracionPage() {
                     {/* Otras Configuraciones de Asamblea */}
                     <div className="rounded-2xl bg-white p-8 shadow-sm border border-slate-100 space-y-6">
                         <ConfiguracionEvento />
+                        <ConfiguracionCheckin />
                         <ConfiguracionMantenimiento />
                         <ConfiguracionNotificaciones />
                         <ConfiguracionFechaLimite />
@@ -1417,7 +1659,7 @@ export default function ConfiguracionPage() {
                                     </div>
 
                                     <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                                        {foundSocios.map(socio => (
+                                        {foundSocios.map((socio: any) => (
                                             <div key={socio.id} className="bg-white rounded-2xl p-5 border border-slate-100 flex items-center justify-between gap-6 hover:border-emerald-200 hover:shadow-md transition-all">
                                                 <div className="flex items-center gap-4">
                                                     <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center">

@@ -16,10 +16,10 @@ public class Cooperativa {
     private Long id;
 
     @Column(nullable = false)
-    private String nombre; // Nombre completo: "Cooperativa Reducto Ltda."
+    private String nombre; // Nombre completo: "Cooperativa Multiactiva Lambaré Ltda."
 
     @Column(name = "nombre_corto")
-    private String nombreCorto; // Nombre corto: "Reducto"
+    private String nombreCorto; // Nombre corto: "Lambaré"
 
     private String logo; // URL o path del logo
 
@@ -47,13 +47,13 @@ public class Cooperativa {
     private String ruc; // RUC o identificación fiscal
 
     @Column(name = "color_primario")
-    private String colorPrimario; // Color principal en hex: "#10b981"
+    private String colorPrimario; // Color principal en hex: "#A8252C"
 
     @Column(name = "color_secundario")
-    private String colorSecundario; // Color secundario: "#064e3b"
+    private String colorSecundario; // Color secundario: "#600000"
 
     @Column(name = "color_acento")
-    private String colorAcento; // Color de acento: "#f59e0b"
+    private String colorAcento; // Color de acento: "#D4AF37"
 
     @Column(name = "anio_fundacion")
     private Integer anioFundacion;

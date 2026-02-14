@@ -101,8 +101,7 @@ public class AsistenciaController {
             }
 
             // Calcular estado voz y voto
-            boolean vozVoto = socio.isAporteAlDia() && socio.isSolidaridadAlDia() &&
-                    socio.isFondoAlDia() && socio.isIncoopAlDia() && socio.isCreditoAlDia();
+            boolean vozVoto = socio.isEstadoVozVoto();
 
             // Crear asistencia
             Asistencia asistencia = new Asistencia();
@@ -125,11 +124,15 @@ public class AsistenciaController {
             // Calcular mesa asignada
             Map<String, Object> mesaInfo = mesaService.calcularMesa(socio);
 
+            // Calcular Número de Orden (Ranking en Padrón Activo)
+            Long numeroOrden = socioRepository.calcularNumeroOrden(socio.getNumeroSocio());
+
             Map<String, Object> response = new HashMap<>();
             response.put("id", guardada.getId());
             response.put("mensaje", "Asistencia registrada exitosamente");
             response.put("socioNombre", socio.getNombreCompleto());
             response.put("socioNumero", socio.getNumeroSocio());
+            response.put("numeroOrden", numeroOrden);
             response.put("vozVoto", vozVoto);
             response.put("mesa", mesaInfo);
 
@@ -187,7 +190,8 @@ public class AsistenciaController {
         }
     }
 
-    // ===== ELIMINAR TODAS LAS ASISTENCIAS (Solo SUPER_ADMIN con código de seguridad) =====
+    // ===== ELIMINAR TODAS LAS ASISTENCIAS (Solo SUPER_ADMIN con código de
+    // seguridad) =====
     @DeleteMapping("/eliminar-todas")
     @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> eliminarTodasAsistencias(@RequestBody Map<String, String> body, Authentication auth,
@@ -199,7 +203,8 @@ public class AsistenciaController {
 
             if (currentUser.getRol() != Usuario.Rol.SUPER_ADMIN) {
                 return ResponseEntity.status(403)
-                        .body(Map.of("error", "Solo el Super Administrador puede eliminar todos los registros de asistencia"));
+                        .body(Map.of("error",
+                                "Solo el Super Administrador puede eliminar todos los registros de asistencia"));
             }
 
             // Verificar código de seguridad
@@ -252,15 +257,18 @@ public class AsistenciaController {
             List<Map<String, Object>> resultado = new ArrayList<>();
             for (Asistencia a : asistencias) {
                 Socio socio = a.getSocio();
-                
+
                 // Filtrar por búsqueda si se proporciona
                 if (busqueda != null && !busqueda.isEmpty()) {
                     String searchLower = busqueda.toLowerCase();
-                    boolean matches = 
-                        (socio.getNumeroSocio() != null && socio.getNumeroSocio().toLowerCase().contains(searchLower)) ||
-                        (socio.getNombreCompleto() != null && socio.getNombreCompleto().toLowerCase().contains(searchLower)) ||
-                        (socio.getCedula() != null && socio.getCedula().toLowerCase().contains(searchLower));
-                    if (!matches) continue;
+                    boolean matches = (socio.getNumeroSocio() != null
+                            && socio.getNumeroSocio().toLowerCase().contains(searchLower)) ||
+                            (socio.getNombreCompleto() != null
+                                    && socio.getNombreCompleto().toLowerCase().contains(searchLower))
+                            ||
+                            (socio.getCedula() != null && socio.getCedula().toLowerCase().contains(searchLower));
+                    if (!matches)
+                        continue;
                 }
 
                 Map<String, Object> item = new HashMap<>();
@@ -281,8 +289,10 @@ public class AsistenciaController {
             resultado.sort((a, b) -> {
                 LocalDateTime fa = (LocalDateTime) a.get("fechaHora");
                 LocalDateTime fb = (LocalDateTime) b.get("fechaHora");
-                if (fa == null) return 1;
-                if (fb == null) return -1;
+                if (fa == null)
+                    return 1;
+                if (fb == null)
+                    return -1;
                 return fb.compareTo(fa);
             });
 
@@ -295,32 +305,31 @@ public class AsistenciaController {
         }
     }
 
-    // Ranking de operadores por cantidad de registros
+    // Ranking de operadores por cantidad de registros (Quien marcó la asistencia en puerta)
     @GetMapping("/ranking-operadores")
     public ResponseEntity<?> rankingOperadores() {
         List<Asistencia> asistencias = asistenciaRepository.findAll();
 
-        // Agrupar por operador
-        Map<Long, Map<String, Object>> operadoresMap = new HashMap<>();
+        // Agrupar por el USUARIO que marcó la asistencia (Operador de Puerta)
+        Map<Long, Map<String, Object>> rankingMap = new HashMap<>();
 
         for (Asistencia a : asistencias) {
-            if (a.getOperador() != null) {
-                Long operadorId = a.getOperador().getId();
+            Usuario responsable = a.getOperador();
 
-                if (!operadoresMap.containsKey(operadorId)) {
-                    Map<String, Object> operadorData = new HashMap<>();
-                    operadorData.put("id", operadorId);
-                    String nombreOp = a.getOperador().getNombreCompleto();
-                    operadorData.put("nombre", nombreOp != null ? nombreOp : "Sin Nombre");
-                    operadorData.put("username", a.getOperador().getUsername());
-                    operadorData.put("rol", a.getOperador().getRol());
-                    operadorData.put("totalRegistros", 0);
-                    operadorData.put("vozYVoto", 0);
-                    operadorData.put("soloVoz", 0);
-                    operadoresMap.put(operadorId, operadorData);
+            if (responsable != null) {
+                Long userId = responsable.getId();
+                if (!rankingMap.containsKey(userId)) {
+                    Map<String, Object> userData = new HashMap<>();
+                    userData.put("id", userId);
+                    userData.put("nombre", responsable.getNombreCompleto() != null ? responsable.getNombreCompleto() : responsable.getUsername());
+                    userData.put("username", responsable.getUsername());
+                    userData.put("totalRegistros", 0);
+                    userData.put("vozYVoto", 0);
+                    userData.put("soloVoz", 0);
+                    rankingMap.put(userId, userData);
                 }
 
-                Map<String, Object> data = operadoresMap.get(operadorId);
+                Map<String, Object> data = rankingMap.get(userId);
                 data.put("totalRegistros", (int) data.get("totalRegistros") + 1);
 
                 if (Boolean.TRUE.equals(a.getEstadoVozVoto())) {
@@ -331,8 +340,7 @@ public class AsistenciaController {
             }
         }
 
-        // Convertir a lista y ordenar por totalRegistros descendente
-        List<Map<String, Object>> ranking = new ArrayList<>(operadoresMap.values());
+        List<Map<String, Object>> ranking = new ArrayList<>(rankingMap.values());
         ranking.sort((a, b) -> (int) b.get("totalRegistros") - (int) a.get("totalRegistros"));
 
         return ResponseEntity.ok(ranking);
@@ -473,8 +481,7 @@ public class AsistenciaController {
                         item.put("fechaHoraIngreso", null);
                     }
 
-                    boolean esVyV = socio.isAporteAlDia() && socio.isSolidaridadAlDia() &&
-                            socio.isFondoAlDia() && socio.isIncoopAlDia() && socio.isCreditoAlDia();
+                    boolean esVyV = socio.isEstadoVozVoto();
                     item.put("condicion", esVyV ? "VOZ Y VOTO" : "SOLO VOZ");
                     item.put("esVyV", esVyV);
 

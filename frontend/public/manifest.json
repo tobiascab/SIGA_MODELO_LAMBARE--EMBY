@@ -1,14 +1,14 @@
 {
     "name": "SIGA - Sistema de Gestión de Asambleas",
     "short_name": "SIGA",
-    "description": "Sistema de Gestión de Asambleas - Cooperativa Reducto. Control de asistencia, socios y votaciones.",
+    "description": "Sistema de Gestión de Asambleas - Cooperativa Multiactiva Lambaré Ltda. Control de asistencia, socios y votaciones.",
     "start_url": "/dashboard",
     "scope": "/",
     "id": "/",
     "display": "standalone",
     "display_override": ["standalone", "minimal-ui"],
     "background_color": "#ffffff",
-    "theme_color": "#10b981",
+    "theme_color": "#A8252C",
     "orientation": "portrait-primary",
     "icons": [
         {

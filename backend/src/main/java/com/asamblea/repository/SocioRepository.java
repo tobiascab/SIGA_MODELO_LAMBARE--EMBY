@@ -69,12 +69,12 @@ public interface SocioRepository extends JpaRepository<Socio, Long> {
         List<Socio> findSociosSinAsignar();
 
         // Paginación con filtro Voz y Voto (todos los campos en SI)
-        @Query(value = "SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true ORDER BY CAST(s.numeroSocio AS int) ASC", countQuery = "SELECT COUNT(s) FROM Socio s WHERE s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true")
+        @Query(value = "SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE LOWER(s.habilitadoVozVoto) LIKE '%voto%' ORDER BY CAST(s.numeroSocio AS int) ASC", countQuery = "SELECT COUNT(s) FROM Socio s WHERE LOWER(s.habilitadoVozVoto) LIKE '%voto%'")
         org.springframework.data.domain.Page<Socio> findAllConVozYVoto(
                         org.springframework.data.domain.Pageable pageable);
 
         // Paginación con filtro Solo Voz (al menos 1 campo en NO)
-        @Query(value = "SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE NOT (s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true) ORDER BY CAST(s.numeroSocio AS int) ASC", countQuery = "SELECT COUNT(s) FROM Socio s WHERE NOT (s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true)")
+        @Query(value = "SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE LOWER(s.habilitadoVozVoto) NOT LIKE '%voto%' OR s.habilitadoVozVoto IS NULL ORDER BY CAST(s.numeroSocio AS int) ASC", countQuery = "SELECT COUNT(s) FROM Socio s WHERE LOWER(s.habilitadoVozVoto) NOT LIKE '%voto%' OR s.habilitadoVozVoto IS NULL")
         org.springframework.data.domain.Page<Socio> findAllSoloVoz(org.springframework.data.domain.Pageable pageable);
 
         @Query(value = "SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE " +
@@ -83,22 +83,17 @@ public interface SocioRepository extends JpaRepository<Socio, Long> {
                         "(:telefono IS NULL OR s.telefono LIKE CONCAT('%', :telefono, '%')) AND " +
                         "(:sucursalId IS NULL OR s.sucursal.id = :sucursalId) AND " +
                         "(:estado IS NULL OR " +
-                        "  (:estado = 'vozYVoto' AND s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true) OR "
-                        +
-                        "  (:estado = 'soloVoz' AND NOT(s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true))"
-                        +
-                        ") ORDER BY CAST(s.numeroSocio AS int) ASC", countQuery = "SELECT COUNT(s) FROM Socio s WHERE "
-                                        +
+                        "  (:estado = 'vozYVoto' AND LOWER(s.habilitadoVozVoto) LIKE '%voto%') OR " +
+                        "  (:estado = 'soloVoz' AND (LOWER(s.habilitadoVozVoto) NOT LIKE '%voto%' OR s.habilitadoVozVoto IS NULL))" +
+                        ") ORDER BY CAST(s.numeroSocio AS int) ASC",
+                        countQuery = "SELECT COUNT(s) FROM Socio s WHERE " +
                                         "(:numeroSocio IS NULL OR s.numeroSocio = :numeroSocio) AND " +
-                                        "(:nombre IS NULL OR LOWER(s.nombreCompleto) LIKE LOWER(CONCAT('%', :nombre, '%'))) AND "
-                                        +
+                                        "(:nombre IS NULL OR LOWER(s.nombreCompleto) LIKE LOWER(CONCAT('%', :nombre, '%'))) AND " +
                                         "(:telefono IS NULL OR s.telefono LIKE CONCAT('%', :telefono, '%')) AND " +
                                         "(:sucursalId IS NULL OR s.sucursal.id = :sucursalId) AND " +
                                         "(:estado IS NULL OR " +
-                                        "  (:estado = 'vozYVoto' AND s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true) OR "
-                                        +
-                                        "  (:estado = 'soloVoz' AND NOT(s.aporteAlDia = true AND s.solidaridadAlDia = true AND s.fondoAlDia = true AND s.incoopAlDia = true AND s.creditoAlDia = true))"
-                                        +
+                                        "  (:estado = 'vozYVoto' AND LOWER(s.habilitadoVozVoto) LIKE '%voto%') OR " +
+                                        "  (:estado = 'soloVoz' AND (LOWER(s.habilitadoVozVoto) NOT LIKE '%voto%' OR s.habilitadoVozVoto IS NULL))" +
                                         ")")
         org.springframework.data.domain.Page<Socio> findWithFilters(
                         @org.springframework.data.repository.query.Param("numeroSocio") String numeroSocio,
@@ -107,4 +102,9 @@ public interface SocioRepository extends JpaRepository<Socio, Long> {
                         @org.springframework.data.repository.query.Param("sucursalId") Long sucursalId,
                         @org.springframework.data.repository.query.Param("estado") String estado,
                         org.springframework.data.domain.Pageable pageable);
+
+        // Calcular el número de orden basado en el número de socio (orden numérico) en
+        // el padrón activo
+        @Query("SELECT COUNT(s) + 1 FROM Socio s WHERE s.enPadronActual = true AND CAST(s.numeroSocio AS int) < CAST(:numeroSocio AS int)")
+        Long calcularNumeroOrden(String numeroSocio);
 }

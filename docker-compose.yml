@@ -74,6 +74,7 @@ services:
       - "traefik.http.routers.asamblea-backend.tls=true"
       - "traefik.http.routers.asamblea-backend.tls.certresolver=letsencrypt"
       - "traefik.http.routers.asamblea-backend.service=asamblea-backend"
+      - "traefik.http.routers.asamblea-backend.middlewares=global-compress"
       - "traefik.http.services.asamblea-backend.loadbalancer.server.port=8081"
 
   # Next.js Frontend - Production Mode (Optimized)
@@ -85,8 +86,8 @@ services:
         NEXT_PUBLIC_API_URL: https://asamblea.cloud
     container_name: asamblea-frontend
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:6002:6001"
+    # ports:
+    #   - "127.0.0.1:6002:6001"
     environment:
       NEXT_PUBLIC_API_URL: https://asamblea.cloud
       NODE_ENV: production
@@ -111,9 +112,9 @@ services:
       - "traefik.http.routers.asamblea-frontend.tls=true"
       - "traefik.http.routers.asamblea-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.routers.asamblea-frontend.service=asamblea-frontend"
-      - "traefik.http.services.asamblea-frontend.loadbalancer.server.port=6001"
       # Security Headers
-      - "traefik.http.routers.asamblea-frontend.middlewares=asamblea-security"
+      - "traefik.http.routers.asamblea-frontend.middlewares=asamblea-security,global-compress"
+      - "traefik.http.services.asamblea-frontend.loadbalancer.server.port=6001"
       - "traefik.http.middlewares.asamblea-security.headers.stsSeconds=31536000"
       - "traefik.http.middlewares.asamblea-security.headers.stsIncludeSubdomains=true"
       - "traefik.http.middlewares.asamblea-security.headers.forceSTSHeader=true"

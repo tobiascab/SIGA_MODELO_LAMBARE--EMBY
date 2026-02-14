@@ -64,34 +64,35 @@ public class ReporteSucursalesController {
     private List<Map<String, Object>> fetchAvanceData() {
         String sql = """
                     SELECT
-                        COALESCE(s.nombre, 'Sin Sucursal') as sucursal,
+                        CASE 
+                            WHEN UPPER(COALESCE(s.nombre, 'Sin Sucursal')) LIKE '%CENTRAL%' 
+                              OR UPPER(COALESCE(s.nombre, 'Sin Sucursal')) LIKE '%SUCURSAL 5%' 
+                              OR UPPER(COALESCE(s.nombre, 'Sin Sucursal')) LIKE '%SUC 5%'
+                              OR UPPER(COALESCE(s.nombre, 'Sin Sucursal')) LIKE '%SAN LORENZO%' 
+                            THEN 'CASA CENTRAL'
+                            WHEN UPPER(COALESCE(s.nombre, 'Sin Sucursal')) LIKE '%CDE%' 
+                              OR UPPER(COALESCE(s.nombre, 'Sin Sucursal')) LIKE '%CIUDAD DEL ESTE%'
+                              OR UPPER(COALESCE(s.nombre, 'Sin Sucursal')) LIKE '%HERNANDARIAS%'
+                              OR UPPER(COALESCE(s.nombre, 'Sin Sucursal')) LIKE '%ALTO PARANA%' 
+                            THEN 'CDE ALTO PARANA'
+                            ELSE COALESCE(s.nombre, 'Sin Sucursal') 
+                        END as sucursal,
                         COUNT(CASE
-                            WHEN socio.aporte_al_dia=1
-                             AND socio.solidaridad_al_dia=1
-                             AND socio.fondo_al_dia=1
-                             AND socio.incoop_al_dia=1
-                             AND socio.credito_al_dia=1
+                            WHEN LOWER(socio.habilitado_voz_voto) LIKE '%voto%'
                             THEN 1 END) as vyv,
                         COUNT(CASE
-                            WHEN NOT(socio.aporte_al_dia=1
-                             AND socio.solidaridad_al_dia=1
-                             AND socio.fondo_al_dia=1
-                             AND socio.incoop_al_dia=1
-                             AND socio.credito_al_dia=1)
+                            WHEN NOT(LOWER(COALESCE(socio.habilitado_voz_voto, '')) LIKE '%voto%')
                             THEN 1 END) as solo_voz,
                         COUNT(a.id) as total,
                         ROUND(COUNT(CASE
-                            WHEN socio.aporte_al_dia=1
-                             AND socio.solidaridad_al_dia=1
-                             AND socio.fondo_al_dia=1
-                             AND socio.incoop_al_dia=1
-                             AND socio.credito_al_dia=1
+                            WHEN LOWER(socio.habilitado_voz_voto) LIKE '%voto%'
                             THEN 1 END) * 100.0 / COUNT(a.id), 1) as porcentaje_vyv
                     FROM asignaciones_socios a
-                    INNER JOIN socios socio ON a.socio_id = socio.id
-                    LEFT JOIN sucursales s ON socio.id_sucursal = s.id
                     INNER JOIN listas_asignacion la ON a.lista_id = la.id
-                    GROUP BY COALESCE(s.nombre, 'Sin Sucursal')
+                    INNER JOIN usuarios u ON la.user_id = u.id
+                    LEFT JOIN sucursales s ON u.id_sucursal = s.id
+                    INNER JOIN socios socio ON a.socio_id = socio.id
+                    GROUP BY 1
                     ORDER BY total DESC
                 """;
 

@@ -14,6 +14,8 @@ interface Socio {
     fondoAlDia: boolean;
     incoopAlDia: boolean;
     creditoAlDia: boolean;
+    estadoVozVoto?: boolean;
+    habilitadoVozVoto?: string;
 }
 
 interface ListaAsignacion {
@@ -69,7 +71,7 @@ export function SocioAssignments({
 
     // Usar selectedLista para estadísticas (el padre selecciona la lista con más socios)
     // Fallback a la primera lista solo si no hay ninguna seleccionada
-    const miLista = selectedLista || (misListas.length> 0 ? misListas[0]:null);
+    const miLista = selectedLista || (misListas.length > 0 ? misListas[0] : null);
 
     // Mensajes amables rotativos
     const mensajesAmables = [
@@ -82,10 +84,10 @@ export function SocioAssignments({
 
     // Notificación periódica amable (cada 2 minutos)
     useEffect(() => {
-        if (!miLista || miLista.total>= 10) return;
+        if (!miLista || miLista.total >= 10) return;
 
         const interval = setInterval(() => {
-            const faltantes = 10-miLista.total;
+            const faltantes = 10 - miLista.total;
             const mensajeRandom = mensajesAmables[Math.floor(Math.random() * mensajesAmables.length)];
             setToastMessage(mensajeRandom.replace("{n}", faltantes.toString()));
             setShowToast(true);
@@ -97,7 +99,7 @@ export function SocioAssignments({
         // Mostrar primera notificación después de 30 segundos
         const initialTimeout = setTimeout(() => {
             if (miLista.total < 10) {
-                const faltantes = 10-miLista.total;
+                const faltantes = 10 - miLista.total;
                 setToastMessage(`¡Hola! 👋 Te recomendamos agregar ${faltantes} socios más para llegar a 10. ¡Tú puedes!`);
                 setShowToast(true);
                 setTimeout(() => setShowToast(false), 8000);
@@ -114,7 +116,7 @@ export function SocioAssignments({
     useEffect(() => {
         const timer = setTimeout(() => {
             // Requiere mínimo 3 caracteres para evitar búsquedas prematuras
-            if (socioSearchTerm.length>= 3) {
+            if (socioSearchTerm.length >= 3) {
                 onSearchSocio();
             }
         }, 800); // 800ms de debounce para evitar búsquedas mientras escribe lento
@@ -123,10 +125,10 @@ export function SocioAssignments({
 
     // Auto-selección de la primera lista solo si no hay una seleccionada
     useEffect(() => {
-        if (misListas.length> 0 && !selectedLista) {
+        if (misListas.length > 0 && !selectedLista) {
             // Seleccionar la lista con más socios
             const listaConMasSocios = misListas.reduce((prev, curr) =>
-                (curr.total || 0) > (prev.total || 0) ? curr:prev
+                (curr.total || 0) > (prev.total || 0) ? curr : prev
             );
             onSelectLista(listaConMasSocios);
         }
@@ -187,13 +189,13 @@ export function SocioAssignments({
                                 </h3>
                                 <p className="text-sm text-indigo-700 mb-3 leading-relaxed">
                                     Para asegurar una distribución efectiva del trabajo, <span className="font-bold">te recomendamos agregar al menos 10 socios</span> a tu lista.
-                                    Actualmente tienes <span className="font-bold text-indigo-900">{miLista.total}</span> {miLista.total === 1 ? 'socio':'socios'}.
+                                    Actualmente tienes <span className="font-bold text-indigo-900">{miLista.total}</span> {miLista.total === 1 ? 'socio' : 'socios'}.
                                 </p>
                                 <div className="flex items-center gap-2">
                                     <div className="flex-1 bg-white/50 rounded-full h-3 overflow-hidden">
                                         <motion.div
                                             initial={{ width: 0 }}
-                                            animate={{ width: `${Math.min((miLista.total /10) * 100, 100)}%` }}
+                                            animate={{ width: `${Math.min((miLista.total / 10) * 100, 100)}%` }}
                                             transition={{ duration: 0.5, ease: "easeOut" }}
                                             className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
                                         />
@@ -246,7 +248,7 @@ export function SocioAssignments({
                             >
                                 {addingSocio ? (
                                     <Loader2 className="h-5 w-5 animate-spin" />
-                                ):(
+                                ) : (
                                     <>
                                         <Search className="h-5 w-5" />
                                         <span className="md:inline">Buscar Socio</span>
@@ -279,11 +281,11 @@ export function SocioAssignments({
                                     <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                                         <div className={`px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 border-2 ${tieneVozYVoto(searchedSocio)
                                             ? 'bg-emerald-50 text-emerald-500 border-emerald-100'
-                                           :'bg-amber-50 text-amber-600 border-amber-100'
+                                            : 'bg-amber-50 text-amber-600 border-amber-100'
                                             }`}>
                                             {tieneVozYVoto(searchedSocio) ? (
                                                 <><CheckCircle2 className="w-4 h-4" /> VOZ Y VOTO</>
-                                            ):(
+                                            ) : (
                                                 <><Shield className="w-4 h-4" /> SOLO VOZ</>
                                             )}
                                         </div>
@@ -351,7 +353,7 @@ export function SocioAssignments({
                             <Loader2 className="w-10 h-10 text-violet-500 animate-spin mx-auto mb-3" />
                             <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Actualizando nómina...</p>
                         </div>
-                    ):socios.length> 0 ? (
+                    ) : socios.length > 0 ? (
                         <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto custom-scrollbar">
                             <AnimatePresence mode="popLayout">
                                 {socios.map((socio, index) => {
@@ -378,7 +380,7 @@ export function SocioAssignments({
                                         >
                                             <div className="flex items-center gap-2.5 md:gap-4">
                                                 {/* Número Identificador - Más pequeño en móvil */}
-                                                <div className={`w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex-shrink-0 flex items-center justify-center font-black text-white text-xs md:text-lg shadow-lg rotate-2 group-hover:rotate-0 transition-transform ${esVyV ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-100':'bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-100'
+                                                <div className={`w-8 h-8 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex-shrink-0 flex items-center justify-center font-black text-white text-xs md:text-lg shadow-lg rotate-2 group-hover:rotate-0 transition-transform ${esVyV ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-emerald-100' : 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-100'
                                                     }`}>
                                                     {index + 1}
                                                 </div>
@@ -392,9 +394,9 @@ export function SocioAssignments({
                                                         <div className="flex items-center">
                                                             <span className={`px-1.5 py-0.5 rounded-lg text-[8px] md:text-xs font-black uppercase tracking-wider border-2 ${esVyV
                                                                 ? 'bg-emerald-50 text-emerald-500 border-emerald-100'
-                                                               :'bg-amber-50 text-amber-600 border-amber-100'
+                                                                : 'bg-amber-50 text-amber-600 border-amber-100'
                                                                 }`}>
-                                                                {esVyV ? 'V&V':'S. Voz'}
+                                                                {esVyV ? 'V&V' : 'S. Voz'}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -421,7 +423,7 @@ export function SocioAssignments({
                                 })}
                             </AnimatePresence>
                         </div>
-                    ):(
+                    ) : (
                         <div className="p-20 text-center">
                             <div className="relative inline-block mb-6">
                                 <Users className="w-20 h-20 text-slate-100" />
@@ -491,7 +493,7 @@ function ConfirmRemoveButton({ onConfirm }: { onConfirm: () => void }) {
                     >
                         <Trash2 className="w-5 h-5" />
                     </motion.button>
-                ):(
+                ) : (
                     <motion.div
                         key="confirm"
                         initial={{ opacity: 0, x: 20, scale: 0.9 }}

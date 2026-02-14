@@ -31,11 +31,19 @@ public class SecurityConfiguration {
                 http
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .headers(headers -> headers
+                                                .frameOptions(frame -> frame.disable())) // Permitir iframes para PDFs
                                 .authorizeHttpRequests(auth -> auth
                                                 .requestMatchers("/public/**", "/api/auth/login", "/error").permitAll()
                                                 .requestMatchers("/api/public/**").permitAll() // Endpoints públicos
                                                                                                // para pantalla
-                                                .requestMatchers("/api/candidatos/publico").permitAll() // Candidatos público
+                                                .requestMatchers("/api/candidatos/publico").permitAll() // Candidatos
+                                                                                                        // público
+                                                .requestMatchers("/api/memoria-balance/**").permitAll() // Módulo
+                                                                                                        // Memoria y
+                                                                                                        // Balance
+                                                .requestMatchers("/uploads/**").permitAll() // Archivos estáticos (PDFs,
+                                                                                            // imágenes)
                                                 .requestMatchers("/api/configuracion").permitAll()
                                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
                                                 .requestMatchers("/api/socios/reset-padron").permitAll()

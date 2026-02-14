@@ -352,9 +352,9 @@ export function MetasWidgets({ userId }: MetasWidgetsProps) {
 
                     <div className="flex justify-between items-start mb-4 relative z-10">
                         <div>
-                            <h3 className="font-bold text-lg mb-1">Meta Funcionarios</h3>
+                            <h3 className="font-bold text-lg mb-1">Meta Operadores</h3>
                             <div className="text-xs text-emerald-300 font-bold uppercase tracking-widest">
-                                Global Funcionarios
+                                Global Operadores
                             </div>
                         </div>
                         <div className="p-2 bg-white/10 rounded-xl backdrop-blur-sm">

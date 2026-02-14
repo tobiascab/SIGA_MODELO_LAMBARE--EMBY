@@ -29,7 +29,7 @@ export default function PantallaPublicaPage() {
 
     // View States
     const [activeLeftView, setActiveLeftView] = useState<'stats' | 'ranking'>('stats');
-    const [activeRightView, setActiveRightView] = useState<'presentes' | 'funcionarios' | 'asesores'>('presentes');
+    const [activeRightView, setActiveRightView] = useState<'presentes' | 'operadores' | 'asesores'>('presentes');
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -68,13 +68,13 @@ export default function PantallaPublicaPage() {
     // Rotation Timers
     useEffect(() => {
         const leftRotation = setInterval(() => {
-            setActiveLeftView(current => current === 'stats' ? 'ranking':'stats');
+            setActiveLeftView(current => current === 'stats' ? 'ranking' : 'stats');
         }, 15000);
 
         const rightRotation = setInterval(() => {
             setActiveRightView(current => {
-                if (current === 'presentes') return 'funcionarios';
-                if (current === 'funcionarios') return 'asesores';
+                if (current === 'presentes') return 'operadores';
+                if (current === 'operadores') return 'asesores';
                 return 'presentes';
             });
         }, 8000);
@@ -216,7 +216,7 @@ export default function PantallaPublicaPage() {
                                                 </div>
                                                 <div className="relative z-10 flex flex-col items-end">
                                                     <span className="text-5xl md:text-6xl font-black text-white tabular-nums drop-shadow-xl" style={{ textShadow: '0 4px 10px rgba(220, 38, 38, 0.5)' }}>
-                                                        {(metasData.meta-metasData.registradosVozYVoto).toLocaleString()}
+                                                        {(metasData.meta - metasData.registradosVozYVoto).toLocaleString()}
                                                     </span>
                                                 </div>
                                             </div>
@@ -248,11 +248,11 @@ export default function PantallaPublicaPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Funcionarios Card */}
+                                            {/* Operadores Card */}
                                             <div className="bg-gradient-to-br from-emerald-900/40 to-slate-900/60 backdrop-blur-md rounded-3xl p-6 border border-emerald-500/20 relative group overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-1">
                                                 <div className="absolute inset-0 bg-emerald-500/5 group-hover:bg-emerald-500/10 transition-colors" />
                                                 <div className="relative z-10">
-                                                    <h3 className="text-xl font-bold text-emerald-200 mb-4 uppercase tracking-wider">Funcionarios</h3>
+                                                    <h3 className="text-xl font-bold text-emerald-200 mb-4 uppercase tracking-wider">Operadores</h3>
                                                     <div className="flex justify-between items-center mb-4">
                                                         <span className="text-5xl font-black text-white" style={{ textShadow: '0 4px 10px rgba(0,0,0,0.5)' }}>
                                                             {metasData.funcionarios?.registradosVozYVoto || 0}
@@ -275,7 +275,7 @@ export default function PantallaPublicaPage() {
                                     </div>
                                 )}
                             </motion.div>
-                        ):(
+                        ) : (
                             <motion.div
                                 key="ranking"
                                 initial={{ opacity: 0, rotateY: 90 }}
@@ -291,7 +291,7 @@ export default function PantallaPublicaPage() {
                                         <Trophy className="h-8 w-8 md:h-10 md:w-10 text-white drop-shadow-md" />
                                     </div>
                                     <div>
-                                        <h2 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-white to-amber-200 drop-shadow-md tracking-tight">Top Funcionarios</h2>
+                                        <h2 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-white to-amber-200 drop-shadow-md tracking-tight">Top Operadores</h2>
                                         <div className="w-24 h-1 bg-gradient-to-r from-amber-400 to-amber-600 rounded-full mt-2 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
                                     </div>
                                 </div>
@@ -415,9 +415,9 @@ export default function PantallaPublicaPage() {
                             </motion.div>
                         )}
 
-                        {activeRightView === 'funcionarios' && (
+                        {activeRightView === 'operadores' && (
                             <motion.div
-                                key="funcionarios"
+                                key="operadores"
                                 initial={{ opacity: 0, rotateX: -20 }}
                                 animate={{ opacity: 1, rotateX: 0 }}
                                 exit={{ opacity: 0, rotateX: 20 }}
@@ -431,7 +431,7 @@ export default function PantallaPublicaPage() {
                                 <h2 className="text-7xl md:text-[10rem] leading-none font-black text-white drop-shadow-[0_15px_30px_rgba(0,0,0,0.6)] tracking-tighter mb-4 tabular-nums z-10 scale-y-110">
                                     {metasData?.funcionarios?.registradosVozYVoto || 0}
                                 </h2>
-                                <p className="text-2xl md:text-3xl text-emerald-100 font-bold tracking-tight mb-2 z-10 uppercase text-center">Funcionarios</p>
+                                <p className="text-2xl md:text-3xl text-emerald-100 font-bold tracking-tight mb-2 z-10 uppercase text-center">Operadores</p>
                                 <div className="px-6 py-2 bg-emerald-900/40 rounded-xl border border-emerald-500/30 z-10 mt-4">
                                     <p className="text-emerald-200 text-lg font-mono">Meta: <span className="text-white font-bold">{metasData?.funcionarios?.meta || 0}</span></p>
                                 </div>

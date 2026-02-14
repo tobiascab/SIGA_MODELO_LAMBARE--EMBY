@@ -42,11 +42,11 @@ public interface AsistenciaRepository extends JpaRepository<Asistencia, Long> {
 
     java.util.List<Asistencia> findByFechaHoraBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 
-    // Optimized Report Query
+     // Optimized Report Query - UPDATED: Filter by OPERATOR BRANCH
     @Query("SELECT a FROM Asistencia a " +
            "WHERE (:fechaInicio IS NULL OR a.fechaHora >= :fechaInicio) " +
            "AND (:fechaFin IS NULL OR a.fechaHora <= :fechaFin) " +
-           "AND (:sucursalId IS NULL OR a.socio.sucursal.id = :sucursalId) " +
+           "AND (:sucursalId IS NULL OR a.operador.sucursal.id = :sucursalId) " +
            "AND (:operadorId IS NULL OR a.operador.id = :operadorId) " +
            "AND (:filterByAssignment = false OR a.socio.id IN :socioIds)")
     java.util.List<Asistencia> findAsistenciasReporte(

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
 interface CooperativaData {
     id?: number;
@@ -42,9 +42,9 @@ const defaultCooperativa: CooperativaData = {
     email: "",
     sitioWeb: "",
     ruc: "",
-    colorPrimario: "#10b981",
-    colorSecundario: "#064e3b",
-    colorAcento: "#f59e0b",
+    colorPrimario: "#A8252C",
+    colorSecundario: "#600000",
+    colorAcento: "#D4AF37",
     facebookUrl: "",
     instagramUrl: "",
     whatsappNumero: ""
@@ -62,19 +62,16 @@ export function CooperativaProvider({ children }: { children: ReactNode }) {
 
     const fetchCooperativa = useCallback(async () => {
         try {
-            // Usar el endpoint público que no requiere autenticación
             const response = await fetch("/api/cooperativa/publica");
-
             if (response.ok) {
                 const data = await response.json();
-                setCooperativa((prev: CooperativaData) => ({
+                setCooperativa((prev) => ({
                     ...prev,
                     ...data
                 }));
             }
         } catch (error) {
             console.error("Error al cargar datos de la cooperativa:", error);
-            // En caso de error, usar valores por defecto
         } finally {
             setLoading(false);
         }
@@ -96,13 +93,6 @@ export function CooperativaProvider({ children }: { children: ReactNode }) {
     );
 }
 
-/**
- * Hook para acceder a los datos de la cooperativa desde cualquier componente.
- * Ejemplo de uso:
- * 
- * const { cooperativa } = useCooperativa();
- * return <h1>{cooperativa.nombre}</h1>;
- */
 export function useCooperativa() {
     const context = useContext(CooperativaContext);
     if (!context) {

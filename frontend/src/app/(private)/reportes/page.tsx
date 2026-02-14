@@ -244,7 +244,7 @@ export default function IntelligenceHubPage() {
         // --- RENDER HEADER ---
         // 1. Logo
         try {
-            const logoImg = await loadImage('/logo.png');
+            const logoImg = await loadImage('/images/logo_coop.png');
             if (logoImg.width > 0) {
                 const logoWidth = 35; // Un poco más pequeño para ser elegante
                 const logoHeight = (logoImg.height * logoWidth) / logoImg.width;
@@ -258,7 +258,7 @@ export default function IntelligenceHubPage() {
         doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
-        doc.text("COOPERATIVA MULTIACTIVA LAMBARÉ LTDA", centerX, 20, { align: 'center' });
+        doc.text("COOPERATIVA MULTIACTIVA LAMBARÉ LTDA.", centerX, 20, { align: 'center' });
 
         doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
@@ -271,7 +271,7 @@ export default function IntelligenceHubPage() {
 
         const subheader1 = alcance === 'GLOBAL' ? 'CONSOLIDADO NACIONAL' :
             alcance === 'SUCURSAL' ? `SUCURSAL: ${sucursales.find(s => s.id === selectedSucursalId)?.nombre || ''}`.toUpperCase() :
-                `FUNCIONARIO: ${asesores.find(a => a.id === selectedAsesorId)?.nombreCompleto || ''}`.toUpperCase();
+                `OPERADOR: ${asesores.find(a => a.id === selectedAsesorId)?.nombreCompleto || ''}`.toUpperCase();
 
         doc.text(`DIRECCIÓN COMERCIAL - ${subheader1}`, centerX, 34, { align: 'center' });
 
@@ -562,18 +562,18 @@ export default function IntelligenceHubPage() {
     if (loading) return <div className="p-10 text-center text-slate-500">Cargando Intelligence Hub...</div>;
 
     return (
-        <div key="monitor-hub" className="min-h-screen bg-slate-50 relative overflow-hidden p-6 pb-20">
+        <div key="monitor-hub" className="min-h-screen bg-slate-50 relative overflow-hidden p-3 sm:p-6 pb-20">
             {/* Background Mesh Gradient */}
             <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-emerald-50/50 to-transparent pointer-events-none" />
             {/* --- HEADER SUPERIOR: FILTROS MAESTROS (Oculto al imprimir) --- */}
-            <header className="relative bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg shadow-slate-900/5 border border-white/20 p-6 mb-8 sticky top-4 z-40 print:hidden">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <header className="relative bg-white/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-lg shadow-slate-900/5 border border-white/20 p-3 sm:p-6 mb-4 sm:mb-8 sticky top-2 sm:top-4 z-40 print:hidden">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-6">
                     <div>
-                        <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-                            <BarChart3 className="h-8 w-8 text-emerald-500" />
+                        <h1 className="text-lg sm:text-2xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                            <BarChart3 className="h-5 w-5 sm:h-8 sm:w-8 text-emerald-500" />
                             Intelligence Hub
                         </h1>
-                        <p className="text-sm text-slate-400 font-medium">Centro de Reportes Unificado</p>
+                        <p className="text-xs sm:text-sm text-slate-400 font-medium">Centro de Reportes Unificado</p>
                     </div>
 
                     <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
@@ -633,7 +633,7 @@ export default function IntelligenceHubPage() {
                     </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 mt-6 border-b border-slate-100 pb-2">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-3 sm:mt-6 border-b border-slate-100 pb-2">
                     {[
                         { id: "GESTION", label: "Gestión", icon: TrendingUp },
                         { id: "PADRON", label: "Padrón", icon: FileText },
@@ -822,7 +822,7 @@ export default function IntelligenceHubPage() {
                             <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Total Registrados</p>
                             <h3 className="text-4xl font-black bg-gradient-to-br from-slate-900 to-slate-700 bg-clip-text text-transparent">{processedData.totalRegistrados.toLocaleString()}</h3>
                             <div className="mt-2 text-xs text-emerald-600 font-bold bg-emerald-50 inline-block px-2 py-1 rounded">
-                                {alcance === 'GLOBAL' ? 'Total Cooperativa' : 'Sede/Funcionario'}
+                                {alcance === 'GLOBAL' ? 'Total Cooperativa' : 'Sede/Operador'}
                             </div>
                         </div>
 

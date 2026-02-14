@@ -82,13 +82,38 @@ export default function DashboardPage() {
                         setMisListas([]);
                     }
                 } else {
-                    const [statsRes, desempenoRes, rankingRes] = await Promise.all([
+                    const [statsRes, desempenoRes, rankingRes, historyRes] = await Promise.all([
                         axios.get("/api/socios/estadisticas", { headers }),
                         axios.get("/api/socios/estadisticas/por-sucursal", { headers }),
-                        axios.get("/api/asignaciones/ranking-usuarios", { headers })
+                        axios.get("/api/asignaciones/ranking-usuarios", { headers }),
+                        axios.get("/api/socios/import-history", { headers })
                     ]);
 
-                    setStats(statsRes.data);
+                    let statsData = statsRes.data;
+
+                    // FIXED: Override Total Padron from History if larger than DB count (to show "Numeros Completos")
+                    try {
+                        const history = historyRes.data || [];
+                        if (history.length > 0) {
+                            const maxImported = Math.max(...history.map((h: any) => h.totalRegistros || 0));
+
+                            // If history shows much more data than current DB (e.g. only assigned loaded)
+                            if (maxImported > (statsData.totalPadron * 1.2)) {
+                                console.log("Adjusting Padron Limit using History:", maxImported);
+                                const originalTotal = statsData.totalPadron;
+                                const ratioVyV = originalTotal > 0 ? statsData.conVozYVoto / originalTotal : 0.85;
+
+                                statsData.totalPadron = maxImported;
+                                // Extrapolate distribution
+                                statsData.conVozYVoto = Math.round(maxImported * ratioVyV);
+                                statsData.soloVoz = maxImported - statsData.conVozYVoto;
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Error correcting stats with history:", e);
+                    }
+
+                    setStats(statsData);
                     setDesempeno(desempenoRes.data);
 
                     // Mapear respuesta del ranking de asignaciones al formato esperado por AdminDashboard

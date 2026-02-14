@@ -40,7 +40,7 @@ const menuItems = [
         ]
     },
     { id: "importar", name: "Importar Padrón", href: "/importar", icon: FileUp },
-    { id: "importar-funcionarios", name: "Importar Funcionarios", href: "/importar-funcionarios", icon: Users },
+    { id: "importar-funcionarios", name: "Importar Operadores", href: "/importar-funcionarios", icon: Users },
     { id: "socios", name: "Padrón Socios", href: "/socios", icon: Users },
     { id: "asignacion-rapida", name: "Asignación Rápida", href: "/asignacion-rapida", icon: Zap },
     { id: "asignaciones", name: "Mis Listas", href: "/asignaciones", icon: UserCheck },
@@ -161,7 +161,7 @@ export function Sidebar() {
             )}>
                 <div className="flex-shrink-0">
                     <img
-                        src="/logo.png?v=fixed"
+                        src="/logo.png"
                         alt="Logo"
                         className={cn(
                             "object-contain rounded-full bg-white shadow-lg transition-all duration-300",
@@ -171,7 +171,7 @@ export function Sidebar() {
                 </div>
                 {!effectiveCollapsed && (
                     <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-bold text-white truncate">Cooperativa Lambaré</span>
+                        <span className="text-sm font-bold text-white truncate">Cooperativa Multiactiva Lambaré Ltda.</span>
                         <span className="text-xs text-teal-200/80">Sistema de Asambleas</span>
                     </div>
                 )}

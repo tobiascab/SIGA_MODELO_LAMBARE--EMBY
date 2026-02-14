@@ -147,7 +147,7 @@ export default function ReportePorSucursalPage() {
         doc.setFontSize(22);
         doc.setTextColor(255, 255, 255);
         doc.setFont("helvetica", "bold");
-        doc.text("COOPERATIVA REDUCTO LTDA", 50, 18);
+        doc.text("COOPERATIVA MULTIACTIVA LAMBARÉ LTDA.", 50, 18);
 
         doc.setFontSize(11);
         doc.setFont("helvetica", "normal");

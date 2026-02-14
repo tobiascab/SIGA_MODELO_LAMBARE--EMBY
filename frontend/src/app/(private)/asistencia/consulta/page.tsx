@@ -65,14 +65,27 @@ export default function ConsultaAsistenciaPage() {
             const vozYVoto = data.filter(a => a.vozVoto).length;
             const soloVoz = data.filter(a => !a.vozVoto).length;
 
-            // Agrupar por sucursal
+            // Agrupar por sucursal normalizada
             const sucursalesMap = new Map<string, { total: number; vozYVoto: number; soloVoz: number }>();
+
             data.forEach(a => {
-                const suc = a.sucursal || "Sin Sucursal";
-                if (!sucursalesMap.has(suc)) {
-                    sucursalesMap.set(suc, { total: 0, vozYVoto: 0, soloVoz: 0 });
+                const rawSuc = (a.sucursal || "Sin Sucursal").toUpperCase();
+                let grupo = "OTRAS";
+
+                if (rawSuc.includes("CENTRAL") || rawSuc.includes("SUC 5") || rawSuc.includes("SUCURSAL 5") || rawSuc.includes("SAN LORENZO") || rawSuc.includes("SANLO")) {
+                    grupo = "CASA CENTRAL"; // Unificar todo en CASA CENTRAL
+                } else if (rawSuc.includes("CDE") || rawSuc.includes("HERNANDARIAS") || rawSuc.includes("ALTO PARANA") || rawSuc.includes("CIUDAD DEL ESTE")) {
+                    grupo = "CDE ALTO PARANA"; // CDE, Hernandarias
+                } else if (rawSuc.includes("VILLARRICA")) {
+                    grupo = "VILLARRICA"; // Villarrica se mantiene
+                } else {
+                    grupo = rawSuc; // Fallback para casos no esperados
                 }
-                const s = sucursalesMap.get(suc)!;
+
+                if (!sucursalesMap.has(grupo)) {
+                    sucursalesMap.set(grupo, { total: 0, vozYVoto: 0, soloVoz: 0 });
+                }
+                const s = sucursalesMap.get(grupo)!;
                 s.total++;
                 if (a.vozVoto) s.vozYVoto++;
                 else s.soloVoz++;
@@ -418,7 +431,7 @@ export default function ConsultaAsistenciaPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {asistenciasFiltradas.slice(0, 50).map(a => (
+                                {asistenciasFiltradas.slice(0, 50).map((a: AsistenciaItem) => (
                                     <tr key={a.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-4 py-3">
                                             <span className="font-bold text-slate-800">#{a.socioNumero}</span>
@@ -459,7 +472,7 @@ export default function ConsultaAsistenciaPage() {
             {/* Vista por Sucursal */}
             {vistaActiva === "sucursal" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {stats.sucursales.map(suc => (
+                    {stats.sucursales.map((suc: EstadisticasSucursal) => (
                         <div key={suc.sucursal} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="p-2 bg-blue-100 rounded-xl">
@@ -505,7 +518,7 @@ export default function ConsultaAsistenciaPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {operadores.slice(0, 20).map((op, idx) => (
+                                {operadores.slice(0, 20).map((op: Operador, idx: number) => (
                                     <tr key={op.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-4 py-3">
                                             <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold text-sm ${idx === 0 ? 'bg-yellow-100 text-yellow-700' :

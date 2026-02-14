@@ -17,6 +17,8 @@ interface Socio {
     fondoAlDia: boolean;
     incoopAlDia: boolean;
     creditoAlDia: boolean;
+    estadoVozVoto?: boolean;
+    habilitadoVozVoto?: string;
 }
 
 export default function ImprimirCarnetsPage() {
@@ -33,7 +35,7 @@ export default function ImprimirCarnetsPage() {
             const headers = { Authorization: `Bearer ${token}` };
 
             let url = "/api/socios";
-            if (term && term.length> 0) {
+            if (term && term.length > 0) {
                 url = `/api/socios/buscar?term=${encodeURIComponent(term)}`;
             }
 
@@ -41,7 +43,7 @@ export default function ImprimirCarnetsPage() {
             // Adaptar datos para el carnet
             const data = response.data.map((s: any) => ({
                 ...s,
-                tieneVoto: s.aporteAlDia && s.solidaridadAlDia && s.fondoAlDia && s.incoopAlDia && s.creditoAlDia
+                tieneVoto: s.estadoVozVoto !== undefined ? s.estadoVozVoto : (s.habilitadoVozVoto ? s.habilitadoVozVoto.toLowerCase().includes('voto') : false)
             }));
             setSocios(data);
         } catch (error) {
@@ -135,9 +137,9 @@ export default function ImprimirCarnetsPage() {
                                 <tr>
                                     <th className="px-6 py-4 w-10">
                                         <button onClick={toggleAll} className="text-slate-400 hover:text-emerald-500">
-                                            {selectedIds.size === socios.length && socios.length> 0 ? (
+                                            {selectedIds.size === socios.length && socios.length > 0 ? (
                                                 <CheckSquare className="h-5 w-5 text-emerald-500" />
-                                            ):(
+                                            ) : (
                                                 <Square className="h-5 w-5" />
                                             )}
                                         </button>
@@ -153,23 +155,23 @@ export default function ImprimirCarnetsPage() {
                                             <Loader2 className="h-8 w-8 animate-spin text-emerald-500 mx-auto" />
                                         </td>
                                     </tr>
-                                ):socios.length === 0 ? (
+                                ) : socios.length === 0 ? (
                                     <tr>
                                         <td colSpan={3} className="py-20 text-center text-slate-400">
                                             No se encontraron socios
                                         </td>
                                     </tr>
-                                ):(
+                                ) : (
                                     socios.map((socio) => (
                                         <tr
                                             key={socio.id}
                                             onClick={() => toggleSelect(socio.id)}
-                                            className={`cursor-pointer transition-colors ${selectedIds.has(socio.id) ? 'bg-emerald-50/50':'hover:bg-slate-50'}`}
+                                            className={`cursor-pointer transition-colors ${selectedIds.has(socio.id) ? 'bg-emerald-50/50' : 'hover:bg-slate-50'}`}
                                         >
                                             <td className="px-6 py-4">
                                                 {selectedIds.has(socio.id) ? (
                                                     <CheckSquare className="h-5 w-5 text-emerald-500" />
-                                                ):(
+                                                ) : (
                                                     <Square className="h-5 w-5 text-slate-300" />
                                                 )}
                                             </td>
@@ -178,8 +180,8 @@ export default function ImprimirCarnetsPage() {
                                                 <p className="text-xs text-slate-500">N° {socio.numeroSocio} • CI: {socio.cedula}</p>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${socio.tieneVoto ? 'bg-emerald-100 text-teal-500':'bg-amber-100 text-amber-700'}`}>
-                                                    {socio.tieneVoto ? 'VOZ Y VOTO':'SOLO VOZ'}
+                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${socio.tieneVoto ? 'bg-emerald-100 text-teal-500' : 'bg-amber-100 text-amber-700'}`}>
+                                                    {socio.tieneVoto ? 'VOZ Y VOTO' : 'SOLO VOZ'}
                                                 </span>
                                             </td>
                                         </tr>
@@ -192,7 +194,7 @@ export default function ImprimirCarnetsPage() {
             </div>
 
             {/* PRINT ONLY AREA */}
-            <div className={`hidden print:block ${printing ? 'block':''}`}>
+            <div className={`hidden print:block ${printing ? 'block' : ''}`}>
                 <style jsx global>{`
                     @media print {
                         @page {
@@ -236,7 +238,7 @@ export default function ImprimirCarnetsPage() {
             </div>
 
             {/* Preview Banner */}
-            {selectedIds.size> 0 && (
+            {selectedIds.size > 0 && (
                 <div className="print:hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-8 z-50 animate-in fade-in slide-in-from-bottom-4">
                     <div className="flex items-center gap-3">
                         <div className="bg-emerald-500 p-1 rounded-full">

@@ -148,7 +148,7 @@ public class AvisosController {
      */
     @PostMapping("/upload-imagen")
     public ResponseEntity<?> uploadImagen(@RequestParam("file") MultipartFile file,
-            Authentication auth) {
+            Authentication auth, HttpServletRequest request) {
         Usuario emisor = getCurrentUser(auth);
         if (emisor == null || !isAdmin(emisor)) {
             return ResponseEntity.status(403).body(Map.of("error", "Solo administradores pueden subir imágenes"));
@@ -179,6 +179,11 @@ public class AvisosController {
 
             // URL accesible (mapeada en WebMvcConfig)
             String imageUrl = "/uploads/avisos/" + filename;
+
+            // Auditoría
+            auditService.registrar("AVISOS", "UPLOAD_IMAGEN",
+                    String.format("Subió imagen para aviso: %s", filename),
+                    auth.getName(), request.getRemoteAddr());
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -314,7 +319,7 @@ public class AvisosController {
      * Confirmar aviso ("Entendido")
      */
     @PutMapping("/{id}/confirmar")
-    public ResponseEntity<?> confirmarAviso(@PathVariable Long id, Authentication auth) {
+    public ResponseEntity<?> confirmarAviso(@PathVariable Long id, Authentication auth, HttpServletRequest request) {
         Usuario current = getCurrentUser(auth);
         if (current == null)
             return ResponseEntity.status(401).body(Map.of("error", "No autenticado"));
@@ -330,6 +335,11 @@ public class AvisosController {
         ad.setConfirmadoAt(LocalDateTime.now());
         ad.setEstado(AvisoDestinatario.EstadoDestinatario.CONFIRMADO);
         destinatarioRepository.save(ad);
+
+        // Auditoría
+        auditService.registrar("AVISOS", "CONFIRMAR_AVISO",
+                String.format("Confirmó lectura (\"Entendido\") del aviso #%d", id),
+                auth.getName(), request.getRemoteAddr());
 
         return ResponseEntity.ok(Map.of("success", true));
     }
@@ -367,6 +377,36 @@ public class AvisosController {
                 auth.getName(), request.getRemoteAddr());
 
         return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    /**
+     * Eliminar aviso (solo admin)
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarAviso(@PathVariable Long id, Authentication auth, HttpServletRequest request) {
+        Usuario current = getCurrentUser(auth);
+        if (current == null || !isAdmin(current)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Solo administradores pueden eliminar avisos"));
+        }
+
+        Optional<Aviso> avisoOpt = avisoRepository.findById(id);
+        if (avisoOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Eliminar todos los destinatarios asociados primero
+        List<AvisoDestinatario> destinatarios = destinatarioRepository.findByAvisoId(id);
+        destinatarioRepository.deleteAll(destinatarios);
+
+        // Eliminar el aviso
+        avisoRepository.delete(avisoOpt.get());
+
+        // Auditoría
+        auditService.registrar("AVISOS", "ELIMINAR_AVISO",
+                String.format("Eliminó aviso #%d: %s", id, avisoOpt.get().getTitulo()),
+                auth.getName(), request.getRemoteAddr());
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Aviso eliminado correctamente"));
     }
 
     // ========================================================================

@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SIGA - Sistema de Gestión de Asambleas | Cooperativa Lambaré",
-  description: "Sistema web profesional para gestión de asambleas cooperativas. Control de asistencia, votaciones, documentos y socios. Cooperativa Multiactiva Lambaré Ltda. Paraguay.",
+  description: "Sistema web profesional para gestión de asambleas cooperativas. Control de asistencia, votaciones, documentos y socios. Cooperativa Multiactiva Lambaré Ltda. Lambaré, Paraguay.",
   keywords: ["sistema de asambleas", "cooperativa", "gestión cooperativa", "control asistencia", "votaciones", "Paraguay", "SIGA", "Cooperativa Lambaré"],
   authors: [{ name: "Cooperativa Multiactiva Lambaré Ltda" }],
   creator: "Avanzantec Group SRL",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     url: "https://asamblea.cloud",
     images: [
       {
-        url: "/uploads/logos/logo_cooperativa.png",
+        url: "/logo-cooperativa.png",
         width: 800,
         height: 600,
         alt: "Logo Cooperativa Multiactiva Lambaré Ltda",
@@ -69,7 +69,7 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#10b981",
+  themeColor: "#A8252C",
 };
 
 export default function RootLayout({
@@ -90,7 +90,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="SIGA" />
         <link rel="apple-touch-icon" href="/logo.png" />
         <meta name="msapplication-TileImage" content="/logo.png" />
-        <meta name="msapplication-TileColor" content="#009900" />
+        <meta name="msapplication-TileColor" content="#A8252C" />
         {/* Schema.org Structured Data */}
         <script
           type="application/ld+json"

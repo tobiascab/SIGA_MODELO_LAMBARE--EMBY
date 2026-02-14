@@ -85,19 +85,21 @@ public class UsuarioController {
             map.put("nombreCompleto", u.getNombreCompleto());
             map.put("email", u.getEmail());
             map.put("telefono", u.getTelefono());
-            map.put("cargo", u.getCargo()); // Include cargo
-            map.put("meta", u.getMeta()); // Include meta
+            map.put("cargo", u.getCargo()); 
+            map.put("meta", u.getMeta()); 
             map.put("rol", u.getRol().name());
             map.put("rolNombre", u.getRol().getNombre());
             map.put("activo", u.isActivo());
             map.put("permisosEspeciales", u.getPermisosEspeciales());
             map.put("idSocio", u.getSocio() != null ? u.getSocio().getId() : null);
-            map.put("numeroSocio", u.getSocio() != null ? u.getSocio().getNumeroSocio() : null); // Return
+            map.put("numeroSocio", u.getSocio() != null ? u.getSocio().getNumeroSocio() : null); 
+            map.put("sucursalId", u.getSucursal() != null ? u.getSucursal().getId() : (u.getSocio() != null && u.getSocio().getSucursal() != null ? u.getSocio().getSucursal().getId() : null));
+            
+            String sName = u.getSucursal() != null ? u.getSucursal().getNombre() : (u.getSocio() != null && u.getSocio().getSucursal() != null ? u.getSocio().getSucursal().getNombre() : "CASA CENTRAL");
+            if (sName == null || sName.equalsIgnoreCase("Sucursal 5") || sName.equalsIgnoreCase("Central")) sName = "CASA CENTRAL";
+            map.put("sucursal", sName);
 
-            // numeroSocio
-            map.put("sucursalId", u.getSucursal() != null ? u.getSucursal().getId() : null);
-            map.put("sucursal", u.getSucursal() != null ? u.getSucursal().getNombre() : null);
-            map.put("passwordVisible", u.getPasswordVisible()); // Contraseña visible para admins
+            map.put("passwordVisible", u.getPasswordVisible()); 
             map.put("tipo", "USUARIO");
 
             // FUSIÓN: Si tiene socio vinculado, agregar detalles de estado
@@ -267,8 +269,12 @@ public class UsuarioController {
             map.put("activo", u.isActivo());
             map.put("permisosEspeciales", u.getPermisosEspeciales());
             map.put("idSocio", u.getIdSocio());
-            map.put("sucursal", u.getSucursal() != null ? u.getSucursal().getNombre() : null);
-            map.put("sucursalId", u.getSucursal() != null ? u.getSucursal().getId() : null);
+            map.put("sucursalId", u.getSucursal() != null ? u.getSucursal().getId() : (u.getSocio() != null && u.getSocio().getSucursal() != null ? u.getSocio().getSucursal().getId() : null));
+            
+            String sNameAll = u.getSucursal() != null ? u.getSucursal().getNombre() : (u.getSocio() != null && u.getSocio().getSucursal() != null ? u.getSocio().getSucursal().getNombre() : "CASA CENTRAL");
+            if (sNameAll == null || sNameAll.equalsIgnoreCase("Sucursal 5") || sNameAll.equalsIgnoreCase("Central")) sNameAll = "CASA CENTRAL";
+            map.put("sucursal", sNameAll);
+
             map.put("passwordVisible", u.getPasswordVisible()); // Contraseña visible para super admins
             map.put("tipo", "USUARIO");
 
@@ -608,7 +614,8 @@ public class UsuarioController {
 
     // Cambiar contraseña del usuario actual (requiere contraseña actual)
     @PostMapping("/cambiar-password-actual")
-    public ResponseEntity<?> cambiarPasswordActual(@RequestBody Map<String, String> data, Authentication auth) {
+    public ResponseEntity<?> cambiarPasswordActual(@RequestBody Map<String, String> data, Authentication auth,
+            HttpServletRequest request) {
         try {
             String currentPassword = data.get("currentPassword");
             String newPassword = data.get("newPassword");
@@ -635,6 +642,13 @@ public class UsuarioController {
             usuario.setPasswordVisible(newPassword);
             usuario.setRequiresPasswordChange(false);
             usuarioRepository.save(usuario);
+
+            auditService.registrar(
+                    "USUARIOS",
+                    "CAMBIAR_PASSWORD_PROPIO",
+                    "El usuario cambió su propia contraseña exitosamente.",
+                    usuario.getUsername(),
+                    request.getRemoteAddr());
 
             return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
         } catch (Exception e) {

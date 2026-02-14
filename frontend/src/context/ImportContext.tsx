@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import axios from "axios";
 
 type ImportStats = {
@@ -16,6 +17,10 @@ type ImportStats = {
     filasVacias: number;
     timeMs: number;
     rowsPerSecond: number;
+    sociosEliminados?: number;
+    sociosInactivados?: number;
+    usuariosCreados?: number;
+    mode?: string;
 };
 
 type DuplicateDetail = {
@@ -38,14 +43,14 @@ type ImportContextType = {
     stats: ImportStats | null;
     error: string | null;
     errorDetails: ErrorDetail[];
-    startImport: (file: File) => Promise<void>;
+    startImport: (file: File, endpoint?: string) => Promise<void>;
     cancelImport: () => Promise<void>;
     resetImport: () => void;
 };
 
 const ImportContext = createContext<ImportContextType | undefined>(undefined);
 
-export function ImportProvider({ children }: { children: React.ReactNode }) {
+export function ImportProvider({ children }: { children: any }) {
     // Initialize state from localStorage if available
     const [isImporting, setIsImporting] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -71,7 +76,7 @@ export function ImportProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    const startImport = async (file: File) => {
+    const startImport = async (file: File, endpoint: string = "/api/socios/import") => {
         setError(null);
         setStats(null);
         setProgress(0);
@@ -88,7 +93,7 @@ export function ImportProvider({ children }: { children: React.ReactNode }) {
         formData.append("file", file);
 
         try {
-            const response = await axios.post("/api/socios/import", formData, {
+            const response = await axios.post(endpoint, formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                     Authorization: `Bearer ${token}`,
@@ -139,7 +144,7 @@ export function ImportProvider({ children }: { children: React.ReactNode }) {
                     if (status.error) {
                         setError(status.error);
                     } else {
-                        setStats(status.result);
+                        setStats(status.result as ImportStats);
                     }
                     if (status.errorDetails && status.errorDetails.length > 0) {
                         setErrorDetails(status.errorDetails);

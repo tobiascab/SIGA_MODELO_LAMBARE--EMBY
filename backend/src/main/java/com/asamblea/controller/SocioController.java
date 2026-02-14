@@ -40,7 +40,31 @@ public class SocioController {
         try {
             // Inicia el proceso asincrono y retorna un ID
             String username = auth != null ? auth.getName() : "SISTEMA";
-            String processId = importacionService.iniciarImportacion(file, username);
+            String processId = importacionService.iniciarImportacion(file, username, com.asamblea.model.ImportType.PADRON_COMPLETO);
+            return ResponseEntity.ok(Map.of("processId", processId));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/import/complementary")
+    public ResponseEntity<?> importExcelComplementary(@RequestParam("file") MultipartFile file, Authentication auth) {
+        try {
+            // Inicia el proceso asincrono en modo COMPLEMENTARIO (Solo rellenar huecos)
+            String username = auth != null ? auth.getName() : "SISTEMA";
+            String processId = importacionService.iniciarImportacion(file, username, com.asamblea.model.ImportType.SOLO_FALTANTES);
+            return ResponseEntity.ok(Map.of("processId", processId));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/import/update-contacts")
+    public ResponseEntity<?> importExcelUpdateContacts(@RequestParam("file") MultipartFile file, Authentication auth) {
+        try {
+            // Inicia el proceso asincrono en modo ACTUALIZACION (Upsert sin invalidar)
+            String username = auth != null ? auth.getName() : "SISTEMA";
+            String processId = importacionService.iniciarImportacion(file, username, com.asamblea.model.ImportType.ACTUALIZACION_DATOS);
             return ResponseEntity.ok(Map.of("processId", processId));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
@@ -171,6 +195,23 @@ public class SocioController {
             dto.put("incoopAlDia", socio.isIncoopAlDia());
             dto.put("creditoAlDia", socio.isCreditoAlDia());
             dto.put("vozYVoto", socio.isEstadoVozVoto());
+            
+            // Campos del Padrón moderno
+            dto.put("habilitadoVozVoto", socio.getHabilitadoVozVoto());
+            dto.put("direccion", socio.getDireccion());
+            dto.put("barrio", socio.getBarrio());
+            dto.put("ciudad", socio.getCiudad());
+            dto.put("profesion", socio.getProfesion());
+            dto.put("edad", socio.getEdad());
+            dto.put("email", socio.getEmail());
+            dto.put("ocupacion", socio.getOcupacion());
+            dto.put("mesa", socio.getMesa());
+            dto.put("nroOrdenPadron", socio.getNroOrdenPadron());
+            dto.put("movil", socio.getMovil());
+            dto.put("fechaIngreso", socio.getFechaIngreso());
+            dto.put("fechaPadron", socio.getFechaPadron());
+            dto.put("enPadronActual", socio.isEnPadronActual());
+
             dto.put("yaAsignado", false);
             response.add(dto);
         }
@@ -316,8 +357,23 @@ public class SocioController {
         response.put("creditoAlDia", socio.isCreditoAlDia());
         response.put("asistenciaConfirmada", asistenciaConfirmada);
 
-        boolean conVozYVoto = socio.isAporteAlDia() && socio.isSolidaridadAlDia() &&
-                socio.isFondoAlDia() && socio.isIncoopAlDia() && socio.isCreditoAlDia();
+        // Campos del padrón moderno
+        response.put("habilitadoVozVoto", socio.getHabilitadoVozVoto());
+        response.put("direccion", socio.getDireccion());
+        response.put("barrio", socio.getBarrio());
+        response.put("fechaIngreso", socio.getFechaIngreso());
+        response.put("fechaPadron", socio.getFechaPadron());
+        response.put("edad", socio.getEdad());
+        response.put("profesion", socio.getProfesion());
+        response.put("ocupacion", socio.getOcupacion());
+        response.put("ciudad", socio.getCiudad());
+        response.put("email", socio.getEmail());
+        response.put("movil", socio.getMovil());
+        response.put("mesa", socio.getMesa());
+        response.put("nroOrdenPadron", socio.getNroOrdenPadron());
+        response.put("enPadronActual", socio.isEnPadronActual());
+
+        boolean conVozYVoto = socio.isEstadoVozVoto();
         response.put("conVozYVoto", conVozYVoto);
         return ResponseEntity.ok(response);
     }
@@ -509,7 +565,7 @@ public class SocioController {
         // Title
         com.lowagie.text.Font titleFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 18,
                 com.lowagie.text.Font.BOLD);
-        com.lowagie.text.Paragraph title = new com.lowagie.text.Paragraph("Padrón de Socios - Cooperativa Reducto",
+        com.lowagie.text.Paragraph title = new com.lowagie.text.Paragraph("Padrón de Socios - Cooperativa Multiactiva Lambaré Ltda.",
                 titleFont);
         title.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
         title.setSpacingAfter(20);

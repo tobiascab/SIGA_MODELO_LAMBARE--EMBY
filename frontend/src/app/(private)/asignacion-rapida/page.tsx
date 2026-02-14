@@ -16,6 +16,8 @@ interface Socio {
     fondoAlDia: boolean;
     incoopAlDia: boolean;
     creditoAlDia: boolean;
+    estadoVozVoto?: boolean;
+    habilitadoVozVoto?: string;
 }
 
 interface ListaAsignacion {
@@ -59,7 +61,9 @@ export default function AsignacionRapidaPage() {
     } | null>(null);
 
     const tieneVozYVoto = (socio: Socio) => {
-        return socio.aporteAlDia && socio.solidaridadAlDia && socio.fondoAlDia && socio.incoopAlDia && socio.creditoAlDia;
+        if (socio.estadoVozVoto !== undefined) return socio.estadoVozVoto;
+        if (socio.habilitadoVozVoto) return socio.habilitadoVozVoto.toLowerCase().includes('voto');
+        return false;
     };
 
     const fetchData = useCallback(async () => {

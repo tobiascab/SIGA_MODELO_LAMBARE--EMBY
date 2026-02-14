@@ -135,8 +135,8 @@ public class AsignacionController {
                         u.rol,
                         COUNT(DISTINCT la.id) as totalListas,
                         COUNT(a.id) as totalAsignados,
-                        SUM(CASE WHEN (s.aporte_al_dia = 1 AND s.solidaridad_al_dia = 1 AND s.fondo_al_dia = 1 AND s.incoop_al_dia = 1 AND s.credito_al_dia = 1) THEN 1 ELSE 0 END) as vyv,
-                        SUM(CASE WHEN NOT (s.aporte_al_dia = 1 AND s.solidaridad_al_dia = 1 AND s.fondo_al_dia = 1 AND s.incoop_al_dia = 1 AND s.credito_al_dia = 1) THEN 1 ELSE 0 END) as soloVoz
+                        SUM(CASE WHEN LOWER(s.habilitado_voz_voto) LIKE '%voto%' THEN 1 ELSE 0 END) as vyv,
+                        SUM(CASE WHEN LOWER(s.habilitado_voz_voto) NOT LIKE '%voto%' OR s.habilitado_voz_voto IS NULL THEN 1 ELSE 0 END) as soloVoz
                     FROM usuarios u
                     INNER JOIN listas_asignacion la ON la.user_id = u.id
                     INNER JOIN asignaciones_socios a ON a.lista_id = la.id
@@ -377,15 +377,20 @@ public class AsignacionController {
                     m.put("responsable", u.getNombreCompleto());
                     m.put("responsableUser", u.getUsername());
 
-                    // Buscar lista activa real y contar asignados
+                    // Buscar todas las listas y sumar asignados
                     List<ListaAsignacion> listas = listaRepository.findByUsuarioId(u.getId());
-                    Optional<ListaAsignacion> activa = listas.stream().filter(l -> Boolean.TRUE.equals(l.getActiva()))
-                            .findFirst();
+                    
+                    // Preferir la activa para "idListaReal", sino la primera
+                    Optional<ListaAsignacion> activa = listas.stream().filter(l -> Boolean.TRUE.equals(l.getActiva())).findFirst();
+                    if (activa.isPresent()) {
+                        m.put("idListaReal", activa.get().getId());
+                    } else if (!listas.isEmpty()) {
+                        m.put("idListaReal", listas.get(0).getId()); // Fallback
+                    }
 
                     int totalAsignados = 0;
-                    if (activa.isPresent()) {
-                        totalAsignados = asignacionRepository.findByListaAsignacionId(activa.get().getId()).size();
-                        m.put("idListaReal", activa.get().getId());
+                    for (ListaAsignacion lista : listas) {
+                        totalAsignados += asignacionRepository.findByListaAsignacionId(lista.getId()).size();
                     }
 
                     // Contar asistencias realizadas por el operador
@@ -394,8 +399,8 @@ public class AsignacionController {
                     // Total combinado (aproximado, el detalle filtra duplicados)
                     m.put("total", totalAsignados + totalRegistrados);
 
-                    // Consideramos activa si tiene lista activa O tiene registros
-                    m.put("activa", activa.isPresent() || totalRegistrados > 0);
+                    // Consideramos activa si tiene lista activa O tiene registros OR tiene asignados (aunque la lista no este marcada activa)
+                    m.put("activa", activa.isPresent() || totalRegistrados > 0 || totalAsignados > 0);
 
                     return m;
                 }).collect(Collectors.toList());
@@ -424,8 +429,9 @@ public class AsignacionController {
             return ResponseEntity.status(404).body(Map.of("error", "Socio no encontrado"));
 
         Socio socio = socioOpt.get();
-        
-        // VALIDACIÓN: Solo permitir socios con Voz Y Voto (si está activo en configuración)
+
+        // VALIDACIÓN: Solo permitir socios con Voz Y Voto (si está activo en
+        // configuración)
         if (configuracionService.isSoloVozVotoActivo() && !socio.isEstadoVozVoto()) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "SOCIO_SOLO_VOZ");
@@ -433,16 +439,17 @@ public class AsignacionController {
             errorResponse.put("socioNombre", socio.getNombreCompleto());
             errorResponse.put("socioNro", socio.getNumeroSocio());
             errorResponse.put("cedula", socio.getCedula());
-            
-            // Detalles de qué le falta al socio
+
+            // Mostrar el estado actual de habilitación
             List<String> pendientes = new ArrayList<>();
-            if (!socio.isAporteAlDia()) pendientes.add("Aporte");
-            if (!socio.isSolidaridadAlDia()) pendientes.add("Solidaridad");
-            if (!socio.isFondoAlDia()) pendientes.add("Fondo");
-            if (!socio.isIncoopAlDia()) pendientes.add("INCOOP");
-            if (!socio.isCreditoAlDia()) pendientes.add("Crédito");
+            String hvv = socio.getHabilitadoVozVoto();
+            if (hvv == null || hvv.isBlank()) {
+                pendientes.add("Sin dato de habilitación Voz/Voto");
+            } else {
+                pendientes.add("Estado actual: " + hvv);
+            }
             errorResponse.put("requisitosIncumplidos", pendientes);
-            
+
             return ResponseEntity.status(422).body(errorResponse);
         }
 
@@ -549,7 +556,8 @@ public class AsignacionController {
 
         Socio socio = socioOpt.get();
 
-        // VALIDACIÓN: Solo permitir socios con Voz Y Voto (si está activo en configuración)
+        // VALIDACIÓN: Solo permitir socios con Voz Y Voto (si está activo en
+        // configuración)
         if (configuracionService.isSoloVozVotoActivo() && !socio.isEstadoVozVoto()) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "SOCIO_SOLO_VOZ");
@@ -557,16 +565,17 @@ public class AsignacionController {
             errorResponse.put("socioNombre", socio.getNombreCompleto());
             errorResponse.put("socioNro", socio.getNumeroSocio());
             errorResponse.put("cedula", socio.getCedula());
-            
-            // Detalles de qué le falta al socio
+
+            // Mostrar el estado actual de habilitación
             List<String> pendientes = new ArrayList<>();
-            if (!socio.isAporteAlDia()) pendientes.add("Aporte");
-            if (!socio.isSolidaridadAlDia()) pendientes.add("Solidaridad");
-            if (!socio.isFondoAlDia()) pendientes.add("Fondo");
-            if (!socio.isIncoopAlDia()) pendientes.add("INCOOP");
-            if (!socio.isCreditoAlDia()) pendientes.add("Crédito");
+            String hvv = socio.getHabilitadoVozVoto();
+            if (hvv == null || hvv.isBlank()) {
+                pendientes.add("Sin dato de habilitación Voz/Voto");
+            } else {
+                pendientes.add("Estado actual: " + hvv);
+            }
             errorResponse.put("requisitosIncumplidos", pendientes);
-            
+
             return ResponseEntity.status(422).body(errorResponse);
         }
 
@@ -745,18 +754,17 @@ public class AsignacionController {
         List<Map<String, Object>> sociosDetalle = new ArrayList<>();
         Set<Long> procesados = new HashSet<>();
 
-        // 1. Obtener Asignados (si tiene lista)
+        // 1. Obtener Asignados (de TODAS las listas)
         List<ListaAsignacion> listas = listaRepository.findByUsuarioId(userId);
-        Optional<ListaAsignacion> listaActiva = listas.stream().filter(l -> Boolean.TRUE.equals(l.getActiva()))
-                .findFirst();
-
-        if (listaActiva.isPresent()) {
-            List<Asignacion> asignaciones = asignacionRepository.findByListaAsignacionId(listaActiva.get().getId());
+        
+        for (ListaAsignacion lista : listas) {
+            List<Asignacion> asignaciones = asignacionRepository.findByListaAsignacionId(lista.getId());
             for (Asignacion a : asignaciones) {
                 if (a.getSocio() != null && !procesados.contains(a.getSocio().getId())) {
                     procesados.add(a.getSocio().getId());
-                    sociosDetalle.add(mapSocioDetalle(a.getSocio(), a.getFechaAsignacion(), "Asignación Lista",
-                            a.getAsignadoPor()));
+                    // Indicar nombre de lista si tiene varias
+                    String origen = "Lista: " + lista.getNombre();
+                    sociosDetalle.add(mapSocioDetalle(a.getSocio(), a.getFechaAsignacion(), origen, a.getAsignadoPor()));
                 }
             }
         }
@@ -798,7 +806,8 @@ public class AsignacionController {
                 "id", targetUser.getId(),
                 "nombre", targetUser.getNombreCompleto(),
                 "username", targetUser.getUsername()));
-        response.put("idListaActiva", listaActiva.isPresent() ? listaActiva.get().getId() : null);
+        Optional<ListaAsignacion> activeList = listas.stream().filter(l -> Boolean.TRUE.equals(l.getActiva())).findFirst();
+        response.put("idListaActiva", activeList.isPresent() ? activeList.get().getId() : (listas.isEmpty() ? null : listas.get(0).getId()));
         response.put("socios", sociosDetalle);
         response.put("stats", Map.of(
                 "total", sociosDetalle.size(),
@@ -1101,24 +1110,24 @@ public class AsignacionController {
         try {
             // Obtener ranking completo
             String sql = """
-                SELECT
-                    u.id,
-                    u.nombre_completo as nombre,
-                    u.username,
-                    u.rol,
-                    COALESCE(suc.nombre, 'Sin Sucursal') as sucursal,
-                    COUNT(a.id) as totalAsignados,
-                    SUM(CASE WHEN (s.aporte_al_dia = 1 AND s.solidaridad_al_dia = 1 AND s.fondo_al_dia = 1 AND s.incoop_al_dia = 1 AND s.credito_al_dia = 1) THEN 1 ELSE 0 END) as vyv,
-                    SUM(CASE WHEN NOT (s.aporte_al_dia = 1 AND s.solidaridad_al_dia = 1 AND s.fondo_al_dia = 1 AND s.incoop_al_dia = 1 AND s.credito_al_dia = 1) THEN 1 ELSE 0 END) as soloVoz
-                FROM usuarios u
-                LEFT JOIN sucursales suc ON u.id_sucursal = suc.id
-                INNER JOIN listas_asignacion la ON la.user_id = u.id
-                INNER JOIN asignaciones_socios a ON a.lista_id = la.id
-                INNER JOIN socios s ON a.socio_id = s.id
-                GROUP BY u.id, u.nombre_completo, u.username, u.rol, suc.nombre
-                HAVING totalAsignados > 0
-                ORDER BY totalAsignados DESC
-            """;
+                        SELECT
+                            u.id,
+                            u.nombre_completo as nombre,
+                            u.username,
+                            u.rol,
+                            COALESCE(suc.nombre, 'Sin Sucursal') as sucursal,
+                            COUNT(a.id) as totalAsignados,
+                            SUM(CASE WHEN LOWER(s.habilitado_voz_voto) LIKE '%voto%' THEN 1 ELSE 0 END) as vyv,
+                            (COUNT(a.id) - SUM(CASE WHEN LOWER(s.habilitado_voz_voto) LIKE '%voto%' THEN 1 ELSE 0 END)) as soloVoz
+                        FROM usuarios u
+                        LEFT JOIN sucursales suc ON u.id_sucursal = suc.id
+                        INNER JOIN listas_asignacion la ON la.user_id = u.id
+                        INNER JOIN asignaciones_socios a ON a.lista_id = la.id
+                        INNER JOIN socios s ON a.socio_id = s.id
+                        GROUP BY u.id, u.nombre_completo, u.username, u.rol, suc.nombre
+                        HAVING totalAsignados > 0
+                        ORDER BY totalAsignados DESC
+                    """;
 
             List<Map<String, Object>> ranking = jdbcTemplate.queryForList(sql);
 
@@ -1164,30 +1173,29 @@ public class AsignacionController {
 
             // Obtener todos los socios asignados a este usuario
             String sql = """
-                SELECT
-                    s.numero_socio,
-                    s.cedula,
-                    s.nombre_completo,
-                    COALESCE(suc.nombre, 'Sin Sucursal') as sucursal,
-                    CASE WHEN (s.aporte_al_dia = 1 AND s.solidaridad_al_dia = 1 AND s.fondo_al_dia = 1 AND s.incoop_al_dia = 1 AND s.credito_al_dia = 1) THEN 1 ELSE 0 END as es_vyv,
-                    a.fecha_asignacion,
-                    s.aporte_al_dia, s.solidaridad_al_dia, s.fondo_al_dia, s.incoop_al_dia, s.credito_al_dia
-                FROM asignaciones_socios a
-                INNER JOIN socios s ON a.socio_id = s.id
-                LEFT JOIN sucursales suc ON s.id_sucursal = suc.id
-                INNER JOIN listas_asignacion la ON a.lista_id = la.id
-                WHERE la.user_id = ?
-                ORDER BY CAST(s.numero_socio AS UNSIGNED), s.nombre_completo
-            """;
+                        SELECT
+                            s.numero_socio,
+                            s.cedula,
+                            s.nombre_completo,
+                            COALESCE(suc.nombre, 'Sin Sucursal') as sucursal,
+                            CASE WHEN LOWER(s.habilitado_voz_voto) LIKE '%voto%' THEN 1 ELSE 0 END as es_vyv,
+                            a.fecha_asignacion,
+                            s.habilitado_voz_voto
+                        FROM asignaciones_socios a
+                        INNER JOIN socios s ON a.socio_id = s.id
+                        LEFT JOIN sucursales suc ON s.id_sucursal = suc.id
+                        INNER JOIN listas_asignacion la ON a.lista_id = la.id
+                        WHERE la.user_id = ?
+                        ORDER BY CAST(s.numero_socio AS UNSIGNED), s.nombre_completo
+                    """;
 
             List<Map<String, Object>> socios = jdbcTemplate.queryForList(sql, userId);
 
             byte[] pdfContent = reporteExportService.generarPdfListaUsuario(
-                socios,
-                targetUser.getNombreCompleto(),
-                targetUser.getUsername(),
-                targetUser.getRol().name()
-            );
+                    socios,
+                    targetUser.getNombreCompleto(),
+                    targetUser.getUsername(),
+                    targetUser.getRol().name());
 
             String filename = "lista_" + targetUser.getUsername().toLowerCase().replace(" ", "_") + ".pdf";
 

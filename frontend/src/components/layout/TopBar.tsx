@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, User, Calendar, Menu, X, ArrowLeft, LogOut, Settings, Mail, UserCircle, HelpCircle, Users, Activity, UserCheck, Check } from "lucide-react";
+import { Bell, Search as SearchIcon, User, Calendar, Menu, X, ArrowLeft, LogOut, Settings, Mail, UserCircle, HelpCircle, Users, Activity, UserCheck, Check } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { WelcomeModal } from "../onboarding/WelcomeModal";
 import AvisosBell from "../AvisosBell";
@@ -278,7 +278,7 @@ export function TopBar() {
                     {/* Búsqueda Responsive (Siempre visible) */}
                     <div className="flex flex-col relative flex-1 w-full max-w-xs md:max-w-sm lg:max-w-md" ref={searchContainerRef}>
                         <div className="w-full flex items-center gap-2 rounded-lg md:rounded-xl bg-slate-100 px-3 py-2 md:py-2.5 border border-transparent focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100 focus-within:bg-white transition-all">
-                            <Search className={`h-4 w-4 text-slate-400 shrink-0 ${isSearching ? 'animate-spin text-emerald-500' : ''}`} />
+                            <SearchIcon className={`h-4 w-4 text-slate-400 shrink-0 ${isSearching ? 'animate-spin text-emerald-500' : ''}`} />
                             <input
                                 type="text"
                                 value={searchTerm}
@@ -351,7 +351,7 @@ export function TopBar() {
 
                                     <div className="flex items-start gap-3 pr-4">
                                         <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-200">
-                                            <Search className="h-5 w-5 text-white" />
+                                            <SearchIcon className="h-5 w-5 text-white" />
                                         </div>
                                         <div>
                                             <p className="font-bold text-slate-800 text-sm mb-0.5">
@@ -533,8 +533,7 @@ export function TopBar() {
                     {(() => {
                         // Determinar si tiene Voz y Voto basándose en los aportes
                         const tieneVozVoto = selectedMember.vozVoto === true ||
-                            (selectedMember.aporteAlDia && selectedMember.solidaridadAlDia &&
-                                selectedMember.fondoAlDia && selectedMember.incoopAlDia && selectedMember.creditoAlDia);
+                            (selectedMember.habilitadoVozVoto && typeof selectedMember.habilitadoVozVoto === 'string' && selectedMember.habilitadoVozVoto.toLowerCase().includes('voto'));
 
                         const esAdmin = selectedMember.tipo === 'ADMIN' || (!selectedMember.nroSocio && !selectedMember.idSocio);
 
@@ -564,9 +563,9 @@ export function TopBar() {
                                 <div className={`relative h-24 bg-gradient-to-br ${theme.headerGradient} flex items-center justify-center shrink-0`}>
                                     <button
                                         onClick={() => setSelectedMember(null)}
-                                        className="absolute top-3 right-3 z-20 p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-all"
+                                        className="absolute top-2 right-2 z-20 p-3 bg-white/20 hover:bg-white/40 active:bg-white/50 rounded-full text-white transition-all min-w-[44px] min-h-[44px] flex items-center justify-center"
                                     >
-                                        <X className="h-5 w-5" />
+                                        <X className="h-6 w-6" strokeWidth={3} />
                                     </button>
 
                                     {/* Avatar superpuesto */}
@@ -605,29 +604,13 @@ export function TopBar() {
                                         </div>
                                     </div>
 
-                                    {/* Aportes Compacto - Solo si es socio */}
-                                    {!esAdmin && (selectedMember.idSocio || selectedMember.nroSocio) && (
-                                        <div className="bg-slate-50 rounded-xl p-2 border border-slate-100">
-                                            <div className="grid grid-cols-5 gap-1">
-                                                {[
-                                                    { label: "Aporte", val: selectedMember.aporteAlDia },
-                                                    { label: "Solid.", val: selectedMember.solidaridadAlDia },
-                                                    { label: "Fondo", val: selectedMember.fondoAlDia },
-                                                    { label: "INCOOP", val: selectedMember.incoopAlDia },
-                                                    { label: "Créd.", val: selectedMember.creditoAlDia },
-                                                ].map((item, idx) => (
-                                                    <div key={idx} className={`flex flex-col items-center justify-center py-1.5 rounded-lg border ${item.val
-                                                        ? 'bg-emerald-100/50 border-emerald-200 text-emerald-700'
-                                                        : 'bg-red-50 border-red-100 text-red-600'
-                                                        }`}>
-                                                        {item.val
-                                                            ? <Check className="h-3 w-3 mb-0.5" strokeWidth={4} />
-                                                            : <X className="h-3 w-3 mb-0.5" strokeWidth={4} />
-                                                        }
-                                                        <span className="text-[8px] font-black uppercase text-center leading-none">{item.label}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                    {/* Estado Habilitado Voz/Voto del Padrón */}
+                                    {!esAdmin && (selectedMember.idSocio || selectedMember.nroSocio) && selectedMember.habilitadoVozVoto && (
+                                        <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Estado según Padrón</p>
+                                            <p className={`text-sm font-black uppercase ${tieneVozVoto ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                {selectedMember.habilitadoVozVoto}
+                                            </p>
                                         </div>
                                     )}
 

@@ -193,7 +193,7 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
     };
 
     return (
-        <div className="space-y-6 pb-12">
+        <div className="space-y-4 sm:space-y-6 pb-12">
             <ActiveUsersModal
                 isOpen={isActiveUsersModalOpen}
                 onClose={() => setIsActiveUsersModalOpen(false)}
@@ -223,10 +223,10 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
                 {/* Decorative Blobs - Ocultos en móvil para performance */}
                 <div className="hidden md:block absolute top-0 right-0 w-[300px] h-full bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none" />
 
-                <div className="relative p-4 md:p-6 lg:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+                <div className="relative p-3 sm:p-4 md:p-6 lg:p-8 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 md:gap-6">
 
                     {/* Left Branding Group */}
-                    <div className="flex items-center gap-3 md:gap-5">
+                    <div className="flex items-center gap-2.5 sm:gap-3 md:gap-5">
                         {/* Interactive Main Icon */}
                         <div className="relative group/icon cursor-help">
                             {/* Animated Outer Rings */}
@@ -239,9 +239,9 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
                                 className="absolute -inset-4 bg-emerald-400 rounded-full blur-2xl"
                             />
 
-                            <div className="relative flex items-center justify-center w-16 h-16 lg:w-20 lg:h-20 bg-white rounded-3xl shadow-[0_12px_24px_-8px_rgba(16,185,129,0.3)] border border-slate-100 transition-all duration-500 group-hover/icon:scale-110 group-hover/icon:rotate-3 overflow-hidden">
+                            <div className="relative flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-white rounded-2xl sm:rounded-3xl shadow-[0_12px_24px_-8px_rgba(16,185,129,0.3)] border border-slate-100 transition-all duration-500 group-hover/icon:scale-110 group-hover/icon:rotate-3 overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-emerald-50/30" />
-                                <Activity className={`h-8 w-8 lg:h-10 lg:w-10 text-emerald-500 relative z-10 transition-all duration-1000 ${autoRefresh ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''}`} />
+                                <Activity className={`h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-emerald-500 relative z-10 transition-all duration-1000 ${autoRefresh ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''}`} />
 
                                 {/* Micro Shine Effect */}
                                 <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/80 to-transparent pointer-events-none" />
@@ -260,7 +260,7 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
                         {/* Title Wrapper */}
                         <div className="space-y-1.5 pt-1">
                             <div className="flex items-center gap-4">
-                                <h1 className="text-3xl lg:text-5xl font-black text-slate-800 tracking-tight leading-none drop-shadow-sm">
+                                <h1 className="text-xl sm:text-3xl lg:text-5xl font-black text-slate-800 tracking-tight leading-none drop-shadow-sm">
                                     Centro de <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Control</span>
                                 </h1>
                                 <AnimatePresence mode="wait">
@@ -279,7 +279,7 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
                                     )}
                                 </AnimatePresence>
                             </div>
-                            <p className="text-slate-500/80 font-bold text-sm lg:text-base flex items-center gap-3">
+                            <p className="text-slate-500/80 font-bold text-xs sm:text-sm lg:text-base flex items-center gap-2 sm:gap-3">
                                 <ShieldCheck className="h-4 w-4 text-emerald-400" />
                                 Panel Inteligente de Operaciones & Estadísticas
                             </p>
@@ -293,7 +293,7 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
                         <motion.div
                             whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.8)" }}
                             onTap={() => setAutoRefresh(!autoRefresh)}
-                            className={`flex items-center gap-4 pl-5 pr-6 py-4 rounded-[2rem] border transition-all duration-500 cursor-pointer shadow-sm select-none
+                            className={`flex items-center gap-3 sm:gap-4 pl-3 sm:pl-5 pr-4 sm:pr-6 py-3 sm:py-4 rounded-2xl sm:rounded-[2rem] border transition-all duration-500 cursor-pointer shadow-sm select-none touch-manipulation
                             ${autoRefresh ? 'bg-white border-emerald-200 shadow-emerald-100/30' : 'bg-slate-50/50 border-slate-200'}`}
                         >
                             <div className="flex flex-col items-start pr-2">
@@ -328,12 +328,12 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
                             whileTap={{ scale: 0.95 }}
                             onClick={() => handleRefresh(false)}
                             disabled={isRefreshing}
-                            className="relative h-16 group/btn"
+                            className="relative h-12 sm:h-16 group/btn"
                         >
                             {/* Glowing Aura on Hover */}
                             <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-2xl blur-lg opacity-0 group-hover/btn:opacity-30 transition-opacity duration-500" />
 
-                            <div className="relative h-full px-8 bg-slate-900 overflow-hidden rounded-2xl flex items-center gap-3 border border-slate-800 transition-all duration-300 group-hover/btn:border-emerald-500/50">
+                            <div className="relative h-full px-5 sm:px-8 bg-slate-900 overflow-hidden rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 border border-slate-800 transition-all duration-300 group-hover/btn:border-emerald-500/50">
                                 {/* Flowing Shine Animation */}
                                 <motion.div
                                     animate={{ x: ['-200%', '200%'] }}
@@ -342,7 +342,7 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
                                 />
 
                                 <RefreshCw className={`h-5 w-5 text-emerald-400 transition-all duration-700 ${isRefreshing ? 'animate-spin' : 'group-hover/btn:rotate-180'}`} />
-                                <span className="text-white font-black uppercase text-xs tracking-[0.2em]">
+                                <span className="text-white font-black uppercase text-[10px] sm:text-xs tracking-[0.15em] sm:tracking-[0.2em]">
                                     {isRefreshing ? 'Procesando...' : 'Actualizar'}
                                 </span>
 
@@ -565,7 +565,7 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
             <MetasWidgets />
 
             {/* KPIs Premium 'Nano' Style */}
-            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 lg:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5 sm:gap-4 lg:gap-6">
                 {
                     [
                         { label: "Meta Global", value: stats.totalMeta || 0, icon: Target, gradient: "from-pink-500 via-rose-600 to-rose-700", shadow: "shadow-rose-500/40", ring: "ring-rose-400/30" },
@@ -581,35 +581,35 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
                             animate="visible"
                             transition={{ delay: i * 0.05 }}
                             whileHover={{ y: -5, scale: 1.02 }}
-                            className={`relative overflow-hidden rounded-[2rem] p-6 lg:p-8 text-white shadow-2xl bg-gradient-to-br ${stat.shadow} ${stat.gradient} group`}
+                            className={`relative overflow-hidden rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 lg:p-8 text-white shadow-2xl bg-gradient-to-br ${stat.shadow} ${stat.gradient} group`}
                         >
                             {/* Glossy Overlay/Reflection */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
                             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-6 -mt-6 pointer-events-none" />
 
                             {/* Inner Highlight Ring */}
-                            <div className={`absolute inset-0 rounded-[2rem] border border-white/20 ${stat.ring} pointer-events-none`} />
+                            <div className={`absolute inset-0 rounded-2xl sm:rounded-[2rem] border border-white/20 ${stat.ring} pointer-events-none`} />
 
                             {/* Background Icon */}
                             <div className="absolute -right-6 -bottom-6 opacity-10 rotate-12 transition-transform duration-500 group-hover:rotate-0 group-hover:scale-110">
-                                <stat.icon className="h-32 w-32" />
+                                <stat.icon className="h-20 w-20 sm:h-32 sm:w-32" />
                             </div>
 
                             {/* Content */}
-                            <div className="relative z-10 flex flex-col h-full justify-between gap-4">
+                            <div className="relative z-10 flex flex-col h-full justify-between gap-2 sm:gap-4">
                                 {/* Header: Icon + Label */}
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-white/20 backdrop-blur-md rounded-xl shadow-inner border border-white/20">
-                                        <stat.icon className="h-5 w-5 text-white" />
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    <div className="p-1.5 sm:p-2.5 bg-white/20 backdrop-blur-md rounded-lg sm:rounded-xl shadow-inner border border-white/20">
+                                        <stat.icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                                     </div>
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/90 drop-shadow-sm">
+                                    <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.15em] sm:tracking-[0.2em] text-white/90 drop-shadow-sm">
                                         {stat.label}
                                     </span>
                                 </div>
 
                                 {/* Value */}
                                 <div className="mt-auto">
-                                    <p className="text-4xl xs:text-5xl md:text-5xl lg:text-6xl font-black tracking-tighter drop-shadow-lg leading-none">
+                                    <p className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter drop-shadow-lg leading-none">
                                         <AnimatedCounter value={stat.value} />
                                     </p>
                                 </div>
@@ -623,24 +623,24 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100"
+                className="bg-white rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 shadow-xl shadow-slate-200/50 border border-slate-100"
             >
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-200">
-                            <Target className="h-6 w-6 text-white" />
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-2 sm:p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg sm:rounded-xl shadow-lg shadow-indigo-200">
+                            <Target className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
                         </div>
                         <div>
-                            <h3 className="font-black text-slate-800 text-lg">Progreso de Asistencia</h3>
-                            <p className="text-slate-400 text-xs font-medium">Asistencia sobre el total de padrón</p>
+                            <h3 className="font-black text-slate-800 text-sm sm:text-lg">Progreso de Asistencia</h3>
+                            <p className="text-slate-400 text-[10px] sm:text-xs font-medium hidden sm:block">Asistencia sobre el total de padrón</p>
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-4xl font-black text-slate-800">{porcentajeAsistencia}%</p>
-                        <p className="text-slate-400 text-sm font-medium">{presentes.toLocaleString()} /{stats.totalPadron.toLocaleString()}</p>
+                        <p className="text-2xl sm:text-4xl font-black text-slate-800">{porcentajeAsistencia}%</p>
+                        <p className="text-slate-400 text-xs sm:text-sm font-medium">{presentes.toLocaleString()} /{stats.totalPadron.toLocaleString()}</p>
                     </div>
                 </div>
-                <div className="h-6 bg-slate-100 rounded-full overflow-hidden relative">
+                <div className="h-4 sm:h-6 bg-slate-100 rounded-full overflow-hidden relative">
                     <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.min(porcentajeAsistenciaRaw, 100)}%` }}
@@ -654,7 +654,7 @@ export function AdminDashboard({ stats, desempeno, ranking, userActivity, onRefr
             </motion.div>
 
             {/* Grid Principal de Estadísticas */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
                 {/* Gráfico Radial de Quórum */}
                 <motion.div

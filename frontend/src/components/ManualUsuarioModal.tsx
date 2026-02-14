@@ -162,11 +162,11 @@ export function ManualUsuarioModal({ isOpen, onClose }: ManualUsuarioModalProps)
                                         key={section.id}
                                         onClick={() => setActiveSection(section.id)}
                                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeSection === section.id
-                                                ? "bg-white text-teal-500 shadow-sm ring-1 ring-slate-200"
-                                               :"text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                            ? "bg-white text-teal-500 shadow-sm ring-1 ring-slate-200"
+                                            : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                                             }`}
                                     >
-                                        <section.icon className={`h-4 w-4 ${activeSection === section.id ? "text-emerald-500":"text-slate-400"}`} />
+                                        <section.icon className={`h-4 w-4 ${activeSection === section.id ? "text-emerald-500" : "text-slate-400"}`} />
                                         {section.title}
                                     </button>
                                 ))}
@@ -176,14 +176,14 @@ export function ManualUsuarioModal({ isOpen, onClose }: ManualUsuarioModalProps)
                         {/* Contenido Principal */}
                         <div className="flex-1 flex flex-col bg-white h-full overflow-hidden">
                             {/* Header Móvil (Solo visible en pantallas pequeñas) */}
-                            <div className="md:hidden p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                                <span className="font-bold text-slate-700">Explorando: {activeContent?.title}</span>
-                                <button onClick={onClose} className="p-2 bg-white rounded-full shadow-sm text-slate-500">
+                            <div className="md:hidden p-3 border-b border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0">
+                                <span className="font-bold text-slate-700 text-sm truncate">{activeContent?.title}</span>
+                                <button onClick={onClose} className="p-2 bg-white rounded-full shadow-sm text-slate-500 touch-manipulation">
                                     <X className="h-4 w-4" />
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 md:p-10">
+                            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-10">
                                 <div className="max-w-2xl mx-auto">
                                     <motion.div
                                         key={activeSection}
@@ -191,27 +191,27 @@ export function ManualUsuarioModal({ isOpen, onClose }: ManualUsuarioModalProps)
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ duration: 0.3 }}
                                     >
-                                        <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100">
-                                            <div className="h-12 w-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500">
-                                                {activeContent?.icon && <activeContent.icon className="h-6 w-6" />}
+                                        <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-slate-100">
+                                            <div className="h-10 w-10 sm:h-12 sm:w-12 bg-emerald-50 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-500 flex-shrink-0">
+                                                {activeContent?.icon && <activeContent.icon className="h-5 w-5 sm:h-6 sm:w-6" />}
                                             </div>
-                                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">
+                                            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-800 tracking-tight">
                                                 {activeContent?.title}
                                             </h2>
                                         </div>
 
-                                        <div className="prose prose-slate prose-lg">
+                                        <div className="prose prose-slate prose-sm sm:prose-lg">
                                             {activeContent?.content}
                                         </div>
                                     </motion.div>
                                 </div>
                             </div>
 
-                            {/* Footer con Botón Cerrar Desktop */}
-                            <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end hidden md:flex">
+                            {/* Footer con Botón Cerrar - visible en todas las pantallas */}
+                            <div className="p-3 sm:p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end flex-shrink-0">
                                 <button
                                     onClick={onClose}
-                                    className="px-6 py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold transition-colors flex items-center gap-2"
+                                    className="px-5 sm:px-6 py-2 sm:py-2.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold transition-colors flex items-center gap-2 text-sm touch-manipulation"
                                 >
                                     <span>Entendido</span>
                                     <CheckCircle2 className="h-4 w-4" />

@@ -10,4 +10,7 @@ public interface ImportacionHistorialRepository extends JpaRepository<Importacio
 
     @Query("SELECT i FROM ImportacionHistorial i ORDER BY i.fechaImportacion DESC")
     List<ImportacionHistorial> findTop10ByOrderByFechaImportacionDesc();
+
+    @Query("SELECT MAX(i.totalRegistros) FROM ImportacionHistorial i")
+    Integer findMaxTotalRegistros();
 }

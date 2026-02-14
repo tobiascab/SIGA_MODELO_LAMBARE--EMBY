@@ -167,7 +167,7 @@ export default function MiReportePage() {
 
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(18);
-        doc.text('COOPERATIVA REDUCTO LTDA', 42, 22);
+        doc.text('COOPERATIVA MULTIACTIVA LAMBARÉ LTDA.', 42, 22);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text('SIGA - Mi Reporte Personal', 42, 30);

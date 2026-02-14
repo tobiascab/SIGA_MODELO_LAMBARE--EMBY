@@ -19,6 +19,7 @@ import { HeartbeatManager } from "@/components/layout/HeartbeatManager";
 import { DeadlineNotification } from "@/components/DeadlineNotification";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { CandidateSpotlight } from "@/components/dashboard/CandidateSpotlight";
+import { WelcomeStatsModal } from "@/components/modals/WelcomeStatsModal";
 
 // Componente wrapper para el TourWelcome que necesita acceso al contexto
 function TourWelcomeWrapper({ userRole }: { userRole?: string }) {
@@ -132,6 +133,7 @@ export default function PrivateLayout({
                     <DeadlineNotification />
                     <PWAInstallPrompt />
                     <CandidateSpotlight />
+                    <WelcomeStatsModal />
                 </UserActivityProvider>
             </ImportProvider>
         </TourProvider>

@@ -63,7 +63,7 @@ public class ImportacionService {
 
     private final Map<String, ImportStatus> progressMap = new ConcurrentHashMap<>();
 
-    public String iniciarImportacion(MultipartFile file, String usuario) throws Exception {
+    public String iniciarImportacion(MultipartFile file, String usuario, com.asamblea.model.ImportType type) throws Exception {
         String processId = UUID.randomUUID().toString();
         String tempFilename = file.getOriginalFilename();
         String originalFilename = (tempFilename != null && !tempFilename.isBlank()) ? tempFilename : "padron.xlsx";
@@ -87,9 +87,9 @@ public class ImportacionService {
         // Ejecutar en hilo separado manual (evitando problemas de proxy @Async
         // self-invocation)
         final String finalOriginalFilename = originalFilename;
-        final String finalPermanentPath = permanentFile.toString();
+        
         CompletableFuture.runAsync(() -> procesarAsync(processId, permanentFile.toFile(), usuario,
-                finalOriginalFilename, finalPermanentPath));
+                finalOriginalFilename, permanentFile.toString(), type));
 
         return processId;
     }
@@ -106,7 +106,7 @@ public class ImportacionService {
     }
 
     protected void procesarAsync(String processId, File tempFile, String usuario, String originalFilename,
-            String archivoRuta) {
+            String archivoRuta, com.asamblea.model.ImportType type) {
         log.info("[{}] Iniciando importación optimizada - Archivo: {}", processId, originalFilename);
         long start = System.currentTimeMillis();
         ImportStatus status = progressMap.get(processId);
@@ -152,11 +152,90 @@ public class ImportacionService {
                 log.warn("⚠️ No se pudo crear el respaldo de seguridad de asignaciones: {}", e.getMessage());
             }
 
-            int sociosMarcadosInactivos = jdbcTemplate.update("UPDATE socios SET en_padron_actual = false");
-            log.info("Marcados {} socios como inactivos temporalmente", sociosMarcadosInactivos);
+            int sociosMarcadosInactivos = 0;
+            if (type == com.asamblea.model.ImportType.PADRON_COMPLETO) {
+                sociosMarcadosInactivos = jdbcTemplate.update("UPDATE socios SET en_padron_actual = false");
+                log.info("Marcados {} socios como inactivos temporalmente", sociosMarcadosInactivos);
+            } else {
+                log.info("Modo ESPECIAL ({}): No se invalidaron socios previos.", type);
+            }
 
             // 3. Preparar inserción Batch con UPSERT (ON DUPLICATE KEY UPDATE)
             // Se han agregado todos los campos nuevos del padrón 2024
+            // Construcción dinámica del ON DUPLICATE KEY UPDATE según el modo
+            StringBuilder updateClause = new StringBuilder("ON DUPLICATE KEY UPDATE ");
+            
+            if (type == com.asamblea.model.ImportType.SOLO_FALTANTES) {
+                // MODO COMPLEMENTARIO: Solo actualiza si el valor actual es NULL o VACÍO
+                // IF(target IS NULL OR target = '', VALUES(target), target)
+                updateClause.append("nombre_completo = IF(nombre_completo IS NULL OR nombre_completo = '', VALUES(nombre_completo), nombre_completo), ")
+                        .append("telefono = IF(telefono IS NULL OR telefono = '', VALUES(telefono), telefono), ")
+                        .append("id_sucursal = IF(id_sucursal IS NULL, VALUES(id_sucursal), id_sucursal), ") // Sucursal es ID, no string vacio
+                        
+                        .append("clasificacion = IF(clasificacion IS NULL OR clasificacion = '', VALUES(clasificacion), clasificacion), ")
+                        .append("direccion = IF(direccion IS NULL OR direccion = '', VALUES(direccion), direccion), ")
+                        .append("barrio = IF(barrio IS NULL OR barrio = '', VALUES(barrio), barrio), ")
+                        .append("fecha_ingreso = IF(fecha_ingreso IS NULL OR fecha_ingreso = '', VALUES(fecha_ingreso), fecha_ingreso), ")
+                        .append("fecha_padron = IF(fecha_padron IS NULL OR fecha_padron = '', VALUES(fecha_padron), fecha_padron), ")
+                        
+                        .append("deuda_aporte = IF(deuda_aporte IS NULL OR deuda_aporte = '', VALUES(deuda_aporte), deuda_aporte), ")
+                        .append("aporte_cubierto = IF(aporte_cubierto IS NULL OR aporte_cubierto = '', VALUES(aporte_cubierto), aporte_cubierto), ")
+                        .append("deuda_solidaridad = IF(deuda_solidaridad IS NULL OR deuda_solidaridad = '', VALUES(deuda_solidaridad), deuda_solidaridad), ")
+                        .append("solidaridad_cubierto = IF(solidaridad_cubierto IS NULL OR solidaridad_cubierto = '', VALUES(solidaridad_cubierto), solidaridad_cubierto), ")
+                        .append("deuda_sede_social = IF(deuda_sede_social IS NULL OR deuda_sede_social = '', VALUES(deuda_sede_social), deuda_sede_social), ")
+                        .append("sede_social_cubierto = IF(sede_social_cubierto IS NULL OR sede_social_cubierto = '', VALUES(sede_social_cubierto), sede_social_cubierto), ")
+                        .append("deuda_prestamo = IF(deuda_prestamo IS NULL OR deuda_prestamo = '', VALUES(deuda_prestamo), deuda_prestamo), ")
+                        .append("mayor_dia_atraso_pmo = IF(mayor_dia_atraso_pmo IS NULL OR mayor_dia_atraso_pmo = '', VALUES(mayor_dia_atraso_pmo), mayor_dia_atraso_pmo), ")
+                        .append("deuda_tarjeta_credito = IF(deuda_tarjeta_credito IS NULL OR deuda_tarjeta_credito = '', VALUES(deuda_tarjeta_credito), deuda_tarjeta_credito), ")
+                        .append("mayor_dia_atraso_tc = IF(mayor_dia_atraso_tc IS NULL OR mayor_dia_atraso_tc = '', VALUES(mayor_dia_atraso_tc), mayor_dia_atraso_tc), ")
+                        
+                        // habilitado_voz_voto es critico. Si ya está definido, NO tocar. Excepto si en DB está vacio.
+                        .append("habilitado_voz_voto = IF(habilitado_voz_voto IS NULL OR habilitado_voz_voto = '', VALUES(habilitado_voz_voto), habilitado_voz_voto), ")
+                        .append("mesa = IF(mesa IS NULL OR mesa = '', VALUES(mesa), mesa), ")
+                        .append("nro_orden_padron = IF(nro_orden_padron IS NULL OR nro_orden_padron = '', VALUES(nro_orden_padron), nro_orden_padron), ")
+                        
+                        .append("edad = IF(edad IS NULL OR edad = '', VALUES(edad), edad), ")
+                        .append("ocupacion = IF(ocupacion IS NULL OR ocupacion = '', VALUES(ocupacion), ocupacion), ")
+                        .append("profesion = IF(profesion IS NULL OR profesion = '', VALUES(profesion), profesion), ")
+                        .append("grado_instruccion = IF(grado_instruccion IS NULL OR grado_instruccion = '', VALUES(grado_instruccion), grado_instruccion), ")
+                        .append("ciudad = IF(ciudad IS NULL OR ciudad = '', VALUES(ciudad), ciudad), ")
+                        .append("email = IF(email IS NULL OR email = '', VALUES(email), email), ")
+                        .append("movil = IF(movil IS NULL OR movil = '', VALUES(movil), movil), ")
+                        
+                        .append("en_padron_actual = true"); // Siempre marcar como activo si se encuentra
+            } else {
+                // MODO ESTÁNDAR (Upsert normal): Sobreescribe si viene dato nuevo
+                updateClause.append("nombre_completo = COALESCE(VALUES(nombre_completo), nombre_completo), ")
+                        .append("telefono = COALESCE(VALUES(telefono), telefono), ")
+                        .append("id_sucursal = COALESCE(VALUES(id_sucursal), id_sucursal), ")
+                        .append("clasificacion = COALESCE(VALUES(clasificacion), clasificacion), ")
+                        .append("direccion = COALESCE(VALUES(direccion), direccion), ")
+                        .append("barrio = COALESCE(VALUES(barrio), barrio), ")
+                        .append("fecha_ingreso = COALESCE(VALUES(fecha_ingreso), fecha_ingreso), ")
+                        .append("fecha_padron = COALESCE(VALUES(fecha_padron), fecha_padron), ")
+                        .append("deuda_aporte = COALESCE(VALUES(deuda_aporte), deuda_aporte), ")
+                        .append("aporte_cubierto = COALESCE(VALUES(aporte_cubierto), aporte_cubierto), ")
+                        .append("deuda_solidaridad = COALESCE(VALUES(deuda_solidaridad), deuda_solidaridad), ")
+                        .append("solidaridad_cubierto = COALESCE(VALUES(solidaridad_cubierto), solidaridad_cubierto), ")
+                        .append("deuda_sede_social = COALESCE(VALUES(deuda_sede_social), deuda_sede_social), ")
+                        .append("sede_social_cubierto = COALESCE(VALUES(sede_social_cubierto), sede_social_cubierto), ")
+                        .append("deuda_prestamo = COALESCE(VALUES(deuda_prestamo), deuda_prestamo), ")
+                        .append("mayor_dia_atraso_pmo = COALESCE(VALUES(mayor_dia_atraso_pmo), mayor_dia_atraso_pmo), ")
+                        .append("deuda_tarjeta_credito = COALESCE(VALUES(deuda_tarjeta_credito), deuda_tarjeta_credito), ")
+                        .append("mayor_dia_atraso_tc = COALESCE(VALUES(mayor_dia_atraso_tc), mayor_dia_atraso_tc), ")
+                        .append("habilitado_voz_voto = COALESCE(VALUES(habilitado_voz_voto), habilitado_voz_voto), ")
+                        .append("mesa = COALESCE(VALUES(mesa), mesa), ")
+                        .append("nro_orden_padron = COALESCE(VALUES(nro_orden_padron), nro_orden_padron), ")
+                        .append("edad = COALESCE(VALUES(edad), edad), ")
+                        .append("ocupacion = COALESCE(VALUES(ocupacion), ocupacion), ")
+                        .append("profesion = COALESCE(VALUES(profesion), profesion), ")
+                        .append("grado_instruccion = COALESCE(VALUES(grado_instruccion), grado_instruccion), ")
+                        .append("ciudad = COALESCE(VALUES(ciudad), ciudad), ")
+                        .append("email = COALESCE(VALUES(email), email), ")
+                        .append("movil = COALESCE(VALUES(movil), movil), ")
+                        .append("en_padron_actual = true");
+            }
+
             String sql = "INSERT INTO socios (numero_socio, cedula, nombre_completo, telefono, id_sucursal, " +
                     "aporte_al_dia, solidaridad_al_dia, fondo_al_dia, incoop_al_dia, credito_al_dia, " +
                     "clasificacion, direccion, barrio, fecha_ingreso, fecha_padron, " +
@@ -166,22 +245,7 @@ public class ImportacionService {
                     "edad, ocupacion, profesion, grado_instruccion, ciudad, email, movil, " +
                     "created_at, en_padron_actual) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, true) " +
-                    "ON DUPLICATE KEY UPDATE " +
-                    "nombre_completo = VALUES(nombre_completo), " +
-                    "telefono = VALUES(telefono), " +
-                    "id_sucursal = VALUES(id_sucursal), " +
-                    // Actualizamos también los nuevos campos
-                    "clasificacion = VALUES(clasificacion), direccion = VALUES(direccion), barrio = VALUES(barrio), " +
-                    "fecha_ingreso = VALUES(fecha_ingreso), fecha_padron = VALUES(fecha_padron), " +
-                    "deuda_aporte = VALUES(deuda_aporte), aporte_cubierto = VALUES(aporte_cubierto), " +
-                    "deuda_solidaridad = VALUES(deuda_solidaridad), solidaridad_cubierto = VALUES(solidaridad_cubierto), " +
-                    "deuda_sede_social = VALUES(deuda_sede_social), sede_social_cubierto = VALUES(sede_social_cubierto), " +
-                    "deuda_prestamo = VALUES(deuda_prestamo), mayor_dia_atraso_pmo = VALUES(mayor_dia_atraso_pmo), " +
-                    "deuda_tarjeta_credito = VALUES(deuda_tarjeta_credito), mayor_dia_atraso_tc = VALUES(mayor_dia_atraso_tc), " +
-                    "habilitado_voz_voto = VALUES(habilitado_voz_voto), mesa = VALUES(mesa), nro_orden_padron = VALUES(nro_orden_padron), " +
-                    "edad = VALUES(edad), ocupacion = VALUES(ocupacion), profesion = VALUES(profesion), " +
-                    "grado_instruccion = VALUES(grado_instruccion), ciudad = VALUES(ciudad), email = VALUES(email), movil = VALUES(movil), " +
-                    "en_padron_actual = true";
+                    updateClause.toString();
 
             int imported = 0;
             int errors = 0;
@@ -235,13 +299,13 @@ public class ImportacionService {
                                 
                                 if (h.equals("DOC AGR")) continue; // IGNORAR EXPLÍCITAMENTE
                                 
-                                if (h.equals("DOC NUM") || h.equals("DOC. NUM.") || h.equals("CEDULA") || h.equals("CI") || h.equals("NRO. DOC") || h.equals("NRO.DOC")) {
+                                if (h.equals("DOC NUM") || h.equals("DOC. NUM.") || h.equals("CEDULA") || h.equals("CI") || h.equals("NRO. DOC") || h.equals("NRO.DOC") || h.equals("NRO. DOC.")) {
                                     colMap.put("DOC NUM", cell.getColumnIndex());
-                                } else if (h.equals("SOCIO NOMBRE") || h.equals("SOCIO NOM") || h.equals("NOMBRE") || h.equals("SOCIO NON") || h.equals("SOCIO") || h.equals("APELLIDOS Y NOMBRES")) {
+                                } else if (h.equals("SOCIO NOMBRE") || h.equals("SOCIO NOM") || h.equals("NOMBRE") || h.equals("SOCIO NON") || h.equals("SOCIO") || h.equals("APELLIDOS Y NOMBRES") || h.equals("PADRON") || h.equals("PADRÓN")) {
                                     colMap.put("SOCIO NOMBRE", cell.getColumnIndex());
-                                } else if (h.equals("SOCIO NRO") || h.equals("NRO SOCIO") || h.equals("NUMERO SOCIO") || h.equals("SOCIO NRO.")) {
+                                } else if (h.equals("SOCIO NRO") || h.equals("NRO SOCIO") || h.equals("NUMERO SOCIO") || h.equals("SOCIO NRO.") || h.equals("SOCIO NRO")) {
                                     colMap.put("NRO SOCIO", cell.getColumnIndex());
-                                } else if (h.equalsIgnoreCase("TELEFONO") || h.equalsIgnoreCase("TEL")) {
+                                } else if (h.equalsIgnoreCase("TELEFONO") || h.equalsIgnoreCase("TEL") || h.equals("TELÉFONO")) {
                                     colMap.put("TELEFONO", cell.getColumnIndex());
                                 } else if (h.equals("TEL.MOVIL 1") || h.equals("MOVIL") || h.equals("CELULAR")) {
                                     colMap.put("MOVIL", cell.getColumnIndex());
@@ -290,7 +354,11 @@ public class ImportacionService {
                                 
                                 // Logistica
                                 else if (h.equals("MESA")) colMap.put("MESA", cell.getColumnIndex());
-                                else if (h.contains("NRO. ORDEN") || h.contains("ORDEN PADR")) colMap.put("NRO_ORDEN_PADRON", cell.getColumnIndex());
+                                else if (h.contains("NRO. ORDEN") || h.contains("ORDEN PADR") || h.equals("NRO ORDEN PADRON") || h.equals("NRO ORDEN PADRÓN")) colMap.put("NRO_ORDEN_PADRON", cell.getColumnIndex());
+                                
+                                // Mappings específicos solicitados por usuario
+                                else if (h.equals("FECHA DE PADRON") || h.equals("FECHA DE PADRÓN")) colMap.put("FECHA_PADRON", cell.getColumnIndex());
+                                else if (h.equals("HABILITADO VOZ/VOTO")) colMap.put("HABILITADO_VOZ_VOTO", cell.getColumnIndex());
                             }
                         }
                         log.info("Columnas detectadas: {}", colMap);
@@ -595,6 +663,8 @@ public class ImportacionService {
                 ps.executeBatch();
                 conn.commit();
 
+                updateProgress(processId, 96); // Señal visual: filas insertadas OK
+
                 // ===== MANEJO DE SOCIOS QUE YA NO ESTÁN EN EL PADRÓN =====
                 // IMPORTANTE: NUNCA eliminamos asignaciones - son datos críticos
                 // Los socios que salen del padrón pero tienen asignaciones se PRESERVAN como inactivos
@@ -602,8 +672,11 @@ public class ImportacionService {
                 int sociosEliminados = 0;
                 try {
                     // 1. Contar socios fuera del padrón actual
-                    Integer totalFueraPadron = jdbcTemplate.queryForObject(
+                    Integer totalFueraPadron = 0;
+                    if (type == com.asamblea.model.ImportType.PADRON_COMPLETO) {
+                        totalFueraPadron = jdbcTemplate.queryForObject(
                             "SELECT COUNT(*) FROM socios WHERE en_padron_actual = false", Integer.class);
+                    }
                     totalFueraPadron = totalFueraPadron != null ? totalFueraPadron : 0;
                     
                     if (totalFueraPadron > 0) {
@@ -637,10 +710,13 @@ public class ImportacionService {
                             log.info("🗑️ Eliminando {} socios sin asignaciones ni asistencias...", eliminables);
                             
                             // Eliminar solo los que no tienen ninguna relación
+                            // Usando LEFT JOIN en vez de NOT IN para mejor rendimiento
                             sociosEliminados = jdbcTemplate.update(
-                                    "DELETE FROM socios WHERE en_padron_actual = false " +
-                                    "AND id NOT IN (SELECT DISTINCT socio_id FROM asignaciones_socios) " +
-                                    "AND id NOT IN (SELECT DISTINCT id_socio FROM asistencias)");
+                                    "DELETE s FROM socios s " +
+                                    "LEFT JOIN asignaciones_socios a ON s.id = a.socio_id " +
+                                    "LEFT JOIN asistencias ast ON s.id = ast.id_socio " +
+                                    "WHERE s.en_padron_actual = false " +
+                                    "AND a.socio_id IS NULL AND ast.id_socio IS NULL");
                             
                             log.info("✓ {} socios eliminados del sistema (sin datos relacionados)", sociosEliminados);
                         }
@@ -650,6 +726,8 @@ public class ImportacionService {
                 }
                 // ===== FIN MANEJO SOCIOS =====
                 
+                updateProgress(processId, 97); // Señal: limpieza de padrón completa
+
                 // ===== BLINDAJE FINAL: RE-ACTIVAR SOCIOS CON ASIGNACIONES =====
                 try {
                     int reactivados = jdbcTemplate.update(
@@ -661,43 +739,20 @@ public class ImportacionService {
                     log.error("Error en blindaje de asignaciones: {}", reEx.getMessage());
                 }
 
+                updateProgress(processId, 98); // Señal: blindaje completo
+
                 long ms = System.currentTimeMillis() - start;
                 double speed = (imported * 1000.0) / ms;
 
-                // ===== AUTO-CREACIÓN DE USUARIOS PARA FUNCIONARIOS/DIRECTIVOS =====
+                // ===== AUTO-CREACIÓN DE USUARIOS DESACTIVADA =====
+                // Se desactivó porque genera usuarios masivamente (Operadores/USUARIO_SOCIO)
+                // que el administrador prefiere gestionar manualmente desde "Usuarios y Roles".
+                // Esto también elimina el cuello de botella de ~3 min durante importación.
                 int usuariosCreados = 0;
-                try {
-                    log.info("Iniciando auto-creación de usuarios optimizada...");
-
-                    // OPTIMIZACIÓN: Solo traemos los socios que COINCIDEN con funcionarios
-                    String queryFuncionariosEncontrados = "SELECT s.numero_socio, s.cedula, s.nombre_completo " +
-                            "FROM socios s " +
-                            "INNER JOIN funcionarios_directivos fd ON s.numero_socio = fd.numero_socio";
-
-                    List<Map<String, Object>> funcionariosEncontrados = jdbcTemplate
-                            .queryForList(queryFuncionariosEncontrados);
-
-                    log.info("Procesando {} funcionarios encontrados en el padrón...", funcionariosEncontrados.size());
-
-                    for (Map<String, Object> fila : funcionariosEncontrados) {
-                        String nroSocio = (String) fila.get("numero_socio");
-                        String cedula = (String) fila.get("cedula");
-                        String nombreCompleto = (String) fila.get("nombre_completo");
-
-                        // Crear usuario directamente
-                        boolean creado = funcionarioService.crearUsuarioSiFuncionario(nroSocio, cedula, nombreCompleto);
-                        if (creado) {
-                            usuariosCreados++;
-                        }
-                    }
-
-                    if (usuariosCreados > 0) {
-                        log.info("✓ Se crearon/actualizaron {} usuarios automáticamente.", usuariosCreados);
-                    }
-                } catch (Exception e) {
-                    log.warn("Error al crear usuarios automáticos: {}", e.getMessage());
-                }
+                log.info("Auto-creación de usuarios DESACTIVADA. Los usuarios se gestionan manualmente.");
                 // ===== FIN AUTO-CREACIÓN =====
+
+                updateProgress(processId, 99); // Señal: casi listo
 
                 // ===== ESTADÍSTICAS PRECISAS (usando contadores del loop) =====
                 log.info("Socios previos: {}, Nuevos: {}, Actualizados: {}",
@@ -709,7 +764,8 @@ public class ImportacionService {
                 stats.put("imported", imported); // Total procesados (para compatibilidad)
                 stats.put("nuevos", nuevosContador); // Socios realmente nuevos (insertados)
                 stats.put("actualizados", actualizadosContador); // Socios existentes actualizados
-                stats.put("mode", "UPSERT"); // Informative flag
+                stats.put("actualizados", actualizadosContador); // Socios existentes actualizados
+                stats.put("mode", type.name()); // Informative flag
                 stats.put("errors", errors);
                 stats.put("duplicados", duplicados);
                 stats.put("duplicadosDetalle", duplicadosDetalle); // Lista detallada de duplicados
@@ -793,6 +849,18 @@ public class ImportacionService {
             case STRING:
                 return cell.getStringCellValue().trim();
             case NUMERIC:
+                // PRIMERO: Verificar si es una celda de fecha (Excel almacena fechas como números)
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    try {
+                        java.util.Date date = cell.getDateCellValue();
+                        if (date != null) {
+                            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+                            return sdf.format(date);
+                        }
+                    } catch (Exception e) {
+                        // Si falla el parsing de fecha, continuar como número
+                    }
+                }
                 // Forzar formato sin decimales para cédulas y códigos
                 double val = cell.getNumericCellValue();
                 if (val == (long) val) {
@@ -807,6 +875,14 @@ public class ImportacionService {
                     return cell.getStringCellValue();
                 } catch (Exception e) {
                     try {
+                        // También verificar fechas en fórmulas
+                        if (DateUtil.isCellDateFormatted(cell)) {
+                            java.util.Date date = cell.getDateCellValue();
+                            if (date != null) {
+                                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+                                return sdf.format(date);
+                            }
+                        }
                         double valFormula = cell.getNumericCellValue();
                         if (valFormula == (long) valFormula) {
                             return String.format("%d", (long) valFormula);

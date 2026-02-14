@@ -63,7 +63,7 @@ function ImportModule({
             });
             const total = response.data.total || 0;
             setDbCount(total);
-            if (total> 0) {
+            if (total > 0) {
                 setIsLocked(true);
             }
         } catch (error) {
@@ -79,7 +79,7 @@ function ImportModule({
             interval = setInterval(() => {
                 setProgress(prev => {
                     const next = prev + Math.random() * 10;
-                    return next> 90 ? 90:next;
+                    return next > 90 ? 90 : next;
                 });
             }, 200);
         }
@@ -202,7 +202,7 @@ function ImportModule({
                     <div className="flex items-center gap-3">
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] font-black uppercase tracking-wider">
-                                {isLocked ? "Protegida":"Edición"}
+                                {isLocked ? "Protegida" : "Edición"}
                             </span>
                             <span className="text-[10px] font-medium opacity-70">
                                 {dbCount} {entityName}
@@ -237,8 +237,8 @@ function ImportModule({
                                 onDragOver={handleDrag}
                                 onDrop={handleDrop}
                                 className={`relative flex flex-col items-center justify-center rounded-2xl border-3 border-dashed p-8 text-center transition-all duration-300 bg-slate-50/50 overflow-hidden
-                                    ${dragActive ? `border-${accentColor} bg-${accentColorLight}/50 scale-[0.99]`:"border-slate-200 hover:border-slate-300"}`}
-                                style={{ borderColor: dragActive ? accentColor:undefined }}
+                                    ${dragActive ? `border-${accentColor} bg-${accentColorLight}/50 scale-[0.99]` : "border-slate-200 hover:border-slate-300"}`}
+                                style={{ borderColor: dragActive ? accentColor : undefined }}
                             >
                                 {/* Overlay de Bloqueo */}
                                 {isLocked && (
@@ -323,7 +323,7 @@ function ImportModule({
                                         strokeLinecap="round"
                                         strokeDasharray="352"
                                         initial={{ strokeDashoffset: 352 }}
-                                        animate={{ strokeDashoffset: 352 - (352 * progress) /100 }}
+                                        animate={{ strokeDashoffset: 352 - (352 * progress) / 100 }}
                                         transition={{ duration: 0.5 }}
                                     />
                                 </svg>
@@ -364,8 +364,8 @@ function ImportModule({
                                 ].map((stat, i) => (
                                     <div key={i} className={`p-4 rounded-xl ${stat.bg} flex flex-col items-center`}>
                                         <span
-                                            className={`text-2xl font-black ${typeof stat.color === 'string' && !stat.color.startsWith('#') ? stat.color:''}`}
-                                            style={{ color: typeof stat.color === 'string' && stat.color.startsWith('#') ? stat.color:undefined }}
+                                            className={`text-2xl font-black ${typeof stat.color === 'string' && !stat.color.startsWith('#') ? stat.color : ''}`}
+                                            style={{ color: typeof stat.color === 'string' && stat.color.startsWith('#') ? stat.color : undefined }}
                                         >
                                             {formatNumber(stat.val)}
                                         </span>
@@ -388,7 +388,7 @@ function ImportModule({
     );
 }
 
-export default function ImportarFuncionariosPage() {
+export default function ImportarOperadoresPage() {
     return (
         <div className="min-h-screen bg-slate-50/50" style={{ padding: 'clamp(1rem, 3vw, 3rem)' }}>
             <div className="mx-auto space-y-8" style={{ maxWidth: 'clamp(320px, 95vw, 1400px)' }}>
@@ -400,19 +400,19 @@ export default function ImportarFuncionariosPage() {
                         Gestión de Personal
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-3">
-                        Importar Funcionarios
+                        Importar Operadores
                     </h1>
                     <p className="text-slate-500 max-w-xl mx-auto">
-                        Carga las bases de datos de funcionarios y asesores de crédito.
+                        Carga las bases de datos de operadores y asesores de crédito.
                         Su acceso al sistema se creará automáticamente al importar el padrón.
                     </p>
                 </div>
 
                 {/* Grid de módulos */}
                 <div className="grid md:grid-cols-2 gap-8">
-                    {/* Módulo Funcionarios */}
+                    {/* Módulo Operadores */}
                     <ImportModule
-                        title="Funcionarios y Directivos"
+                        title="Operadores y Directivos"
                         subtitle="Personal operativo y directivo"
                         icon={Users}
                         gradientFrom="from-indigo-600"
@@ -422,7 +422,7 @@ export default function ImportarFuncionariosPage() {
                         accentColorLight="#e0e7ff"
                         countEndpoint="/api/funcionarios/count/funcionarios"
                         importEndpoint="/api/funcionarios/importar"
-                        entityName="Funcionarios"
+                        entityName="Operadores"
                         columnInfo="Nro Socio | Nombre | CI"
                         templateUrl="/plantilla_funcionarios.xlsx"
                     />

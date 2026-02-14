@@ -74,7 +74,7 @@ export const SocioCarnetBase: React.FC<CarnetDataProps> = ({ socio, config }) =>
                             lineHeight: '1',
                             fontFamily: 'Arial Black, sans-serif'
                         }}>
-                            COOPERATIVA<br />REDUCTO LTDA.
+                            COOPERATIVA<br />LAMBARÉ LTDA.
                         </div>
                         <div style={{
                             fontSize: '11px',

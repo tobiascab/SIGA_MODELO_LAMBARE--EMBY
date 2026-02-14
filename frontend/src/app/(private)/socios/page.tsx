@@ -22,7 +22,11 @@ import {
     Plus,
     Save,
     Loader2,
-    Check
+    Upload,
+    Phone,
+    Mail,
+    MapPin,
+    MessageCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -41,6 +45,17 @@ interface Socio {
     incoopAlDia: boolean;
     creditoAlDia: boolean;
     activo: boolean;
+    habilitadoVozVoto: string;
+    estadoVozVoto?: boolean;
+    // Campos enriquecidos 2024
+    edad?: string;
+    profesion?: string;
+    ocupacion?: string;
+    barrio?: string;
+    ciudad?: string;
+    email?: string;
+    mesa?: string;
+    nroOrdenPadron?: string;
 }
 
 interface User {
@@ -49,10 +64,6 @@ interface User {
     rol: string;
 }
 
-// =============================================================================
-// SOCIO ROW COMPONENT - Premium table row with side panel modal on hover
-// =============================================================================
-
 interface SocioRowProps {
     socio: Socio;
     index: number;
@@ -60,169 +71,248 @@ interface SocioRowProps {
     isSuperAdmin: boolean;
     onEdit: () => void;
     onDelete: () => void;
-    onHover: (socio: Socio | null, mouseY?: number) => void;
-    isHovered: boolean;
+    onClick: () => void;
 }
 
+// Helper para WhatsApp
+const getWhatsAppLink = (phone: string | null) => {
+    if (!phone) return undefined;
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone) return undefined;
+    return `https://wa.me/${cleanPhone}`;
+};
+
 // Mobile-friendly card component to prevent clipping
-function SocioCard({ socio, tieneVozYVoto, isSuperAdmin, onEdit, onDelete }: Omit<SocioRowProps, 'index' | 'onHover' | 'isHovered'>) {
+function SocioCard({ socio, tieneVozYVoto, isSuperAdmin, onEdit, onDelete, onClick }: Omit<SocioRowProps, 'index'>) {
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-4 shadow-md border border-slate-100 flex flex-col gap-3 relative overflow-hidden"
+            className="group relative bg-white rounded-xl sm:rounded-[1.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-300 transform active:scale-[0.98]"
+            onClick={onClick}
         >
-            <div className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl text-[10px] font-black uppercase tracking-tighter text-white
-                ${tieneVozYVoto ? 'bg-emerald-500':'bg-amber-500'}`}>
-                {tieneVozYVoto ? 'Voz y Voto':'Solo Voz'}
+            {/* Header con gradiente sutil y número de socio */}
+            <div className="absolute top-0 left-0 right-0 h-16 sm:h-24 bg-gradient-to-br from-slate-50 to-slate-100/50 border-b border-slate-100" />
+
+            <div className="relative p-3 pb-12 sm:p-5 sm:pb-16"> {/* Padding bottom extra para la franja inferior */}
+                <div className="flex justify-between items-start mb-2 sm:mb-4">
+                    <div className="flex items-center gap-2 bg-white/80 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Socio N°</span>
+                        <span className="text-sm font-black text-slate-800">{socio.numeroSocio}</span>
+                    </div>
+                    {isSuperAdmin && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                            className="p-2 -mr-2 -mt-2 text-slate-400 hover:text-blue-600 active:scale-95 transition"
+                        >
+                            <Edit className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+
+                {/* Avatar y Datos Principales */}
+                <div className="flex flex-col items-center text-center mb-3 sm:mb-6">
+                    <div className={`h-14 w-14 sm:h-20 sm:w-20 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl font-black text-white shadow-xl mb-2 sm:mb-3 transform group-hover:scale-105 transition-transform duration-300
+                        ${tieneVozYVoto
+                            ? 'bg-gradient-to-br from-[#009900] to-[#007700] shadow-[#009900]/30'
+                            : 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-orange-500/30'}`}>
+                        {socio.nombreCompleto.substring(0, 2).toUpperCase()}
+                    </div>
+                    <h3 className="text-sm sm:text-lg font-black text-slate-800 leading-tight mb-1">{socio.nombreCompleto}</h3>
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 font-medium text-xs font-mono">
+                        <span>CI: {socio.cedula}</span>
+                    </div>
+                </div>
+
+                {/* Grid de Datos - Diseño Premium */}
+                <div className="grid grid-cols-1 gap-3">
+                    <div className="space-y-3">
+                        {/* Teléfono y Email */}
+                        {(socio.telefono || socio.email) && (
+                            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100/80">
+                                <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-sm text-blue-500 shrink-0">
+                                    <Phone className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Contacto</p>
+                                    <div className="flex flex-col gap-1">
+                                        {socio.telefono && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-semibold text-slate-700 truncate">{socio.telefono}</span>
+                                                {getWhatsAppLink(socio.telefono) && (
+                                                    <a
+                                                        href={getWhatsAppLink(socio.telefono)!}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 bg-[#25D366] text-white rounded-lg hover:bg-[#128C7E] transition-all shadow-sm transform hover:scale-105"
+                                                        title="Enviar WhatsApp"
+                                                    >
+                                                        <MessageCircle className="w-3.5 h-3.5" />
+                                                        <span className="text-[10px] font-bold">WhatsApp</span>
+                                                    </a>
+                                                )}
+                                            </div>
+                                        )}
+                                        {socio.email && <span className="text-[10px] font-medium text-slate-500 truncate">{socio.email}</span>}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Dirección y Barrio */}
+                        {(socio.direccion || socio.barrio || socio.ciudad) && (
+                            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100/80">
+                                <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-sm text-indigo-500 shrink-0">
+                                    <MapPin className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Ubicación</p>
+                                    <div className="flex flex-col">
+                                        {socio.barrio && <span className="text-xs font-semibold text-slate-700 truncate">{socio.barrio}</span>}
+                                        {(socio.ciudad || socio.direccion) && (
+                                            <span className="text-[10px] font-medium text-slate-500 truncate">
+                                                {[socio.direccion, socio.ciudad].filter(Boolean).join(', ')}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Datos Adicionales (Profesion, etc) */}
+                        {(socio.profesion || socio.edad) && (
+                            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100/80">
+                                <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center shadow-sm text-slate-500 shrink-0">
+                                    <Users className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Perfil</p>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-semibold text-slate-700 truncate">
+                                            {[socio.edad ? `${socio.edad} años` : '', socio.profesion].filter(Boolean).join(' - ')}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            <div className="flex items-center gap-3">
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0
-                    ${tieneVozYVoto ? 'bg-emerald-500':'bg-amber-500'}`}>
-                    {socio.nombreCompleto.substring(0, 2).toUpperCase()}
+            {/* Franja Inferior - Estado de Voto */}
+            <div className={`absolute bottom-0 left-0 right-0 py-3 px-4 flex items-center justify-between font-bold text-xs uppercase tracking-wider text-white shadow-lg z-10
+                ${tieneVozYVoto
+                    ? 'bg-gradient-to-r from-[#009900] to-[#007700]'
+                    : 'bg-gradient-to-r from-amber-500 to-orange-500'}`}>
+                <div className="flex items-center gap-2">
+                    {tieneVozYVoto ? <ShieldCheck className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+                    <span>{tieneVozYVoto ? 'Habilitado: Voz y Voto' : 'Solo Voz'}</span>
                 </div>
-                <div className="min-w-0 flex-1">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase">#{socio.numeroSocio}</div>
-                    <h4 className="font-bold text-slate-800 text-sm leading-tight truncate">{socio.nombreCompleto}</h4>
-                    <p className="text-[10px] text-slate-500 font-mono">CI: {socio.cedula}</p>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mt-1">
-                <div className="bg-slate-50 rounded-lg p-2">
-                    <p className="text-[8px] text-slate-400 font-bold uppercase">Teléfono</p>
-                    <p className="text-[10px] font-bold text-slate-600 truncate">{socio.telefono || '—'}</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-2">
-                    <p className="text-[8px] text-slate-400 font-bold uppercase">Sucursal</p>
-                    <p className="text-[10px] font-bold text-slate-600 truncate">{socio.sucursal?.nombre || '—'}</p>
-                </div>
-            </div>
-
-            <div className="flex gap-2 pt-2 border-t border-slate-50">
-                <button
-                    onClick={onEdit}
-                    className="flex-1 py-2 bg-slate-50 text-slate-600 rounded-lg text-xs font-bold hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
-                >
-                    Editar
-                </button>
-                {isSuperAdmin && (
-                    <button
-                        onClick={onDelete}
-                        className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </button>
-                )}
+                <ChevronRight className="w-4 h-4 opacity-75" />
             </div>
         </motion.div>
     );
 }
 
-function SocioRow({ socio, index, tieneVozYVoto, isSuperAdmin, onEdit, onDelete, onHover, isHovered }: SocioRowProps) {
-    const handleMouseEnter = (e: React.MouseEvent) => {
-        onHover(socio, e.clientY);
-    };
-
+function SocioRow({ socio, index, tieneVozYVoto, isSuperAdmin, onEdit, onDelete, onClick }: SocioRowProps) {
     return (
         <motion.tr
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.02, duration: 0.3 }}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={() => onHover(null)}
-            className={`relative transition-all duration-300 cursor-pointer group
-                ${isHovered
-                    ? 'bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 scale-[1.01] shadow-lg z-10'
-                   :'hover:bg-slate-50/80'}
-            `}
+            onClick={onClick}
+            className="cursor-pointer hover:bg-slate-50/80 transition-colors group relative border-b border-slate-50 last:border-0"
         >
-            {/* Número de Socio - MUY VISIBLE */}
+            {/* Número de Socio */}
             <td className="p-4 md:p-5">
-                <motion.div
-                    animate={{ scale: isHovered ? 1.1:1 }}
-                    transition={{ duration: 0.2 }}
-                    className={`inline-flex items-center gap-1 px-4 py-2 rounded-xl font-black text-base shadow-lg
+                <div className={`inline-flex items-center gap-1 px-4 py-2 rounded-xl font-black text-base shadow-sm group-hover:shadow-md transition-all
                         ${tieneVozYVoto
-                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-emerald-200'
-                           :'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-amber-200'
-                        }`}
+                        ? 'bg-[#009900]/10 text-[#009900] border border-[#009900]/20'
+                        : 'bg-blue-50 text-blue-600 border border-blue-100'
+                    }`}
                 >
-                    <span className="text-white/60 text-xs">#</span>
+                    <span className="text-slate-400 text-xs">#</span>
                     {socio.numeroSocio}
-                </motion.div>
+                </div>
             </td>
 
-            {/* Nombre con Avatar */}
+            {/* Datos Personales (Nombre, Cédula, Edad, Profesión) */}
             <td className="p-4 md:p-5">
                 <div className="flex items-center gap-3">
-                    <motion.div
-                        animate={{ scale: isHovered ? 1.1:1 }}
-                        className={`h-11 w-11 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg flex-shrink-0
+                    <div className={`h-11 w-11 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0
                             ${tieneVozYVoto
-                                ? 'bg-gradient-to-br from-emerald-400 to-teal-500'
-                               :'bg-gradient-to-br from-amber-400 to-orange-500'
-                            }`}
+                            ? 'bg-gradient-to-br from-[#009900] to-[#007700]'
+                            : 'bg-yellow-500'
+                        }`}
                     >
                         {socio.nombreCompleto.substring(0, 2).toUpperCase()}
-                    </motion.div>
+                    </div>
                     <div>
-                        <div className="font-bold text-slate-800">{socio.nombreCompleto}</div>
-                        <div className="text-xs text-slate-400 font-mono">CI: {socio.cedula}</div>
+                        <div className="font-bold text-slate-800 text-sm md:text-base group-hover:text-[#009900] transition-colors flex items-center gap-2">
+                            {socio.nombreCompleto}
+                            {socio.telefono && getWhatsAppLink(socio.telefono) && (
+                                <a
+                                    href={getWhatsAppLink(socio.telefono)!}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1.5 px-2 py-1 bg-[#25D366] text-white rounded-lg hover:bg-[#128C7E] transition-all shadow-lg hover:shadow-green-500/30 transform hover:scale-105 border border-green-400"
+                                    title="Enviar Mensaje de WhatsApp"
+                                >
+                                    <MessageCircle className="h-4 w-4" />
+                                    <span className="hidden lg:inline text-xs font-bold">WhatsApp</span>
+                                </a>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                            <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-mono">CI: {socio.cedula}</span>
+                        </div>
                     </div>
                 </div>
             </td>
 
-            {/* Teléfono */}
+            {/* Ubicación (Barrio/Ciudad) */}
             <td className="p-4 md:p-5 hidden md:table-cell">
-                {socio.telefono === "Actualizar Nro" ? (
-                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-red-50 text-red-600 border border-red-100">
-                        Actualizar Nro
+                <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-700">
+                        {socio.barrio || <span className="text-slate-300 font-normal italic">Sin barrio</span>}
                     </span>
-                ):(
-                    <span className="text-sm text-slate-600 font-mono">
-                        {socio.telefono || <span className="text-slate-300">—</span>}
+                    <span className="text-xs text-slate-400 font-medium">
+                        {socio.ciudad || '—'}
                     </span>
-                )}
+                </div>
             </td>
 
             {/* Sucursal */}
             <td className="p-4 md:p-5 hidden lg:table-cell">
                 <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-slate-400" />
-                    <span className="text-sm text-slate-600">
+                    <span className="text-sm text-slate-600 font-medium">
                         {socio.sucursal?.nombre || <span className="text-slate-300">—</span>}
                     </span>
                 </div>
             </td>
 
-            {/* Estado */}
+            {/* Estado Voto */}
             <td className="p-4 md:p-5 text-center">
-                <motion.span
-                    animate={{ scale: isHovered ? 1.05:1 }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-md
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black
                         ${tieneVozYVoto
-                            ? 'bg-emerald-100 text-teal-500 border border-emerald-200 shadow-emerald-100'
-                           :'bg-amber-100 text-amber-700 border border-amber-200 shadow-amber-100'
-                        }`}
+                        ? 'bg-[#009900]/10 text-[#009900]'
+                        : 'bg-blue-50 text-blue-600'
+                    }`}
                 >
                     {tieneVozYVoto ? (
                         <><ShieldCheck className="h-3.5 w-3.5" /> Voz y Voto</>
-                    ):(
+                    ) : (
                         <><AlertTriangle className="h-3.5 w-3.5" /> Solo Voz</>
                     )}
-                </motion.span>
+                </span>
             </td>
 
-            {/* Indicador de hover */}
-            <td className="p-4 md:p-5 w-12">
-                <motion.div
-                    animate={{ opacity: isHovered ? 1:0.3, x: isHovered ? 0:-5 }}
-                    className="text-emerald-500"
-                >
-                    <ChevronRight className="h-5 w-5" />
-                </motion.div>
+            {/* Action Arrow */}
+            <td className="p-4 md:p-5 w-12 text-center">
+                <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-[#009900] transition-colors" />
             </td>
         </motion.tr>
     );
@@ -252,14 +342,21 @@ export default function SociosPage() {
     const [selectedSocio, setSelectedSocio] = useState<Socio | null>(null);
     const [saving, setSaving] = useState(false);
 
+    // View Modal
+    const [viewSocio, setViewSocio] = useState<Socio | null>(null);
+
     // Delete confirmation
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [socioToDelete, setSocioToDelete] = useState<Socio | null>(null);
     const [deleting, setDeleting] = useState(false);
 
-    // Hover state for side panel
-    const [hoveredSocio, setHoveredSocio] = useState<Socio | null>(null);
-    const [mouseY, setMouseY] = useState(0);
+    // Import state
+    const [showImportMenu, setShowImportMenu] = useState(false);
+    const [importMode, setImportMode] = useState<"full" | "complementary">("full");
+    const [isImporting, setIsImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const importMenuRef = useRef<HTMLDivElement>(null);
+
 
     // Additional statistics
     const [presentesCount, setPresentesCount] = useState(0);
@@ -291,6 +388,20 @@ export default function SociosPage() {
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const exportMenuRef = useRef<HTMLDivElement>(null);
 
+    // Close modals on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                if (viewSocio) setViewSocio(null);
+                if (showModal) setShowModal(false);
+                if (showDeleteConfirm) setShowDeleteConfirm(false);
+                if (showExportMenu) setShowExportMenu(false);
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [viewSocio, showModal, showDeleteConfirm, showExportMenu]);
+
     // Load user from localStorage
     useEffect(() => {
         const userData = localStorage.getItem("user");
@@ -303,11 +414,14 @@ export default function SociosPage() {
         }
     }, []);
 
-    // Close export menu on outside click
+    // Close menus on outside click
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
                 setShowExportMenu(false);
+            }
+            if (importMenuRef.current && !importMenuRef.current.contains(e.target as Node)) {
+                setShowImportMenu(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
@@ -342,9 +456,8 @@ export default function SociosPage() {
                 const response = await axios.get(searchUrl, { headers });
 
                 if (response.data) {
-                    // Search returns a list, not a page
-                    setSocios(Array.isArray(response.data) ? response.data:response.data.content || []);
-                    setTotalElements(Array.isArray(response.data) ? response.data.length:response.data.totalElements || 0);
+                    setSocios(Array.isArray(response.data) ? response.data : response.data.content || []);
+                    setTotalElements(Array.isArray(response.data) ? response.data.length : response.data.totalElements || 0);
                     setTotalPages(1);
                 } else {
                     setSocios([]);
@@ -384,15 +497,7 @@ export default function SociosPage() {
         }
     }, [pageSize]);
 
-    // Trigger fetch when any filter changes (debounced for text inputs if we wanted, currently instant/effect based)
     useEffect(() => {
-        // Debounce only if typing text, but for selects it can be instant.
-        // For simplicity, we are debouncing everything via the timeout in handleSearchChange, 
-        // but parameters like filters need to be passed.
-
-        // Use a small timeout to avoid double fetching if multiple states change at once, 
-        // though React batching helps.
-
         const timeoutId = setTimeout(() => {
             fetchSocios(currentPage, searchTerm, filterEstado, filterNumeroSocio, filterNombre, filterTelefono, filterSucursal);
         }, 300);
@@ -400,7 +505,6 @@ export default function SociosPage() {
         return () => clearTimeout(timeoutId);
     }, [currentPage, searchTerm, filterEstado, filterNumeroSocio, filterNombre, filterTelefono, filterSucursal, fetchSocios]);
 
-    // Fetch additional stats
     useEffect(() => {
         const fetchStats = async () => {
             const token = localStorage.getItem("token");
@@ -409,25 +513,17 @@ export default function SociosPage() {
             const headers = { Authorization: `Bearer ${token}` };
 
             try {
-                // Get presentes count
                 const asistenciaRes = await axios.get("/api/asistencia/hoy", { headers });
                 if (asistenciaRes.data) {
                     setPresentesCount(asistenciaRes.data.length);
-                    // Count registrados con voz y voto y solo voz entre los presentes
-                    const conVoto = asistenciaRes.data.filter((a: { socio?: Socio }) => {
-                        if (a.socio) {
-                            return a.socio.aporteAlDia && a.socio.solidaridadAlDia && a.socio.fondoAlDia && a.socio.incoopAlDia && a.socio.creditoAlDia;
-                        }
-                        return false;
-                    }).length;
+                    const conVoto = asistenciaRes.data.filter((a: { socio?: Socio }) => a.socio && a.socio.habilitadoVozVoto && a.socio.habilitadoVozVoto.toLowerCase().includes('voto')).length;
                     setRegistradosVozYVoto(conVoto);
-                    setRegistradosSoloVoz(asistenciaRes.data.length-conVoto);
+                    setRegistradosSoloVoz(asistenciaRes.data.length - conVoto);
                 }
             } catch (err) {
                 console.error("Error fetching stats:", err);
             }
         };
-
         fetchStats();
     }, []);
 
@@ -442,18 +538,14 @@ export default function SociosPage() {
     };
 
     const tieneVozYVoto = (socio: Socio) => {
-        return socio.aporteAlDia && socio.solidaridadAlDia && socio.fondoAlDia && socio.incoopAlDia && socio.creditoAlDia;
+        if (socio.estadoVozVoto !== undefined) return socio.estadoVozVoto;
+        return socio.habilitadoVozVoto ? socio.habilitadoVozVoto.toLowerCase().includes('voto') : false;
     };
 
-    // Client-side filtering removed as we now filter on backend
     const displayedSocios = socios;
-
-    const sociosConVoto = registradosVozYVoto; // Simplificado
-
-    // Check if any filter is active
+    const sociosConVoto = 14608;
     const hasActiveFilters = filterNumeroSocio || filterNombre || filterTelefono || filterSucursal || filterEstado !== "todos";
 
-    // Clear all filters
     const clearAllFilters = () => {
         setFilterNumeroSocio("");
         setFilterNombre("");
@@ -463,7 +555,6 @@ export default function SociosPage() {
         fetchSocios(0, "", "todos", "", "", "", "");
     };
 
-    // Export functions
     const handleExport = async (format: "excel" | "pdf") => {
         setExporting(format);
         setShowExportMenu(false);
@@ -481,7 +572,7 @@ export default function SociosPage() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = format === "excel" ? "padron_socios.xlsx":"padron_socios.pdf";
+            a.download = format === "excel" ? "padron_socios.xlsx" : "padron_socios.pdf";
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -496,7 +587,6 @@ export default function SociosPage() {
         }
     };
 
-    // ABM functions
     const openCreateModal = () => {
         setFormData({
             numeroSocio: "",
@@ -587,11 +677,59 @@ export default function SociosPage() {
         }
     };
 
+    const handleImportClick = (mode: "full" | "complementary") => {
+        setImportMode(mode);
+        setShowImportMenu(false);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+
+        const file = e.target.files[0];
+        const endpoint = importMode === "full" ? "/api/socios/import" : "/api/socios/import/complementary";
+
+        setIsImporting(true);
+        const toastId = toast.loading("Iniciando importación...");
+
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const token = localStorage.getItem("token");
+            const res = await axios.post(endpoint, formData, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data"
+                }
+            });
+
+            const processId = res.data.processId;
+            toast.dismiss(toastId);
+            toast.success(`Importación ${importMode === "full" ? "completa" : "complementaria"} iniciada.`);
+
+            // Simple polling notification
+            setTimeout(() => {
+                toast.info("La importación se está procesando en segundo plano. Recargue la página en unos momentos.");
+                setIsImporting(false);
+                fetchSocios(currentPage, searchTerm, filterEstado, filterNumeroSocio, filterNombre, filterTelefono, filterSucursal);
+            }, 3000);
+
+        } catch (error) {
+            console.error(error);
+            toast.error("Error al iniciar importación");
+            toast.dismiss(toastId);
+            setIsImporting(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-50/50 p-4 md:p-8 lg:p-12 pb-32">
             <div className="max-w-7xl mx-auto space-y-6 md:space-y-10">
 
-                {/* Header Premium con Gradiente */}
                 <div className="relative overflow-hidden rounded-2xl md:rounded-[2rem] bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 p-6 md:p-10 shadow-2xl shadow-emerald-500/20 text-white">
                     <div className="absolute top-0 right-0 -mr-20 -mt-20 h-96 w-96 rounded-full bg-white/10 blur-3xl hidden md:block" />
                     <div className="absolute bottom-0 left-0 -ml-20 -mb-20 h-64 w-64 rounded-full bg-black/10 blur-3xl hidden md:block" />
@@ -611,34 +749,27 @@ export default function SociosPage() {
                         </div>
 
                         <div className="flex flex-col gap-4 w-full lg:w-auto">
-                            {/* Estadísticas Rápidas - Grid Premium */}
                             <div className="grid grid-cols-2 xs:grid-cols-3 md:grid-cols-3 gap-2 md:gap-3">
-                                {/* Total Padrón */}
                                 <div className="bg-white rounded-xl p-2.5 md:p-3 text-center shadow-lg">
                                     <div className="text-xl md:text-2xl font-black text-slate-800">{totalElements.toLocaleString()}</div>
                                     <div className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Padrón</div>
                                 </div>
-                                {/* Habilitados Voz y Voto */}
                                 <div className="bg-gradient-to-br from-emerald-500 to-emerald-500 rounded-xl p-2.5 md:p-3 text-center shadow-lg text-white">
                                     <div className="text-xl md:text-2xl font-black">{sociosConVoto.toLocaleString()}</div>
                                     <div className="text-[8px] md:text-[10px] font-bold text-emerald-100 uppercase tracking-wider">Voz y Voto</div>
                                 </div>
-                                {/* Solo Voz */}
-                                <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl p-2.5 md:p-3 text-center shadow-lg text-white">
-                                    <div className="text-xl md:text-2xl font-black">{(totalElements-sociosConVoto).toLocaleString()}</div>
-                                    <div className="text-[8px] md:text-[10px] font-bold text-amber-100 uppercase tracking-wider">Solo Voz</div>
+                                <div className="bg-yellow-500 rounded-xl p-2.5 md:p-3 text-center shadow-lg text-white">
+                                    <div className="text-xl md:text-2xl font-black">{(totalElements - sociosConVoto > 0 ? totalElements - sociosConVoto : 0).toLocaleString()}</div>
+                                    <div className="text-[8px] md:text-[10px] font-bold text-yellow-100 uppercase tracking-wider">Solo Voz</div>
                                 </div>
-                                {/* Presentes Ahora */}
                                 <div className="bg-gradient-to-br from-emerald-500 to-blue-500 rounded-xl p-2.5 md:p-3 text-center shadow-lg text-white">
                                     <div className="text-xl md:text-2xl font-black">{presentesCount.toLocaleString()}</div>
                                     <div className="text-[8px] md:text-[10px] font-bold text-cyan-100 uppercase tracking-wider">Presentes</div>
                                 </div>
-                                {/* Registrados con Voz y Voto */}
                                 <div className="bg-gradient-to-br from-green-500 to-teal-500 rounded-xl p-2.5 md:p-3 text-center shadow-lg text-white">
                                     <div className="text-xl md:text-2xl font-black">{registradosVozYVoto.toLocaleString()}</div>
                                     <div className="text-[8px] md:text-[10px] font-bold text-green-100 uppercase tracking-wider">Reg. Voz+Voto</div>
                                 </div>
-                                {/* Registrados Solo Voz */}
                                 <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-xl p-2.5 md:p-3 text-center shadow-lg text-white">
                                     <div className="text-xl md:text-2xl font-black">{registradosSoloVoz.toLocaleString()}</div>
                                     <div className="text-[8px] md:text-[10px] font-bold text-orange-100 uppercase tracking-wider">Reg. Solo Voz</div>
@@ -646,7 +777,6 @@ export default function SociosPage() {
                             </div>
 
                             <div className="flex flex-wrap gap-2">
-                                {/* Export Dropdown */}
                                 <div className="relative" ref={exportMenuRef}>
                                     <button
                                         onClick={() => setShowExportMenu(!showExportMenu)}
@@ -656,7 +786,7 @@ export default function SociosPage() {
                                         <div className="relative z-10 flex items-center gap-2 font-bold text-sm md:text-base">
                                             {exporting ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                            ):(
+                                            ) : (
                                                 <FileDown className="h-4 w-4 text-emerald-500" />
                                             )}
                                             <span>Exportar</span>
@@ -691,7 +821,70 @@ export default function SociosPage() {
                                     </AnimatePresence>
                                 </div>
 
-                                {/* Nuevo Socio - Solo SUPER_ADMIN */}
+                                {/* Import Menu */}
+                                {isSuperAdmin && (
+                                    <div className="relative" ref={importMenuRef}>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                            accept=".xlsx,.xls"
+                                            onChange={handleFileChange}
+                                        />
+                                        <button
+                                            onClick={() => setShowImportMenu(!showImportMenu)}
+                                            disabled={isImporting}
+                                            className="group relative overflow-hidden rounded-xl md:rounded-2xl bg-white px-4 md:px-6 py-2.5 md:py-3 text-emerald-900 shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-70"
+                                        >
+                                            <div className="relative z-10 flex items-center gap-2 font-bold text-sm md:text-base">
+                                                {isImporting ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Upload className="h-4 w-4 text-purple-500" />
+                                                )}
+                                                <span>Importar</span>
+                                                <ChevronDown className="h-4 w-4" />
+                                            </div>
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {showImportMenu && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    className="absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden z-50"
+                                                >
+                                                    <button
+                                                        onClick={() => handleImportClick("full")}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 transition-colors text-left"
+                                                    >
+                                                        <div className="bg-emerald-100 p-2 rounded-lg">
+                                                            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                                                        </div>
+                                                        <div>
+                                                            <span className="font-bold text-slate-700 block text-sm">Importación Completa</span>
+                                                            <span className="text-[10px] text-slate-500">Reemplaza/Actualiza todo el padrón</span>
+                                                        </div>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleImportClick("complementary")}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-purple-50 transition-colors text-left border-t border-slate-100"
+                                                    >
+                                                        <div className="bg-purple-100 p-2 rounded-lg">
+                                                            <Zap className="h-4 w-4 text-purple-600" />
+                                                        </div>
+                                                        <div>
+                                                            <span className="font-bold text-slate-700 block text-sm">Solo Rellenar Datos</span>
+                                                            <span className="text-[10px] text-slate-500">Completa vacíos, no sobreescribe</span>
+                                                        </div>
+                                                    </button>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
+
                                 {isSuperAdmin && (
                                     <button
                                         onClick={openCreateModal}
@@ -708,7 +901,6 @@ export default function SociosPage() {
                     </div>
                 </div>
 
-                {/* Barra de búsqueda Premium con Filtros */}
                 <div className="space-y-3">
                     <div className="group relative rounded-xl md:rounded-[2rem] bg-white p-2 shadow-xl shadow-slate-200/50">
                         <div className="absolute -inset-1 rounded-[1.5rem] md:rounded-[2.1rem] bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 opacity-0 blur group-hover:opacity-20 transition duration-500" />
@@ -737,9 +929,9 @@ export default function SociosPage() {
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
                                 className={`mr-2 md:mr-4 px-3 md:px-4 py-2 rounded-xl flex items-center gap-2 transition-all text-sm font-bold
-                                    ${showFilters || hasActiveFilters
+                                     ${showFilters || hasActiveFilters
                                         ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200'
-                                       :'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                     }`}
                             >
                                 <Filter className="h-4 w-4" />
@@ -751,7 +943,6 @@ export default function SociosPage() {
                         </div>
                     </div>
 
-                    {/* Panel de Filtros Avanzados */}
                     <AnimatePresence>
                         {showFilters && (
                             <motion.div
@@ -778,7 +969,6 @@ export default function SociosPage() {
                                         )}
                                     </div>
                                     <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                                        {/* Filtro N° Socio */}
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">N° Socio</label>
                                             <input
@@ -789,7 +979,6 @@ export default function SociosPage() {
                                                 className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
                                             />
                                         </div>
-                                        {/* Filtro Nombre */}
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre</label>
                                             <input
@@ -800,7 +989,6 @@ export default function SociosPage() {
                                                 className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
                                             />
                                         </div>
-                                        {/* Filtro Teléfono */}
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Teléfono</label>
                                             <input
@@ -811,7 +999,6 @@ export default function SociosPage() {
                                                 className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
                                             />
                                         </div>
-                                        {/* Filtro Sucursal */}
                                         <div className="col-span-1">
                                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Sucursal</label>
                                             <select
@@ -827,7 +1014,6 @@ export default function SociosPage() {
                                                 ))}
                                             </select>
                                         </div>
-                                        {/* Filtro Estado */}
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Estado</label>
                                             <select
@@ -864,7 +1050,7 @@ export default function SociosPage() {
                         </div>
                         <p className="mt-4 text-slate-500 font-medium">Cargando padrón...</p>
                     </div>
-                ):error ? (
+                ) : error ? (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -873,15 +1059,13 @@ export default function SociosPage() {
                         <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
                         <p className="font-bold text-lg">{error}</p>
                     </motion.div>
-                ):(
+                ) : (
                     <>
-                        {/* Premium Table with Rows */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="bg-white rounded-2xl md:rounded-3xl lg:shadow-2xl lg:shadow-slate-200/50 lg:border lg:border-slate-100 overflow-hidden"
                         >
-                            {/* Card view for mobile */}
                             <div className="grid grid-cols-1 gap-4 p-2 md:hidden">
                                 {displayedSocios.map((socio) => (
                                     <SocioCard
@@ -891,6 +1075,7 @@ export default function SociosPage() {
                                         isSuperAdmin={isSuperAdmin}
                                         onEdit={() => openEditModal(socio)}
                                         onDelete={() => confirmDelete(socio)}
+                                        onClick={() => setViewSocio(socio)}
                                     />
                                 ))}
                                 {displayedSocios.length === 0 && (
@@ -898,14 +1083,13 @@ export default function SociosPage() {
                                 )}
                             </div>
 
-                            {/* Table view for desktop */}
                             <div className="hidden md:block overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b-2 border-slate-100">
                                             <th className="p-4 md:p-5 text-xs font-black text-slate-500 uppercase tracking-wider">N° Socio</th>
                                             <th className="p-4 md:p-5 text-xs font-black text-slate-500 uppercase tracking-wider">Socio</th>
-                                            <th className="p-4 md:p-5 text-xs font-black text-slate-500 uppercase tracking-wider hidden md:table-cell">Teléfono</th>
+                                            <th className="p-4 md:p-5 text-xs font-black text-slate-500 uppercase tracking-wider hidden md:table-cell">Ubicación</th>
                                             <th className="p-4 md:p-5 text-xs font-black text-slate-500 uppercase tracking-wider hidden lg:table-cell">Sucursal</th>
                                             <th className="p-4 md:p-5 text-xs font-black text-slate-500 uppercase tracking-wider text-center">Estado</th>
                                             <th className="p-4 md:p-5 w-12"></th>
@@ -921,8 +1105,7 @@ export default function SociosPage() {
                                                 isSuperAdmin={isSuperAdmin}
                                                 onEdit={() => openEditModal(socio)}
                                                 onDelete={() => confirmDelete(socio)}
-                                                onHover={(s, y) => { setHoveredSocio(s); if (y) setMouseY(y); }}
-                                                isHovered={hoveredSocio?.id === socio.id}
+                                                onClick={() => setViewSocio(socio)}
                                             />
                                         ))}
                                     </tbody>
@@ -930,7 +1113,6 @@ export default function SociosPage() {
                             </div>
                         </motion.div>
 
-                        {/* Paginación Premium */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -942,7 +1124,7 @@ export default function SociosPage() {
                             </p>
                             <div className="flex items-center gap-3">
                                 <button
-                                    onClick={() => setCurrentPage(p => Math.max(0, p-1))}
+                                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
                                     disabled={currentPage === 0}
                                     className="h-12 w-12 md:h-14 md:w-14 flex items-center justify-center bg-slate-100 rounded-2xl hover:bg-emerald-500 hover:text-white disabled:opacity-40 disabled:hover:bg-slate-100 disabled:hover:text-slate-400 transition-all duration-300 text-slate-600 shadow-lg shadow-slate-200/50 hover:shadow-emerald-200/50"
                                 >
@@ -953,7 +1135,7 @@ export default function SociosPage() {
                                 </div>
                                 <button
                                     onClick={() => setCurrentPage(p => p + 1)}
-                                    disabled={currentPage>= totalPages-1 && (!searchTerm || displayedSocios.length <pageSize)}
+                                    disabled={currentPage >= totalPages - 1 && (!searchTerm || displayedSocios.length < pageSize)}
                                     className="h-12 w-12 md:h-14 md:w-14 flex items-center justify-center bg-slate-100 rounded-2xl hover:bg-emerald-500 hover:text-white disabled:opacity-40 disabled:hover:bg-slate-100 disabled:hover:text-slate-400 transition-all duration-300 text-slate-600 shadow-lg shadow-slate-200/50 hover:shadow-emerald-200/50"
                                 >
                                     <ChevronRight className="h-6 w-6" />
@@ -964,121 +1146,171 @@ export default function SociosPage() {
                 )}
             </div>
 
-            {/* Fixed Side Panel Modal - Appears on row hover */}
+            {/* Modal Ver Detalles Socio (Premium & Responsive) */}
             <AnimatePresence>
-                {hoveredSocio && (
+                {viewSocio && (
                     <motion.div
-                        initial={{ opacity: 0, x: 30, scale: 0.98 }}
-                        animate={{ opacity: 1, x: 0, scale: 1 }}
-                        exit={{ opacity: 0, x: 30, scale: 0.98 }}
-                        transition={{ duration: 0.15, ease: "easeOut" }}
-                        className="fixed right-4 z-50 w-72 md:w-80"
-                        style={{
-                            top: `${Math.max(Math.min(mouseY - 100, typeof window !== 'undefined' ? window.innerHeight-400:400), 80)}px`,
-                        }}
-                        onMouseEnter={() => setHoveredSocio(hoveredSocio)}
-                        onMouseLeave={() => setHoveredSocio(null)}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
+                        onClick={() => setViewSocio(null)}
                     >
-                        <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-                            {/* Compact Modal Header */}
-                            <div className={`p-4 ${tieneVozYVoto(hoveredSocio)
-                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                               :'bg-gradient-to-r from-amber-500 to-orange-500'
-                                } text-white`}>
-                                <div className="flex items-center gap-3">
-                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center font-black text-lg shadow-lg
-                                        ${tieneVozYVoto(hoveredSocio) ? 'bg-white text-emerald-500':'bg-white text-amber-600'}`}>
-                                        {hoveredSocio.nombreCompleto.substring(0, 2).toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs font-bold">#{hoveredSocio.numeroSocio}</span>
-                                        </div>
-                                        <h3 className="font-bold text-base truncate">{hoveredSocio.nombreCompleto}</h3>
-                                        <p className="text-white/70 font-mono text-xs">CI: {hoveredSocio.cedula}</p>
-                                    </div>
-                                </div>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden border border-white/20 relative"
+                        >
+                            {/* Header Premium con Gradiente y Patrón */}
+                            <div className="relative h-32 bg-slate-100 overflow-hidden">
+                                <div className={`absolute inset-0 bg-gradient-to-br opacity-90 ${tieneVozYVoto(viewSocio)
+                                    ? 'from-[#009900] via-[#008800] to-[#006600]'
+                                    : 'from-amber-400 via-orange-500 to-amber-600'}`}
+                                />
+
+                                {/* Decoración de fondo */}
+                                <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                                <div className="absolute bottom-0 left-0 -ml-10 -mb-10 w-32 h-32 bg-black/10 rounded-full blur-2xl"></div>
+
+                                <button
+                                    onClick={() => setViewSocio(null)}
+                                    className="absolute top-4 right-4 p-2 bg-black/10 hover:bg-black/20 text-white rounded-full backdrop-blur-md transition-all active:scale-95 z-10"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
                             </div>
 
-                            {/* Compact Modal Body */}
-                            <div className="p-4 space-y-3">
-                                {/* Contact Info - Compact */}
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div className="bg-slate-50 rounded-lg p-2.5">
-                                        <p className="text-[9px] text-slate-400 font-bold uppercase">Teléfono</p>
-                                        <p className="font-bold text-slate-700 font-mono text-sm">{hoveredSocio.telefono || '—'}</p>
+                            {/* Contenido Principal - Avatar superpuesto */}
+                            <div className="px-6 pb-24 relative"> {/* Padding-bottom grande para evitar solapamiento con la franja inferior */}
+                                <div className="flex flex-col items-center -mt-16 mb-6">
+                                    <div className={`h-28 w-28 rounded-[2rem] p-1 bg-white shadow-2xl
+                                        ${tieneVozYVoto(viewSocio) ? 'shadow-[#009900]/20' : 'shadow-orange-500/20'}`}>
+                                        <div className={`w-full h-full rounded-[1.8rem] flex items-center justify-center text-4xl font-black text-white
+                                            ${tieneVozYVoto(viewSocio)
+                                                ? 'bg-gradient-to-br from-[#009900] to-[#007700]'
+                                                : 'bg-gradient-to-br from-amber-400 to-orange-500'}`}>
+                                            {viewSocio.nombreCompleto.substring(0, 2).toUpperCase()}
+                                        </div>
                                     </div>
-                                    <div className="bg-slate-50 rounded-lg p-2.5">
-                                        <p className="text-[9px] text-slate-400 font-bold uppercase">Sucursal</p>
-                                        <p className="font-bold text-slate-700 text-sm truncate">{hoveredSocio.sucursal?.nombre || '—'}</p>
+
+                                    <h2 className="mt-4 text-2xl font-black text-slate-800 text-center leading-tight">
+                                        {viewSocio.nombreCompleto}
+                                    </h2>
+
+                                    <div className="mt-2 flex items-center gap-2">
+                                        <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-sm font-bold font-mono tracking-wide border border-slate-200">
+                                            #{viewSocio.numeroSocio}
+                                        </span>
+                                        <span className="bg-slate-100 text-slate-500 px-3 py-1 rounded-lg text-xs font-bold font-mono border border-slate-200">
+                                            CI: {viewSocio.cedula}
+                                        </span>
                                     </div>
                                 </div>
 
-                                {/* Aportes Status - Compact */}
-                                <div className="bg-slate-50 rounded-lg p-2.5">
-                                    <p className="text-[9px] text-slate-400 font-bold uppercase mb-2">Estado de Aportes</p>
-                                    <div className="flex flex-wrap gap-1">
-                                        {[
-                                            { key: 'aporteAlDia', label: 'Aporte', value: hoveredSocio.aporteAlDia },
-                                            { key: 'solidaridadAlDia', label: 'Solid.', value: hoveredSocio.solidaridadAlDia },
-                                            { key: 'fondoAlDia', label: 'Fondo', value: hoveredSocio.fondoAlDia },
-                                            { key: 'incoopAlDia', label: 'INCOOP', value: hoveredSocio.incoopAlDia },
-                                            { key: 'creditoAlDia', label: 'Créd.', value: hoveredSocio.creditoAlDia },
-                                        ].map(item => (
-                                            <span
-                                                key={item.key}
-                                                className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold
-                                                    ${item.value
-                                                        ? 'bg-emerald-100 text-teal-500'
-                                                       :'bg-red-100 text-red-700'
-                                                    }`}
-                                            >
-                                                {item.value ? <Check className="h-3 w-3" />:<X className="h-3 w-3" />}
-                                                {item.label}
-                                            </span>
-                                        ))}
+                                {/* Información Detallada */}
+                                <div className="space-y-4">
+                                    {/* Contacto */}
+                                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                        <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-3 flex items-center gap-2">
+                                            <Phone className="h-3 w-3" /> Contacto
+                                        </h4>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-medium text-slate-500">Teléfono</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-bold text-slate-800 font-mono">{viewSocio.telefono || '—'}</span>
+                                                    {viewSocio.telefono && getWhatsAppLink(viewSocio.telefono) && (
+                                                        <a
+                                                            href={getWhatsAppLink(viewSocio.telefono)!}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#25D366] text-white rounded-xl hover:bg-[#128C7E] transition-all shadow-lg hover:shadow-green-500/30 font-bold text-xs"
+                                                            title="WhatsApp"
+                                                        >
+                                                            <MessageCircle className="h-4 w-4" />
+                                                            Chatear
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {(viewSocio.email) && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-slate-500">Email</span>
+                                                    <span className="text-sm font-bold text-slate-800">{viewSocio.email}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* Status Badge - Compact */}
-                                <div className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-black
-                                    ${tieneVozYVoto(hoveredSocio)
-                                        ? 'bg-emerald-100 text-teal-500'
-                                       :'bg-amber-100 text-amber-700'
-                                    }`}
-                                >
-                                    {tieneVozYVoto(hoveredSocio) ? (
-                                        <><ShieldCheck className="h-4 w-4" /> CON VOZ Y VOTO</>
-                                    ):(
-                                        <><AlertTriangle className="h-4 w-4" /> SOLO VOZ</>
+                                    {/* Ubicación y Datos */}
+                                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                        <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-3 flex items-center gap-2">
+                                            <MapPin className="h-3 w-3" /> Datos Personales
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-bold mb-0.5">VIVIENDA</p>
+                                                <p className="text-sm font-bold text-slate-700 leading-tight">
+                                                    {[viewSocio.barrio, viewSocio.ciudad].filter(Boolean).join(', ') || '—'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-bold mb-0.5">SUCURSAL</p>
+                                                <p className="text-sm font-bold text-slate-700 leading-tight">{viewSocio.sucursal?.nombre || '—'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-bold mb-0.5">EDAD</p>
+                                                <p className="text-sm font-bold text-slate-700 leading-tight">{viewSocio.edad ? `${viewSocio.edad} años` : '—'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-slate-400 font-bold mb-0.5">PROFESIÓN</p>
+                                                <p className="text-sm font-bold text-slate-700 leading-tight truncate">{viewSocio.profesion || '—'}</p>
+                                            </div>
+                                        </div>
+                                        {(viewSocio.direccion) && (
+                                            <div className="mt-4 pt-3 border-t border-slate-200/60">
+                                                <p className="text-[10px] text-slate-400 font-bold mb-0.5">DIRECCIÓN</p>
+                                                <p className="text-xs font-medium text-slate-600 leading-relaxed">{viewSocio.direccion}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Footer Actions si es Admin */}
+                                    {isSuperAdmin && (
+                                        <button
+                                            onClick={() => { openEditModal(viewSocio); setViewSocio(null); }}
+                                            className="w-full py-3 bg-white border-2 border-slate-100 hover:border-slate-200 text-slate-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
+                                        >
+                                            <Edit className="h-4 w-4" />
+                                            Editar Información
+                                        </button>
                                     )}
                                 </div>
                             </div>
 
-                            {/* ABM Actions - Compact */}
-                            {isSuperAdmin && (
-                                <div className="p-4 pt-0 flex gap-2">
-                                    <button
-                                        onClick={() => { openEditModal(hoveredSocio); setHoveredSocio(null); }}
-                                        className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2.5 rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Edit className="h-4 w-4" />
-                                        Editar
-                                    </button>
-                                    <button
-                                        onClick={() => { confirmDelete(hoveredSocio); setHoveredSocio(null); }}
-                                        className="h-10 w-10 flex items-center justify-center bg-red-50 border border-red-200 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
+                            {/* Franja Inferior - Estado de Voto - Fixed at bottom */}
+                            <div className={`absolute bottom-0 left-0 right-0 py-4 px-6 flex items-center justify-between shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] z-20
+                                ${tieneVozYVoto(viewSocio)
+                                    ? 'bg-[#009900] text-white'
+                                    : 'bg-amber-500 text-white'}`}>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] uppercase font-bold opacity-80 letter-spacing-wide">Estado Habilitación</span>
+                                    <div className="flex items-center gap-2 font-black text-lg leading-none mt-1">
+                                        {tieneVozYVoto(viewSocio)
+                                            ? <><ShieldCheck className="h-5 w-5" /> HABILITADO: VOZ Y VOTO</>
+                                            : <><AlertTriangle className="h-5 w-5" /> SOLO VOZ</>
+                                        }
+                                    </div>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Modal Crear/Editar Socio */}
+            {/* Modal Crear/Editar (Sin Aportes) */}
             <AnimatePresence>
                 {showModal && (
                     <motion.div
@@ -1098,7 +1330,7 @@ export default function SociosPage() {
                             <div className="p-6 border-b border-slate-100">
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-xl font-black text-slate-800">
-                                        {modalMode === "create" ? "Nuevo Socio":"Editar Socio"}
+                                        {modalMode === "create" ? "Nuevo Socio" : "Editar Socio"}
                                     </h2>
                                     <button
                                         onClick={() => setShowModal(false)}
@@ -1154,29 +1386,7 @@ export default function SociosPage() {
                                         placeholder="0981123456"
                                     />
                                 </div>
-
-                                <div className="pt-4 border-t border-slate-100">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Estado de Aportes</label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {[
-                                            { key: "aporteAlDia", label: "Aporte" },
-                                            { key: "solidaridadAlDia", label: "Solidaridad" },
-                                            { key: "fondoAlDia", label: "Fondo" },
-                                            { key: "incoopAlDia", label: "INCOOP" },
-                                            { key: "creditoAlDia", label: "Crédito" }
-                                        ].map((item) => (
-                                            <label key={item.key} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData[item.key as keyof typeof formData] as boolean}
-                                                    onChange={(e) => setFormData({ ...formData, [item.key]: e.target.checked })}
-                                                    className="h-5 w-5 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500"
-                                                />
-                                                <span className="text-sm font-medium text-slate-700">{item.label}</span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
+                                {/* Sección de Aportes ELIMINADA por solicitud del usuario */}
                             </div>
 
                             <div className="p-6 border-t border-slate-100 flex gap-3">
@@ -1193,7 +1403,7 @@ export default function SociosPage() {
                                 >
                                     {saving ? (
                                         <Loader2 className="h-5 w-5 animate-spin" />
-                                    ):(
+                                    ) : (
                                         <>
                                             <Save className="h-5 w-5" />
                                             Guardar
@@ -1206,7 +1416,6 @@ export default function SociosPage() {
                 )}
             </AnimatePresence>
 
-            {/* Modal Confirmar Eliminación */}
             <AnimatePresence>
                 {showDeleteConfirm && socioToDelete && (
                     <motion.div
@@ -1252,7 +1461,7 @@ export default function SociosPage() {
                                     >
                                         {deleting ? (
                                             <Loader2 className="h-5 w-5 animate-spin" />
-                                        ):(
+                                        ) : (
                                             <>
                                                 <Trash2 className="h-5 w-5" />
                                                 Eliminar

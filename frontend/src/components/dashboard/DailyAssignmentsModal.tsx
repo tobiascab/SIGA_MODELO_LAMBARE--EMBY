@@ -262,7 +262,7 @@ export function DailyAssignmentsModal({ isOpen, onClose }: DailyAssignmentsModal
                     </div>
 
                     <div className="p-4 bg-slate-50 border-t border-slate-100 text-center text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                        Sistema de Seguimiento de Asignaciones • Cooperativa Lambaré
+                        Sistema de Seguimiento de Asignaciones • Cooperativa Multiactiva Lambaré Ltda.
                     </div>
                 </motion.div>
             </div>

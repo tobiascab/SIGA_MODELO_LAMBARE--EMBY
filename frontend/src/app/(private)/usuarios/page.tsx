@@ -41,7 +41,9 @@ import {
     ChevronLeft, // Added from instruction
     ChevronRight, // Added from instruction
     Info, // Added from instruction
-    AlertCircle // Added from instruction
+    AlertCircle, // Added from instruction
+    Send,
+    LayoutGrid
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -131,25 +133,33 @@ export default function UsuariosPage() {
         { id: "dashboard", label: "Dashboard", icon: BarChart3, color: "from-blue-500 to-emerald-500", bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700" },
         { id: "dashboard-live", label: "Dashboard En Vivo", icon: Activity, color: "from-purple-500 to-pink-500", bgColor: "bg-purple-50", borderColor: "border-purple-200", textColor: "text-purple-700" },
         { id: "importar", label: "Importar Padrón", icon: Upload, color: "from-indigo-500 to-blue-500", bgColor: "bg-indigo-50", borderColor: "border-indigo-200", textColor: "text-indigo-700" },
-        { id: "importar-funcionarios", label: "Importar Funcionarios", icon: Users, color: "from-violet-500 to-purple-500", bgColor: "bg-violet-50", borderColor: "border-violet-200", textColor: "text-violet-700" },
+        { id: "importar-funcionarios", label: "Importar Operadores", icon: Users, color: "from-violet-500 to-purple-500", bgColor: "bg-violet-50", borderColor: "border-violet-200", textColor: "text-violet-700" },
         { id: "socios", label: "Padrón Socios", icon: Users, color: "from-teal-500 to-emerald-500", bgColor: "bg-teal-50", borderColor: "border-teal-200", textColor: "text-teal-500" },
         { id: "asignacion-rapida", label: "Asignación Rápida", icon: Zap, color: "from-amber-500 to-orange-500", bgColor: "bg-amber-50", borderColor: "border-amber-200", textColor: "text-amber-700" },
         { id: "asignaciones", label: "Mis Listas", icon: UserCheck, color: "from-emerald-500 to-teal-500", bgColor: "bg-emerald-50", borderColor: "border-emerald-200", textColor: "text-teal-500" },
         { id: "asignaciones-admin", label: "Asignación Master", icon: ShieldAlert, color: "from-red-500 to-rose-500", bgColor: "bg-red-50", borderColor: "border-red-200", textColor: "text-red-700" },
         { id: "asistencia", label: "Asistencia", icon: ClipboardList, color: "from-sky-500 to-blue-500", bgColor: "bg-sky-50", borderColor: "border-sky-200", textColor: "text-sky-700" },
         { id: "checkin", label: "Check-in", icon: CheckSquare, color: "from-green-500 to-emerald-500", bgColor: "bg-green-50", borderColor: "border-green-200", textColor: "text-green-700" },
+        { id: "consulta", label: "Consulta Asistencia", icon: Search, color: "from-cyan-500 to-blue-500", bgColor: "bg-cyan-50", borderColor: "border-cyan-200", textColor: "text-cyan-700" },
+        { id: "gestion-asistencia", label: "Gestión Asistencia", icon: ShieldAlert, color: "from-orange-500 to-red-500", bgColor: "bg-orange-50", borderColor: "border-orange-200", textColor: "text-orange-700" },
         { id: "reportes-general", label: "Reportes Generales", icon: FileText, color: "from-slate-500 to-gray-600", bgColor: "bg-slate-50", borderColor: "border-slate-200", textColor: "text-slate-700" },
+        { id: "reportes-rankings-vyv", label: "Rankings VyV", icon: Award, color: "from-amber-500 to-yellow-600", bgColor: "bg-amber-50", borderColor: "border-amber-200", textColor: "text-amber-700" },
         { id: "ranking-gestion", label: "Ranking de Gestión", icon: Award, color: "from-amber-400 to-yellow-600", bgColor: "bg-amber-50", borderColor: "border-amber-200", textColor: "text-amber-700" },
+        { id: "reportes-asesores", label: "Reporte Asesores", icon: UserCheck, color: "from-blue-500 to-indigo-500", bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700" },
         { id: "reportes-sucursal", label: "Reportes Sucursal", icon: Building2, color: "from-indigo-500 to-violet-600", bgColor: "bg-indigo-50", borderColor: "border-indigo-200", textColor: "text-indigo-700" },
-        { id: "reportes-funcionarios", label: "Rep. Funcionarios", icon: Briefcase, color: "from-blue-500 to-cyan-600", bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700" },
+        { id: "reportes-funcionarios", label: "Rep. Operadores", icon: Briefcase, color: "from-blue-500 to-cyan-600", bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700" },
         { id: "reportes-asistencia", label: "Rep. Asistencia", icon: Clock, color: "from-rose-500 to-red-600", bgColor: "bg-rose-50", borderColor: "border-rose-200", textColor: "text-rose-700" },
+        { id: "auditoria-usuarios", label: "Auditoría Usuarios", icon: Activity, color: "from-slate-500 to-slate-700", bgColor: "bg-slate-50", borderColor: "border-slate-200", textColor: "text-slate-700" },
         { id: "mi-reporte", label: "Mi Reporte", icon: ClipboardList, color: "from-indigo-500 to-blue-600", bgColor: "bg-indigo-50", borderColor: "border-indigo-200", textColor: "text-indigo-700" },
+        { id: "exportar-vyv", label: "Exportar VyV", icon: Send, color: "from-emerald-500 to-teal-500", bgColor: "bg-emerald-50", borderColor: "border-emerald-200", textColor: "text-emerald-700" },
         { id: "mensajes-chat", label: "Mensajería", icon: Zap, color: "from-emerald-500 to-blue-500", bgColor: "bg-cyan-50", borderColor: "border-cyan-200", textColor: "text-cyan-700" },
         { id: "mensajes-avisos", label: "Avisos/Notif.", icon: Zap, color: "from-orange-500 to-red-500", bgColor: "bg-orange-50", borderColor: "border-orange-200", textColor: "text-orange-700" },
         { id: "candidatos", label: "Candidatos", icon: Award, color: "from-emerald-500 to-teal-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200", textColor: "text-emerald-700" },
-        { id: "configuracion-candidatos", label: "Gestión Candidatos", icon: Award, color: "from-amber-500 to-yellow-600", bgColor: "bg-amber-50", borderColor: "border-amber-200", textColor: "text-amber-700" },
+        { id: "config-candidatos", label: "Gestión Candidatos", icon: Award, color: "from-amber-500 to-yellow-600", bgColor: "bg-amber-50", borderColor: "border-amber-200", textColor: "text-amber-700" },
         { id: "usuarios", label: "Usuarios y Roles", icon: Shield, color: "from-rose-500 to-pink-500", bgColor: "bg-rose-50", borderColor: "border-rose-200", textColor: "text-rose-700" },
-        { id: "auditoria", label: "Auditoría", icon: History, color: "from-gray-500 to-slate-500", bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-700" },
+        { id: "datos-cooperativa", label: "Datos Coop.", icon: Building2, color: "from-slate-500 to-slate-700", bgColor: "bg-slate-50", borderColor: "border-slate-200", textColor: "text-slate-700" },
+        { id: "gestor-mesas", label: "Gestión Mesas", icon: LayoutGrid, color: "from-teal-500 to-emerald-500", bgColor: "bg-teal-50", borderColor: "border-teal-200", textColor: "text-teal-600" },
+        { id: "auditoria", label: "Auditoría Sist.", icon: History, color: "from-gray-500 to-slate-500", bgColor: "bg-gray-50", borderColor: "border-gray-200", textColor: "text-gray-700" },
         { id: "gestion-listas", label: "Gestión de Listas", icon: ClipboardList, color: "from-cyan-500 to-teal-500", bgColor: "bg-cyan-50", borderColor: "border-cyan-200", textColor: "text-cyan-700" },
         { id: "configuracion", label: "Configuración", icon: Settings, color: "from-zinc-500 to-gray-600", bgColor: "bg-zinc-50", borderColor: "border-zinc-200", textColor: "text-zinc-700" },
         { id: "backups", label: "Backups", icon: Globe, color: "from-violet-500 to-purple-600", bgColor: "bg-violet-50", borderColor: "border-violet-200", textColor: "text-violet-700" },
@@ -371,6 +381,16 @@ export default function UsuariosPage() {
 
             if (editingUser && editingUser.id) {
                 await axios.put(`/api/usuarios/${editingUser.id}`, payload, { headers });
+
+                // Si me estoy editando a mí mismo, actualizar localStorage para reflejar cambios en Sidebar inmediatamente
+                if (currentUser && editingUser.id === currentUser.id) {
+                    const updatedUser = { ...currentUser, ...payload };
+                    // Asegurarse de que el rol y otros campos no enviados en payload se mantengan
+                    localStorage.setItem("user", JSON.stringify(updatedUser));
+                    // Opcional: recargar para refrescar contexto global
+                    // window.location.reload();
+                }
+
                 setMessage({ type: "success", text: "Usuario actualizado correctamente" });
             } else {
                 await axios.post("/api/usuarios", payload, { headers });
@@ -1033,7 +1053,7 @@ export default function UsuariosPage() {
                             {message && (
                                 <div className={`p-4 rounded-2xl text-sm font-bold flex items-center gap-3 ${message.type === "success" ? "bg-emerald-50 text-teal-500 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
                                     {message.type === "success" ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
-                                    {message.text}
+                                    <span>{message.text}</span>
                                 </div>
                             )}
 

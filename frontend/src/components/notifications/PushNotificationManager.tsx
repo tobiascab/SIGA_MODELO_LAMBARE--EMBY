@@ -110,7 +110,7 @@ export default function PushNotificationManager({ userRole }: { userRole?: strin
     }
 
     return (
-        <div className="fixed bottom-6 right-6 bg-white p-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] border border-slate-100 z-[100] flex flex-col gap-4 max-w-[320px] animate-in fade-in slide-in-from-bottom-5 duration-700">
+        <div className="fixed bottom-2 left-2 right-2 sm:left-auto sm:bottom-6 sm:right-6 bg-white p-4 sm:p-5 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] border border-slate-100 z-[100] flex flex-col gap-3 sm:gap-4 sm:max-w-[320px] animate-in fade-in slide-in-from-bottom-5 duration-700">
             <button
                 onClick={handleDismiss}
                 className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"

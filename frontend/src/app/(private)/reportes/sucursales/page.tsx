@@ -36,7 +36,7 @@ export default function SucursalesReportPage() {
 
                 // --- PROCESAMIENTO DE DATOS EN CLIENTE ---
                 const rawData = res.data;
-                const branchMap: Record<string, { name: string, registros: number, meta: number, funcionarios: number }> = {};
+                const branchMap: Record<string, { name: string, registros: number, meta: number, operadores: number }> = {};
 
                 let globalReg = 0;
                 let globalMeta = 0;
@@ -49,13 +49,13 @@ export default function SucursalesReportPage() {
                             name: sucursalName,
                             registros: 0,
                             meta: 0,
-                            funcionarios: 0
+                            operadores: 0
                         };
                     }
 
                     branchMap[sucursalName].registros += user.registrados || 0;
                     branchMap[sucursalName].meta += user.meta || 0;
-                    branchMap[sucursalName].funcionarios += 1;
+                    branchMap[sucursalName].operadores += 1;
 
                     globalReg += user.registrados || 0;
                     globalMeta += user.meta || 0;
@@ -271,7 +271,7 @@ export default function SucursalesReportPage() {
                             <thead>
                                 <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
                                     <th className="p-4">Sucursal</th>
-                                    <th className="p-4 text-center">Funcionarios</th>
+                                    <th className="p-4 text-center">Operadores</th>
                                     <th className="p-4 text-center">Registros</th>
                                     <th className="p-4 text-center">Meta</th>
                                 </tr>
@@ -283,7 +283,7 @@ export default function SucursalesReportPage() {
                                             <MapPin className="h-4 w-4 text-slate-400" />
                                             {row.name}
                                         </td>
-                                        <td className="p-4 text-center text-slate-500">{row.funcionarios}</td>
+                                        <td className="p-4 text-center text-slate-500">{row.operadores}</td>
                                         <td className="p-4 text-center font-black text-slate-800 text-lg">{row.registros}</td>
                                         <td className="p-4 text-center">
                                             <div className="w-full max-w-[100px] mx-auto">
@@ -306,7 +306,7 @@ export default function SucursalesReportPage() {
                 </div>
 
                 <div className="mt-8 text-center print:mt-12">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Cooperativa Multiactiva Lambaré Ltda • Gestión Estratégica</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Cooperativa Multiactiva Lambaré Ltda. Ltda • Gestión Estratégica</p>
                 </div>
             </div>
             {/* ESTILOS PARA IMPRESIÓN */}

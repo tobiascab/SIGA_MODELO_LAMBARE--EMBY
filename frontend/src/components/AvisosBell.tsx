@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, Check, CheckCheck, MessageSquare, AlertTriangle, AlertCircle, Info, Megaphone } from 'lucide-react';
+import { Bell, X, Check, CheckCheck, MessageSquare, AlertTriangle, AlertCircle, Info, Megaphone, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
 interface Aviso {
@@ -39,12 +39,25 @@ export default function AvisosBell() {
     const [showModal, setShowModal] = useState(false);
     const [respuestaTexto, setRespuestaTexto] = useState('');
     const [soundEnabled, setSoundEnabled] = useState(true);
+    const [userRole, setUserRole] = useState<string>('');
+    const [deletingId, setDeletingId] = useState<number | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'DIRECTIVO';
 
     // Inicializar y polling
     useEffect(() => {
         audioRef.current = new Audio('/sounds/notification.mp3');
         audioRef.current.volume = 0.6;
+
+        // Get user role
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            try {
+                const parsed = JSON.parse(userData);
+                setUserRole(parsed.role || parsed.rol || '');
+            } catch { }
+        }
 
         loadAvisos();
         const interval = setInterval(loadAvisos, 5000);
@@ -66,8 +79,6 @@ export default function AvisosBell() {
         const token = localStorage.getItem('token');
 
         if (!token) {
-            // Si no hay token, no intentamos cargar y probablemente deberíamos redirigir
-            // pero dejaremos que el layout maneje la redirección principal.
             return;
         }
 
@@ -92,11 +103,8 @@ export default function AvisosBell() {
             setUnreadCount(newCount);
         } catch (error: any) {
             console.error('Error loading avisos:', error);
-            // Si el error es de autenticación, detenemos el polling silenciosamente
-            // o redirigimos al login si es crítico
             if (error.response?.status === 401 || error.response?.status === 403) {
-                // Opcional: localStorage.removeItem('token');
-                // router.push('/login'); 
+                // silently stop
             }
         }
     };
@@ -120,7 +128,6 @@ export default function AvisosBell() {
 
         const token = localStorage.getItem('token');
         try {
-            // Marcar todos en paralelo
             await Promise.all(
                 noLeidos.map(aviso =>
                     axios.put(`/api/avisos/${aviso.id}/leido`, {}, {
@@ -128,7 +135,6 @@ export default function AvisosBell() {
                     })
                 )
             );
-            // Actualizar el estado local inmediatamente
             setUnreadCount(0);
             loadAvisos();
         } catch (error) {
@@ -166,6 +172,32 @@ export default function AvisosBell() {
         }
     };
 
+    const eliminarAviso = async (avisoId: number, e?: React.MouseEvent) => {
+        if (e) {
+            e.stopPropagation();
+        }
+        if (!confirm('¿Seguro que deseas eliminar este aviso?')) return;
+
+        setDeletingId(avisoId);
+        try {
+            const token = localStorage.getItem('token');
+            await axios.delete(`/api/avisos/${avisoId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            // If we're viewing this aviso in modal, close modal
+            if (selectedAviso?.id === avisoId) {
+                setShowModal(false);
+                setSelectedAviso(null);
+            }
+            loadAvisos();
+        } catch (error) {
+            console.error('Error deleting aviso:', error);
+            alert('Error al eliminar el aviso. Puede que no tengas permisos.');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
     const getPrioridadIcon = (prioridad: string) => {
         switch (prioridad) {
             case 'CRITICA': return <AlertCircle className="h-5 w-5 text-red-500" />;
@@ -185,12 +217,9 @@ export default function AvisosBell() {
     const formatDate = (dateStr: string) => {
         if (!dateStr) return '';
 
-        // El backend envía la hora en UTC (ej: 21:00) pero sin la 'Z'.
-        // Le agregamos 'Z' para que JS sepa que es UTC.
         const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
         const date = new Date(utcDateStr);
 
-        // Usamos Intl para formatear correctamente a la zona horaria de Paraguay
         return new Intl.DateTimeFormat('es-PY', {
             day: '2-digit',
             month: '2-digit',
@@ -198,13 +227,13 @@ export default function AvisosBell() {
             hour: '2-digit',
             minute: '2-digit',
             hour12: true,
-            timeZone: 'America/Asuncion' // Forzamos hora de Paraguay
+            timeZone: 'America/Asuncion'
         }).format(date);
     };
 
     return (
         <>
-            {/* Bell Button Premium - Permanent Style */}
+            {/* Bell Button */}
             <div className="relative">
                 <motion.button
                     onClick={() => {
@@ -216,7 +245,7 @@ export default function AvisosBell() {
                     }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="relative p-2.5 rounded-2xl bg-white border border-slate-200 hover:border-teal-300 hover:shadow-lg hover:shadow-teal-100 transition-all"
+                    className="relative p-2.5 rounded-2xl bg-white border border-slate-200 hover:border-teal-300 hover:shadow-lg hover:shadow-teal-100 transition-all touch-manipulation"
                 >
                     <Bell className="h-5 w-5 text-slate-600" />
                     {unreadCount > 0 && (
@@ -229,37 +258,48 @@ export default function AvisosBell() {
                         </motion.span>
                     )}
                 </motion.button>
+            </div>
 
-                {/* Dropdown */}
-                <AnimatePresence>
-                    {isOpen && (
+            {/* Dropdown / Full-screen on mobile */}
+            <AnimatePresence>
+                {isOpen && (
+                    <>
+                        {/* Backdrop for mobile */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsOpen(false)}
+                            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 sm:hidden"
+                        />
+
                         <motion.div
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="absolute right-0 mt-3 w-80 sm:w-[420px] bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden z-50"
+                            className="fixed inset-x-0 bottom-0 top-auto sm:absolute sm:inset-auto sm:right-0 sm:mt-3 sm:w-[420px] bg-white rounded-t-2xl sm:rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden z-50 max-h-[85vh] sm:max-h-[500px] flex flex-col"
                         >
-                            {/* Header Premium */}
-                            <div className="px-6 py-4 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between">
+                            {/* Header */}
+                            <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between flex-shrink-0">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white/10 rounded-xl">
-                                        <Bell className="h-5 w-5 text-white" />
+                                    <div className="p-1.5 sm:p-2 bg-white/10 rounded-lg sm:rounded-xl">
+                                        <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                                     </div>
                                     <div>
-                                        <h3 className="text-white font-black tracking-tight">AVISOS</h3>
-                                        <p className="text-white/60 text-xs font-medium">Centro de notificaciones</p>
+                                        <h3 className="text-white font-black tracking-tight text-sm sm:text-base">AVISOS</h3>
+                                        <p className="text-white/60 text-[10px] sm:text-xs font-medium">Centro de notificaciones</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setIsOpen(false)}
-                                    className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                                    className="p-2 hover:bg-white/10 rounded-xl transition-colors touch-manipulation"
                                 >
                                     <X className="h-5 w-5 text-white/70 hover:text-white" />
                                 </button>
                             </div>
 
-                            {/* List */}
-                            <div className="max-h-[400px] overflow-y-auto">
+                            {/* List - scrollable */}
+                            <div className="flex-1 overflow-y-auto overscroll-contain">
                                 {avisos.length === 0 ? (
                                     <div className="px-6 py-12 text-center">
                                         <div className="w-16 h-16 mx-auto bg-slate-50 rounded-full flex items-center justify-center mb-4">
@@ -277,13 +317,14 @@ export default function AvisosBell() {
                                                 onClick={() => {
                                                     setSelectedAviso(aviso);
                                                     setShowModal(true);
+                                                    setIsOpen(false);
                                                     if (!aviso.leidoAt) marcarLeido(aviso.id);
                                                 }}
-                                                className={`px-6 py-4 cursor-pointer transition-all ${!aviso.leidoAt ? 'bg-teal-50/50' : ''
+                                                className={`px-4 sm:px-6 py-3 sm:py-4 cursor-pointer transition-all ${!aviso.leidoAt ? 'bg-teal-50/50' : ''
                                                     } ${getPrioridadStyle(aviso.prioridad)}`}
                                             >
-                                                <div className="flex items-start gap-4">
-                                                    <div className={`p-2.5 rounded-xl flex-shrink-0 ${aviso.prioridad === 'CRITICA' ? 'bg-red-100' :
+                                                <div className="flex items-start gap-3 sm:gap-4">
+                                                    <div className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl flex-shrink-0 ${aviso.prioridad === 'CRITICA' ? 'bg-red-100' :
                                                         aviso.prioridad === 'ALTA' ? 'bg-amber-100' : 'bg-teal-100'
                                                         }`}>
                                                         {getPrioridadIcon(aviso.prioridad)}
@@ -293,14 +334,26 @@ export default function AvisosBell() {
                                                             <p className="font-bold text-sm text-slate-900 truncate">
                                                                 {aviso.titulo || 'Aviso del Sistema'}
                                                             </p>
-                                                            {!aviso.leidoAt && (
-                                                                <span className="w-2.5 h-2.5 bg-teal-500 rounded-full flex-shrink-0 animate-pulse"></span>
-                                                            )}
+                                                            <div className="flex items-center gap-1 flex-shrink-0">
+                                                                {!aviso.leidoAt && (
+                                                                    <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></span>
+                                                                )}
+                                                                {isAdmin && (
+                                                                    <button
+                                                                        onClick={(e) => eliminarAviso(aviso.id, e)}
+                                                                        disabled={deletingId === aviso.id}
+                                                                        className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all touch-manipulation"
+                                                                        title="Eliminar aviso"
+                                                                    >
+                                                                        <Trash2 className={`h-3.5 w-3.5 ${deletingId === aviso.id ? 'animate-spin' : ''}`} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         <p className="text-xs text-slate-500 line-clamp-2 mt-1 leading-relaxed">
                                                             {aviso.contenido}
                                                         </p>
-                                                        <div className="flex items-center gap-3 mt-2">
+                                                        <div className="flex items-center gap-3 mt-2 flex-wrap">
                                                             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
                                                                 {formatDate(aviso.enviadoAt)}
                                                             </span>
@@ -322,16 +375,20 @@ export default function AvisosBell() {
                                     </div>
                                 )}
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
 
-            {/* Modal para aviso detallado - ESTILO PREMIUM CENTRADO */}
+                            {/* Mobile drag handle */}
+                            <div className="sm:hidden flex justify-center py-2 flex-shrink-0">
+                                <div className="w-10 h-1 bg-slate-200 rounded-full" />
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Modal para aviso detallado */}
             <AnimatePresence>
                 {showModal && selectedAviso && (
                     <>
-                        {/* Backdrop con blur fuerte */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -341,104 +398,117 @@ export default function AvisosBell() {
                             className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[100]"
                         />
 
-                        {/* Modal Container - CENTRADO ABSOLUTO PERFECTO */}
-                        <div className="fixed inset-0 z-[101] flex items-center justify-center min-h-screen p-4 sm:p-6">
+                        <div className="fixed inset-0 z-[101] flex items-end sm:items-center justify-center p-0 sm:p-6">
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                                initial={{ opacity: 0, y: 50 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 50 }}
                                 transition={{
                                     type: "spring",
                                     damping: 25,
                                     stiffness: 300
                                 }}
-                                className="w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] m-auto pointer-events-auto border-4 border-white/50"
+                                className="w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh] pointer-events-auto border-t-4 sm:border-4 border-white/50"
                                 style={{ boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.4)' }}
                             >
+                                {/* Mobile drag handle */}
+                                <div className="sm:hidden flex justify-center pt-2 pb-1 flex-shrink-0">
+                                    <div className="w-10 h-1 bg-slate-200 rounded-full" />
+                                </div>
 
-                                {/* Modal Header - Premium Light */}
-                                <div className={`px-6 py-5 flex items-center gap-4 ${selectedAviso.prioridad === 'CRITICA' ? 'bg-gradient-to-r from-red-500 to-rose-500' :
+                                {/* Modal Header */}
+                                <div className={`px-4 sm:px-6 py-4 sm:py-5 flex items-center gap-3 sm:gap-4 ${selectedAviso.prioridad === 'CRITICA' ? 'bg-gradient-to-r from-red-500 to-rose-500' :
                                     selectedAviso.prioridad === 'ALTA' ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
                                         'bg-gradient-to-r from-teal-500 to-emerald-500'
                                     }`}>
-                                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
-                                        {selectedAviso.prioridad === 'CRITICA' ? <AlertCircle className="h-6 w-6 text-white" /> :
-                                            selectedAviso.prioridad === 'ALTA' ? <AlertTriangle className="h-6 w-6 text-white" /> :
-                                                <Megaphone className="h-6 w-6 text-white" />}
+                                    <div className="p-2 sm:p-3 bg-white/20 rounded-xl sm:rounded-2xl backdrop-blur-sm">
+                                        {selectedAviso.prioridad === 'CRITICA' ? <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white" /> :
+                                            selectedAviso.prioridad === 'ALTA' ? <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-white" /> :
+                                                <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-white" />}
                                     </div>
-                                    <div className="flex-1">
-                                        <h2 className="text-white font-black text-lg tracking-tight">
+                                    <div className="flex-1 min-w-0">
+                                        <h2 className="text-white font-black text-base sm:text-lg tracking-tight truncate">
                                             {selectedAviso.titulo || 'Aviso del Sistema'}
                                         </h2>
-                                        <p className="text-white/80 text-sm font-medium">De: {selectedAviso.emisorNombre}</p>
+                                        <p className="text-white/80 text-xs sm:text-sm font-medium">De: {selectedAviso.emisorNombre}</p>
                                     </div>
-                                    {!selectedAviso.requiereConfirmacion && (
-                                        <button
-                                            onClick={() => setShowModal(false)}
-                                            className="p-2 hover:bg-white/20 rounded-xl transition-colors"
-                                        >
-                                            <X className="h-6 w-6 text-white" />
-                                        </button>
-                                    )}
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => eliminarAviso(selectedAviso.id)}
+                                                disabled={deletingId === selectedAviso.id}
+                                                className="p-2 hover:bg-white/20 rounded-xl transition-colors touch-manipulation"
+                                                title="Eliminar aviso"
+                                            >
+                                                <Trash2 className={`h-5 w-5 text-white/80 hover:text-white ${deletingId === selectedAviso.id ? 'animate-spin' : ''}`} />
+                                            </button>
+                                        )}
+                                        {!selectedAviso.requiereConfirmacion && (
+                                            <button
+                                                onClick={() => setShowModal(false)}
+                                                className="p-2 hover:bg-white/20 rounded-xl transition-colors touch-manipulation"
+                                            >
+                                                <X className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Modal Body */}
-                                <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+                                <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 bg-slate-50/50">
                                     {selectedAviso.imagenUrl && (
-                                        <div className="mb-6 rounded-2xl overflow-hidden shadow-md border-4 border-white">
+                                        <div className="mb-4 sm:mb-6 rounded-xl sm:rounded-2xl overflow-hidden shadow-md border-2 sm:border-4 border-white">
                                             <img
                                                 src={selectedAviso.imagenUrl}
                                                 alt="Aviso visual"
-                                                className="w-full h-auto object-cover max-h-[60vh] bg-slate-100"
+                                                className="w-full h-auto object-cover max-h-[40vh] sm:max-h-[60vh] bg-slate-100"
                                             />
                                         </div>
                                     )}
 
-                                    <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-                                        <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-[15px]">
+                                    <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-sm">
+                                        <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-sm sm:text-[15px]">
                                             {selectedAviso.contenido}
                                         </p>
                                     </div>
 
-                                    <p className="text-xs text-slate-400 mt-4 text-center font-medium">
+                                    <p className="text-xs text-slate-400 mt-3 sm:mt-4 text-center font-medium">
                                         Enviado: {formatDate(selectedAviso.enviadoAt)}
                                     </p>
                                 </div>
 
-                                {/* Modal Actions - Premium Styling */}
-                                <div className="px-6 py-5 border-t border-slate-100 bg-white space-y-4">
+                                {/* Modal Actions */}
+                                <div className="px-4 sm:px-6 py-4 sm:py-5 border-t border-slate-100 bg-white space-y-3 sm:space-y-4 flex-shrink-0">
                                     {selectedAviso.requiereRespuesta && !selectedAviso.respondidoAt && (
                                         <>
                                             <p className="text-sm font-bold text-slate-700">
                                                 Respondé el mensaje:
                                             </p>
-                                            <div className="flex flex-wrap gap-2">
+                                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                                 {RESPUESTAS_RAPIDAS.map((resp) => (
                                                     <motion.button
                                                         key={resp}
-                                                        whileHover={{ scale: 1.05 }}
                                                         whileTap={{ scale: 0.95 }}
                                                         onClick={() => responderAviso(selectedAviso.id, resp)}
-                                                        className="px-4 py-2 bg-slate-100 hover:bg-teal-50 hover:text-teal-500 rounded-xl text-sm font-semibold text-slate-600 transition-colors border border-transparent hover:border-teal-200"
+                                                        className="px-3 sm:px-4 py-2 bg-slate-100 hover:bg-teal-50 hover:text-teal-500 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 transition-colors border border-transparent hover:border-teal-200 touch-manipulation"
                                                     >
                                                         {resp}
                                                     </motion.button>
                                                 ))}
                                             </div>
-                                            <div className="flex gap-2 mt-3">
+                                            <div className="flex gap-2 mt-2 sm:mt-3">
                                                 <input
                                                     type="text"
                                                     value={respuestaTexto}
                                                     onChange={(e) => setRespuestaTexto(e.target.value)}
                                                     placeholder="O escribí una respuesta..."
-                                                    className="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-slate-400 font-medium"
+                                                    className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder:text-slate-400 font-medium"
                                                 />
                                                 <motion.button
-                                                    whileHover={{ scale: 1.05 }}
                                                     whileTap={{ scale: 0.95 }}
                                                     onClick={() => responderAviso(selectedAviso.id, 'texto_libre', respuestaTexto)}
                                                     disabled={!respuestaTexto.trim()}
-                                                    className="px-5 py-3 bg-teal-500 hover:bg-teal-500 text-white rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-teal-200 transition-all"
+                                                    className="px-4 sm:px-5 py-2.5 sm:py-3 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-teal-200 transition-all touch-manipulation"
                                                 >
                                                     Enviar
                                                 </motion.button>
@@ -448,10 +518,9 @@ export default function AvisosBell() {
 
                                     {selectedAviso.requiereConfirmacion && !selectedAviso.confirmadoAt && (
                                         <motion.button
-                                            whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
                                             onClick={() => confirmarAviso(selectedAviso.id)}
-                                            className="w-full py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-2xl font-black text-lg shadow-xl shadow-teal-200 hover:shadow-2xl hover:shadow-teal-300 transition-all"
+                                            className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-xl sm:rounded-2xl font-black text-base sm:text-lg shadow-xl shadow-teal-200 hover:shadow-2xl hover:shadow-teal-300 transition-all touch-manipulation"
                                         >
                                             <Check className="h-5 w-5 inline mr-2" />
                                             Cerrar
@@ -460,10 +529,9 @@ export default function AvisosBell() {
 
                                     {!selectedAviso.requiereConfirmacion && !selectedAviso.requiereRespuesta && (
                                         <motion.button
-                                            whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
                                             onClick={() => setShowModal(false)}
-                                            className="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold transition-colors"
+                                            className="w-full py-3.5 sm:py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl sm:rounded-2xl font-bold transition-colors touch-manipulation"
                                         >
                                             Cerrar
                                         </motion.button>

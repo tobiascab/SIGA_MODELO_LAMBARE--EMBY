@@ -28,6 +28,9 @@ public class CooperativaController {
     @Autowired
     private CooperativaRepository cooperativaRepository;
 
+    @Autowired
+    private com.asamblea.service.LogAuditoriaService auditService;
+
     // Directorio donde se guardarán los logos
     private static final String UPLOAD_DIR = "/app/uploads/logos/";
 
@@ -62,16 +65,16 @@ public class CooperativaController {
                     "nombreCorto", coop.getNombreCorto() != null ? coop.getNombreCorto() : "Coop",
                     "logo", coop.getLogo() != null ? coop.getLogo() : "/logo.png",
                     "eslogan", coop.getEslogan() != null ? coop.getEslogan() : "",
-                    "colorPrimario", coop.getColorPrimario() != null ? coop.getColorPrimario() : "#10b981",
-                    "colorSecundario", coop.getColorSecundario() != null ? coop.getColorSecundario() : "#064e3b"));
+                    "colorPrimario", coop.getColorPrimario() != null ? coop.getColorPrimario() : "#A8252C",
+                    "colorSecundario", coop.getColorSecundario() != null ? coop.getColorSecundario() : "#600000"));
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of(
                     "nombre", "Cooperativa",
                     "nombreCorto", "Coop",
                     "logo", "/logo.png",
                     "eslogan", "",
-                    "colorPrimario", "#10b981",
-                    "colorSecundario", "#064e3b"));
+                    "colorPrimario", "#A8252C",
+                    "colorSecundario", "#600000"));
         }
     }
 
@@ -79,7 +82,8 @@ public class CooperativaController {
      * Actualiza los datos de la cooperativa (solo SUPER_ADMIN).
      */
     @PutMapping
-    public ResponseEntity<?> actualizarDatos(@RequestBody Cooperativa datos, Authentication auth) {
+    public ResponseEntity<?> actualizarDatos(@RequestBody Cooperativa datos, Authentication auth,
+            jakarta.servlet.http.HttpServletRequest request) {
         try {
             // Verificar permisos
             if (auth == null || !auth.getAuthorities().stream()
@@ -143,6 +147,14 @@ public class CooperativaController {
 
             cooperativaRepository.save(cooperativa);
 
+            // Auditoría
+            auditService.registrar(
+                    "CONFIGURACION",
+                    "ACTUALIZAR_COOPERATIVA",
+                    "Actualizó los datos generales de la cooperativa: " + cooperativa.getNombre(),
+                    auth.getName(),
+                    request.getRemoteAddr());
+
             return ResponseEntity.ok(Map.of(
                     "mensaje", "Datos de la cooperativa actualizados correctamente",
                     "cooperativa", cooperativa));
@@ -156,7 +168,8 @@ public class CooperativaController {
      * Sube el logo de la cooperativa.
      */
     @PostMapping("/logo")
-    public ResponseEntity<?> subirLogo(@RequestParam("file") MultipartFile file, Authentication auth) {
+    public ResponseEntity<?> subirLogo(@RequestParam("file") MultipartFile file, Authentication auth,
+            jakarta.servlet.http.HttpServletRequest request) {
         try {
             // Verificar permisos
             if (auth == null || !auth.getAuthorities().stream()
@@ -199,6 +212,14 @@ public class CooperativaController {
 
             cooperativaRepository.save(cooperativa);
 
+            // Auditoría
+            auditService.registrar(
+                    "CONFIGURACION",
+                    "ACTUALIZAR_LOGO_COOPERATIVA",
+                    "Actualizó el logo de la cooperativa: " + logoUrl,
+                    auth.getName(),
+                    request.getRemoteAddr());
+
             return ResponseEntity.ok(Map.of(
                     "mensaje", "Logo actualizado correctamente",
                     "logo", logoUrl));
@@ -212,16 +233,16 @@ public class CooperativaController {
     }
 
     /**
-     * Crea una cooperativa con valores por defecto (Cooperativa Reducto).
+     * Crea una cooperativa con valores por defecto (Cooperativa Multiactiva Lambaré Ltda.).
      */
     private Cooperativa crearCooperativaDefault() {
         Cooperativa coop = new Cooperativa();
-        coop.setNombre("Cooperativa Reducto Ltda.");
-        coop.setNombreCorto("Reducto");
+        coop.setNombre("Cooperativa Multiactiva Lambaré Ltda.");
+        coop.setNombreCorto("Lambaré");
         coop.setEslogan("Sistema de Asambleas");
         coop.setLogo("/logo.png");
-        coop.setColorPrimario("#10b981");
-        coop.setColorSecundario("#064e3b");
+        coop.setColorPrimario("#A8252C");
+        coop.setColorSecundario("#600000");
         coop.setColorAcento("#f59e0b");
         coop.setPais("Paraguay");
         coop.setUpdatedAt(LocalDateTime.now());
