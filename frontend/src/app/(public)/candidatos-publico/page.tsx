@@ -69,9 +69,14 @@ export default function CandidatosPage() {
     const [candidatos, setCandidatos] = useState<Candidato[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCandidate, setSelectedCandidate] = useState<Candidato | null>(null);
+    const [coopNombre, setCoopNombre] = useState('Cooperativa');
 
     useEffect(() => {
         cargarCandidatos();
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data?.nombre) setCoopNombre(data.nombre); })
+            .catch(() => { });
     }, []);
 
     const cargarCandidatos = async () => {
@@ -434,7 +439,7 @@ export default function CandidatosPage() {
                             <Heart className="h-5 w-5 text-emerald-500 animate-pulse" />
                         </div>
                         <p className="text-slate-600 text-base font-medium">
-                            Cooperativa Multiactiva Lambaré Ltda. · Asamblea General Ordinaria 2026
+                            {coopNombre} · Asamblea General Ordinaria 2026
                         </p>
                         <p className="text-slate-500 text-sm mt-2">
                             Tu voto construye el futuro
@@ -449,6 +454,7 @@ export default function CandidatosPage() {
                     <CandidateModal
                         candidate={selectedCandidate}
                         onClose={() => setSelectedCandidate(null)}
+                        coopNombre={coopNombre}
                     />
                 )}
             </AnimatePresence>
@@ -600,7 +606,7 @@ function FloatingCard({ can, idx, isSmall = false, onClick, delay = 0 }: {
 }
 
 // Candidate Modal Component
-function CandidateModal({ candidate, onClose }: { candidate: Candidato, onClose: () => void }) {
+function CandidateModal({ candidate, onClose, coopNombre = 'Cooperativa' }: { candidate: Candidato, onClose: () => void, coopNombre?: string }) {
     const info = ORGANO_INFO[candidate.organo] || ORGANO_INFO["CONSEJO_ADMINISTRACION"];
     const IconComponent = info.icon;
 
@@ -620,7 +626,7 @@ ${candidate.biografia ? `📝 "${candidate.biografia}"` : ""}
 🔗 https://asamblea.asamblea.cloud/candidatos-publico
 
 ━━━━━━━━━━━━━━━━━━━
-*Cooperativa Multiactiva Lambaré Ltda. - Tu voto cuenta*`;
+*${coopNombre} - Tu voto cuenta*`;
 
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');

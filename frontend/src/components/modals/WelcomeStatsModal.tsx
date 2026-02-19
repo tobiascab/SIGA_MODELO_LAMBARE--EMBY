@@ -30,11 +30,14 @@ export function WelcomeStatsModal() {
                 return;
             }
 
-            // Check if already shown in this "session" (we can use a flag with date)
-            const today = new Date().toISOString().split('T')[0];
-            const lastShown = localStorage.getItem(`welcome_stats_shown_${parsedUser.id}`);
+            // Mostrar cada 5 sesiones/visitas al dashboard
+            const sessionKey = `welcome_stats_count_${parsedUser.id}`;
+            const currentCount = parseInt(localStorage.getItem(sessionKey) || "0", 10);
+            const nextCount = currentCount + 1;
+            localStorage.setItem(sessionKey, String(nextCount));
 
-            if (lastShown === today) {
+            // Solo mostrar en la primera visita y luego cada 5
+            if (nextCount !== 1 && nextCount % 5 !== 0) {
                 setLoading(false);
                 return;
             }
@@ -47,7 +50,6 @@ export function WelcomeStatsModal() {
 
                 setStats(res.data);
                 setIsOpen(true);
-                localStorage.setItem(`welcome_stats_shown_${parsedUser.id}`, today);
             } catch (error) {
                 console.error("Error loading welcome stats:", error);
             } finally {

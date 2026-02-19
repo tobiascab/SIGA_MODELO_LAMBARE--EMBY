@@ -36,13 +36,15 @@ interface SocioAssignmentsProps {
     addingSocio: boolean;
     searchedSocio: Socio | null;
     showConfirmModal: boolean;
+    searchType: string;
     onSelectLista: (lista: ListaAsignacion) => void;
     onCreateClick: () => void;
     onSearchSocio: () => void;
-    onConfirmAddSocio: () => void;
+    onConfirmAddSocio: () => Promise<void> | void;
     onCancelAdd: () => void;
     onRemoveSocio: (socioId: number) => void;
     onSearchTermChange: (term: string) => void;
+    onSearchTypeChange: (tipo: string) => void;
     tieneVozYVoto: (socio: Socio) => boolean;
     onDeleteLista?: (listaId: number) => void;
     onUpdateLista?: (listaId: number, nombre: string, descripcion: string) => void;
@@ -56,18 +58,35 @@ export function SocioAssignments({
     socioSearchTerm,
     addingSocio,
     searchedSocio,
+    searchType,
     onSelectLista,
     onSearchSocio,
     onConfirmAddSocio,
     onCancelAdd,
     onRemoveSocio,
     onSearchTermChange,
+    onSearchTypeChange,
     tieneVozYVoto,
 }: SocioAssignmentsProps) {
 
     // Estado para notificación toast
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
+    const [isConfirming, setIsConfirming] = useState(false);
+    const [justAdded, setJustAdded] = useState<string | null>(null);
+
+    const handleConfirmClick = async () => {
+        if (isConfirming) return;
+        setIsConfirming(true);
+        try {
+            const socioName = searchedSocio?.nombreCompleto || 'Socio';
+            await onConfirmAddSocio();
+            setJustAdded(socioName);
+            setTimeout(() => setJustAdded(null), 3000);
+        } finally {
+            setIsConfirming(false);
+        }
+    };
 
     // Usar selectedLista para estadísticas (el padre selecciona la lista con más socios)
     // Fallback a la primera lista solo si no hay ninguna seleccionada
@@ -217,22 +236,52 @@ export function SocioAssignments({
                         className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6"
                         data-tour="search-socio"
                     >
-                        <div className="flex items-center gap-3 mb-4">
+                        <div className="flex items-center gap-3 mb-2">
                             <div className="p-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl shadow-lg shadow-violet-200">
                                 <UserPlus className="w-6 h-6 text-white" />
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold text-slate-800">Agregar Socio</h2>
-                                <p className="text-sm text-slate-500">Escribe la cédula o número de socio</p>
+                                <p className="text-sm text-slate-500">Seleccioná cómo querés buscar</p>
                             </div>
                         </div>
 
-                        <form onSubmit={(e) => { e.preventDefault(); onSearchSocio(); }} className="flex flex-col sm:flex-row gap-3">
+                        {/* Search Type Selector - 3-column grid */}
+                        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-4">
+                            {[
+                                { value: '', label: 'Todos', icon: '🔍' },
+                                { value: 'cedula', label: 'CI', icon: '🪪' },
+                                { value: 'nroSocio', label: 'N° Socio', icon: '🔢' },
+                            ].map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => onSearchTypeChange(opt.value)}
+                                    className={`relative flex flex-col items-center justify-center gap-0.5 py-2.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all border-2 ${searchType === opt.value
+                                        ? 'bg-gradient-to-b from-violet-500 to-purple-600 text-white border-violet-400 shadow-lg shadow-violet-200 scale-[1.02]'
+                                        : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50 active:scale-95'
+                                        }`}
+                                >
+                                    <span className="text-base sm:text-sm leading-none">{opt.icon}</span>
+                                    <span className="leading-tight">{opt.label}</span>
+                                    {searchType === opt.value && (
+                                        <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-1 bg-violet-300 rounded-full" />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+
+                        <form onSubmit={(e) => { e.preventDefault(); onSearchSocio(); }} className="flex flex-col gap-3">
                             <div className="relative flex-1">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder="Ingresa Cédula o N° de Socio..."
+                                    inputMode={searchType === 'cedula' || searchType === 'nroSocio' ? 'numeric' : 'text'}
+                                    placeholder={
+                                        searchType === 'cedula' ? 'Ingresá el N° de Cédula...' :
+                                            searchType === 'nroSocio' ? 'Ingresá el N° de Socio...' :
+                                                'Ingresa Cédula, N° de Socio o Nombre...'
+                                    }
                                     className="w-full pl-12 pr-4 py-3 md:py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-medium text-base md:text-lg text-slate-700 placeholder:text-slate-400 focus:border-violet-500 focus:bg-white outline-none transition-all"
                                     value={socioSearchTerm}
                                     onChange={(e) => onSearchTermChange(e.target.value)}
@@ -244,7 +293,7 @@ export function SocioAssignments({
                                 whileTap={{ scale: 0.98 }}
                                 type="submit"
                                 disabled={addingSocio || !socioSearchTerm}
-                                className="px-6 md:px-8 py-3.5 md:py-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl font-bold hover:from-violet-700 hover:to-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-200"
+                                className="w-full sm:w-auto px-6 md:px-8 py-3.5 md:py-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-2xl font-bold hover:from-violet-700 hover:to-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-200"
                             >
                                 {addingSocio ? (
                                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -257,58 +306,89 @@ export function SocioAssignments({
                             </motion.button>
                         </form>
 
+                        {/* Toast de éxito animado */}
+                        <AnimatePresence>
+                            {justAdded && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    className="mt-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl p-4 flex items-center gap-3 shadow-lg shadow-emerald-200/50"
+                                >
+                                    <div className="p-2 bg-white/20 rounded-xl">
+                                        <CheckCircle2 className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="text-white font-black text-sm">✓ Agregado exitosamente</p>
+                                        <p className="text-emerald-100 text-xs font-medium">{justAdded}</p>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
                         {/* Resultado de búsqueda */}
-                        {searchedSocio && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border-2 border-emerald-200 p-5"
-                            >
-                                <div className="flex items-center justify-between flex-wrap gap-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-emerald-500 rounded-xl">
-                                            <CheckCircle2 className="w-6 h-6 text-white" />
+                        <AnimatePresence>
+                            {searchedSocio && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="mt-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border-2 border-emerald-200 p-5"
+                                >
+                                    <div className="flex items-center justify-between flex-wrap gap-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-emerald-500 rounded-xl">
+                                                <CheckCircle2 className="w-6 h-6 text-white" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-emerald-500 font-bold uppercase tracking-wide">Socio Encontrado</p>
+                                                <p className="text-xl font-black text-slate-800">{searchedSocio.nombreCompleto}</p>
+                                                <div className="flex gap-4 mt-1">
+                                                    <span className="text-sm text-slate-500">CI: <span className="font-bold text-slate-700">{searchedSocio.cedula}</span></span>
+                                                    <span className="text-sm text-slate-500">Nro: <span className="font-bold text-slate-700">{searchedSocio.numeroSocio}</span></span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-xs text-emerald-500 font-bold uppercase tracking-wide">Socio Encontrado</p>
-                                            <p className="text-xl font-black text-slate-800">{searchedSocio.nombreCompleto}</p>
-                                            <div className="flex gap-4 mt-1">
-                                                <span className="text-sm text-slate-500">CI: <span className="font-bold text-slate-700">{searchedSocio.cedula}</span></span>
-                                                <span className="text-sm text-slate-500">Nro: <span className="font-bold text-slate-700">{searchedSocio.numeroSocio}</span></span>
+                                        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                                            <div className={`px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 border-2 ${tieneVozYVoto(searchedSocio)
+                                                ? 'bg-emerald-50 text-emerald-500 border-emerald-100'
+                                                : 'bg-amber-50 text-amber-600 border-amber-100'
+                                                }`}>
+                                                {tieneVozYVoto(searchedSocio) ? (
+                                                    <><CheckCircle2 className="w-4 h-4" /> VOZ Y VOTO</>
+                                                ) : (
+                                                    <><Shield className="w-4 h-4" /> SOLO VOZ</>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                <button
+                                                    onClick={handleConfirmClick}
+                                                    disabled={isConfirming}
+                                                    className={`flex-1 sm:flex-none px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg min-w-[130px] ${isConfirming
+                                                        ? 'bg-emerald-400 text-white cursor-wait shadow-emerald-100/50'
+                                                        : 'bg-emerald-500 hover:bg-teal-500 hover:scale-105 active:scale-95 text-white shadow-emerald-200/50'
+                                                        }`}
+                                                >
+                                                    {isConfirming ? (
+                                                        <><Loader2 className="w-5 h-5 animate-spin" /> Agregando...</>
+                                                    ) : (
+                                                        <><Plus className="w-5 h-5" /> Agregar</>
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={onCancelAdd}
+                                                    disabled={isConfirming}
+                                                    className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl font-bold transition-all"
+                                                    title="Cancelar"
+                                                >
+                                                    <X className="w-5 h-5" />
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-                                        <div className={`px-4 py-2 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 border-2 ${tieneVozYVoto(searchedSocio)
-                                            ? 'bg-emerald-50 text-emerald-500 border-emerald-100'
-                                            : 'bg-amber-50 text-amber-600 border-amber-100'
-                                            }`}>
-                                            {tieneVozYVoto(searchedSocio) ? (
-                                                <><CheckCircle2 className="w-4 h-4" /> VOZ Y VOTO</>
-                                            ) : (
-                                                <><Shield className="w-4 h-4" /> SOLO VOZ</>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                                            <button
-                                                onClick={onConfirmAddSocio}
-                                                className="flex-1 sm:flex-none px-6 py-3 bg-emerald-500 hover:bg-teal-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200/50"
-                                            >
-                                                <Plus className="w-5 h-5" />
-                                                Agregar
-                                            </button>
-                                            <button
-                                                onClick={onCancelAdd}
-                                                className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl font-bold transition-all"
-                                                title="Cancelar"
-                                            >
-                                                <X className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </motion.div>
                 )}
 
@@ -438,28 +518,31 @@ export function SocioAssignments({
                 </motion.div>
             </div>
 
-            {/* Toast Notification Premium */}
-            {showToast && (
-                <motion.div
-                    initial={{ opacity: 0, y: 100, x: "-50%" }}
-                    animate={{ opacity: 1, y: 0, x: "-50%" }}
-                    exit={{ opacity: 0, y: 100 }}
-                    className="fixed bottom-6 left-1/2 transform z-50"
-                >
-                    <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 max-w-lg">
-                        <div className="p-2 bg-white/20 rounded-xl backdrop-blur">
-                            <Bell className="w-6 h-6 text-white animate-pulse" />
+            {/* Toast Notification Premium - Mobile Optimized */}
+            <AnimatePresence>
+                {showToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -80 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -80 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        className="fixed top-2 left-2 right-2 md:left-auto md:right-4 md:top-4 md:max-w-sm z-50"
+                    >
+                        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white px-3 py-2.5 md:px-5 md:py-3.5 rounded-xl md:rounded-2xl shadow-2xl flex items-center gap-2.5 md:gap-3 border border-white/10">
+                            <div className="p-1.5 md:p-2 bg-white/20 rounded-lg md:rounded-xl backdrop-blur flex-shrink-0">
+                                <Bell className="w-4 h-4 md:w-5 md:h-5 text-white animate-pulse" />
+                            </div>
+                            <p className="text-xs md:text-sm font-medium flex-1 leading-snug">{toastMessage}</p>
+                            <button
+                                onClick={() => setShowToast(false)}
+                                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0 active:scale-90"
+                            >
+                                <X className="w-4 h-4 md:w-5 md:h-5" />
+                            </button>
                         </div>
-                        <p className="text-sm font-medium flex-1">{toastMessage}</p>
-                        <button
-                            onClick={() => setShowToast(false)}
-                            className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                </motion.div>
-            )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

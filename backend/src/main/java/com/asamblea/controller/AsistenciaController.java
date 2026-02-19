@@ -451,15 +451,30 @@ public class AsistenciaController {
         List<Map<String, Object>> misRegistros = new ArrayList<>();
         int totalVyV = 0;
         int totalSoloVoz = 0;
+        int totalPropios = 0;
+        int totalDePunteros = 0;
 
-        // Obtener todas las asignaciones y filtrar por usuario propietario de la lista
+        // IDs de usuarios a incluir: el propio + sus punteros (si es dirigente)
+        List<Long> usuarioIds = new ArrayList<>();
+        usuarioIds.add(usuario.getId());
+        Map<Long, String> punteroNombres = new HashMap<>();
+
+        // Si es dirigente, incluir también los punteros activos
+        if (Boolean.TRUE.equals(usuario.getIsDirigente())) {
+            List<Usuario> punteros = usuarioRepository.findByDirigenteIdAndActivoTrue(usuario.getId());
+            for (Usuario p : punteros) {
+                usuarioIds.add(p.getId());
+                punteroNombres.put(p.getId(), p.getNombreCompleto());
+            }
+        }
+
+        // Obtener todas las asignaciones y filtrar por usuarios relevantes
         List<Asignacion> todasAsignaciones = asignacionRepository.findAll();
 
         for (Asignacion a : todasAsignaciones) {
-            // Solo incluir si la lista pertenece al usuario actual
             if (a.getListaAsignacion() != null &&
                     a.getListaAsignacion().getUsuario() != null &&
-                    a.getListaAsignacion().getUsuario().getId().equals(usuario.getId())) {
+                    usuarioIds.contains(a.getListaAsignacion().getUsuario().getId())) {
 
                 Socio socio = a.getSocio();
                 if (socio != null) {
@@ -470,10 +485,8 @@ public class AsistenciaController {
                             socio.getNombreCompleto() != null ? socio.getNombreCompleto() : "Sin Nombre");
                     item.put("numeroSocio", socio.getNumeroSocio() != null ? socio.getNumeroSocio() : "-");
 
-                    // Fecha/Hora en que se agregó a la lista
                     item.put("fechaHoraLista", a.getFechaAsignacion());
 
-                    // Verificar si el socio ya ingresó a la asamblea (fecha de asistencia)
                     Optional<Asistencia> asistenciaOpt = asistenciaRepository.findFirstBySocioId(socio.getId());
                     if (asistenciaOpt.isPresent()) {
                         item.put("fechaHoraIngreso", asistenciaOpt.get().getFechaHora());
@@ -484,9 +497,19 @@ public class AsistenciaController {
                     boolean esVyV = socio.isEstadoVozVoto();
                     item.put("condicion", esVyV ? "VOZ Y VOTO" : "SOLO VOZ");
                     item.put("esVyV", esVyV);
-
-                    // Nombre de la lista
                     item.put("listaAsignacion", a.getListaAsignacion().getNombre());
+
+                    // Identificar origen: propio o puntero
+                    Long listOwner = a.getListaAsignacion().getUsuario().getId();
+                    if (listOwner.equals(usuario.getId())) {
+                        item.put("origen", "PROPIO");
+                        item.put("punteroNombre", null);
+                        totalPropios++;
+                    } else {
+                        item.put("origen", "PUNTERO");
+                        item.put("punteroNombre", punteroNombres.getOrDefault(listOwner, "Puntero"));
+                        totalDePunteros++;
+                    }
 
                     misRegistros.add(item);
 
@@ -506,7 +529,7 @@ public class AsistenciaController {
                 return 1;
             if (fb == null)
                 return -1;
-            return fb.compareTo(fa); // Más recientes primero
+            return fb.compareTo(fa);
         });
 
         Map<String, Object> response = new HashMap<>();
@@ -516,12 +539,17 @@ public class AsistenciaController {
                 "username", usuario.getUsername(),
                 "rol", usuario.getRol()));
         response.put("registros", misRegistros);
-        response.put("stats", Map.of(
-                "total", misRegistros.size(),
-                "vyv", totalVyV,
-                "soloVoz", totalSoloVoz));
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("total", misRegistros.size());
+        stats.put("vyv", totalVyV);
+        stats.put("soloVoz", totalSoloVoz);
+        stats.put("propios", totalPropios);
+        stats.put("dePunteros", totalDePunteros);
+        response.put("stats", stats);
 
         return ResponseEntity.ok(response);
     }
 
 }
+

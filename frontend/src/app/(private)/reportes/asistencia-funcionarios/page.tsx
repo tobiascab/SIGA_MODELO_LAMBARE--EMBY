@@ -64,9 +64,18 @@ export default function ReporteAsistenciaOperadoresPage() {
     const [selectedOperador, setSelectedOperador] = useState<Operador | null>(null);
     const [reporteDetalle, setReporteDetalle] = useState<ReporteAsistencia | null>(null);
     const [loadingDetalle, setLoadingDetalle] = useState(false);
+    const [coopNombre, setCoopNombre] = useState('Sistema de Asambleas');
+    const [coopLogo, setCoopLogo] = useState('/logo.png');
 
     useEffect(() => {
         loadOperadores();
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data?.nombre) setCoopNombre(data.nombre);
+                if (data?.logo) setCoopLogo(data.logo);
+            })
+            .catch(() => { });
     }, []);
 
     const loadOperadores = async () => {
@@ -164,7 +173,7 @@ export default function ReporteAsistenciaOperadoresPage() {
         doc.rect(0, 40, pageWidth, 2, 'F');
 
         // Intentar cargar logo
-        const logoUrl = '/logo.png';
+        const logoUrl = coopLogo;
         try {
             const img = new Image();
             img.crossOrigin = 'anonymous';
@@ -205,7 +214,7 @@ export default function ReporteAsistenciaOperadoresPage() {
 
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(18);
-        doc.text('COOPERATIVA MULTIACTIVA LAMBARÉ LTDA.', 42, 22);
+        doc.text(coopNombre.toUpperCase(), 42, 22);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text('SIGA - Reporte de Asistencia', 42, 30);

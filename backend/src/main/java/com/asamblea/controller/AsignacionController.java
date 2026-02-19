@@ -422,9 +422,30 @@ public class AsignacionController {
         }
 
         String term = body.get("term");
-        Optional<Socio> socioOpt = socioRepository.findByNumeroSocio(term);
-        if (socioOpt.isEmpty())
-            socioOpt = socioRepository.findByCedula(term);
+        String tipo = body.get("tipo");
+        Optional<Socio> socioOpt;
+
+        if (tipo != null && !tipo.isEmpty()) {
+            switch (tipo) {
+                case "cedula":
+                    socioOpt = socioRepository.findByCedula(term);
+                    break;
+                case "nroSocio":
+                    socioOpt = socioRepository.findByNumeroSocio(term);
+                    break;
+                case "nombre":
+                    List<Socio> porNombre = socioRepository.buscarPorNombre(term);
+                    socioOpt = porNombre.isEmpty() ? Optional.empty() : Optional.of(porNombre.get(0));
+                    break;
+                default:
+                    socioOpt = socioRepository.findByNumeroSocio(term);
+                    if (socioOpt.isEmpty()) socioOpt = socioRepository.findByCedula(term);
+                    break;
+            }
+        } else {
+            socioOpt = socioRepository.findByNumeroSocio(term);
+            if (socioOpt.isEmpty()) socioOpt = socioRepository.findByCedula(term);
+        }
         if (socioOpt.isEmpty())
             return ResponseEntity.status(404).body(Map.of("error", "Socio no encontrado"));
 
@@ -545,9 +566,33 @@ public class AsignacionController {
         }
 
         String term = body.get("term");
-        Optional<Socio> socioOpt = socioRepository.findByNumeroSocio(term);
-        if (socioOpt.isEmpty()) {
-            socioOpt = socioRepository.findByCedula(term);
+        String tipo = body.get("tipo");
+        Optional<Socio> socioOpt;
+
+        if (tipo != null && !tipo.isEmpty()) {
+            switch (tipo) {
+                case "cedula":
+                    socioOpt = socioRepository.findByCedula(term);
+                    break;
+                case "nroSocio":
+                    socioOpt = socioRepository.findByNumeroSocio(term);
+                    break;
+                case "nombre":
+                    List<Socio> porNombre = socioRepository.buscarPorNombre(term);
+                    socioOpt = porNombre.isEmpty() ? Optional.empty() : Optional.of(porNombre.get(0));
+                    break;
+                default:
+                    socioOpt = socioRepository.findByNumeroSocio(term);
+                    if (socioOpt.isEmpty()) {
+                        socioOpt = socioRepository.findByCedula(term);
+                    }
+                    break;
+            }
+        } else {
+            socioOpt = socioRepository.findByNumeroSocio(term);
+            if (socioOpt.isEmpty()) {
+                socioOpt = socioRepository.findByCedula(term);
+            }
         }
 
         if (socioOpt.isEmpty()) {

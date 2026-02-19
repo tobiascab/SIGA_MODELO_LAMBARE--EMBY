@@ -36,28 +36,27 @@ public class AuthController {
         private final com.asamblea.service.LogAuditoriaService auditService;
 
         @PostMapping("/login")
-        public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
                 try {
                         System.out.println("DEBUG: Intento de login para usuario: " + request.getUsername());
                         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
                                         request.getUsername(), request.getPassword()));
                         var user = usuarioRepository.findByUsername(request.getUsername()).orElseThrow();
 
+                        // Verificar si el puntero tiene login habilitado
+                        if (user.getRol() == Usuario.Rol.PUNTERO && !Boolean.TRUE.equals(user.getLoginHabilitado())) {
+                                System.out.println("DEBUG: Puntero " + user.getUsername() + " no tiene login habilitado");
+                                return ResponseEntity.status(403).body(
+                                        AuthResponse.builder()
+                                                .error("Tu cuenta aún no fue habilitada para iniciar sesión. Contactá a tu dirigente para que habilite tu acceso.")
+                                                .build()
+                                );
+                        }
+
                         System.out.println("DEBUG: Usuario autenticado con éxito, generando token...");
 
                         auditService.registrar("USUARIOS", "LOGIN", "Inició sesión exitosamente en el sistema.",
                                         user.getUsername(), httpRequest.getRemoteAddr());
-
-                        // DESACTIVADO: Detectar acceso duplicado - generaba falsos positivos
-                        // if (user.getLastLogin() != null) {
-                        // long minutesSinceLast = Duration.between(user.getLastLogin(),
-                        // LocalDateTime.now())
-                        // .toMinutes();
-                        // if (minutesSinceLast < 30) {
-                        // avisoService.crearAvisoSeguridad(user,
-                        // "Intento de acceso duplicado detectado en tu cuenta.");
-                        // }
-                        // }
 
                         user.setLastLogin(LocalDateTime.now());
                         user.setLoginCount((user.getLoginCount() != null ? user.getLoginCount() : 0) + 1);
@@ -68,7 +67,8 @@ public class AuthController {
                                         .username(user.getUsername()).nombreCompleto(user.getNombreCompleto())
                                         .rol(user.getRol().name()).permisosEspeciales(user.getPermisosEspeciales())
                                         .requiresPasswordChange(user.getRequiresPasswordChange())
-                                        .fotoPerfil(user.getFotoPerfil()).telefono(user.getTelefono()).build());
+                                        .fotoPerfil(user.getFotoPerfil()).telefono(user.getTelefono())
+                                        .isDirigente(Boolean.TRUE.equals(user.getIsDirigente())).build());
                 } catch (Exception e) {
                         System.err.println("DEBUG: Error en login: " + e.getMessage());
                         e.printStackTrace();
@@ -104,6 +104,7 @@ public class AuthController {
                         response.put("requiresPasswordChange", user.getRequiresPasswordChange());
                         response.put("fotoPerfil", user.getFotoPerfil());
                         response.put("telefono", user.getTelefono());
+                        response.put("isDirigente", Boolean.TRUE.equals(user.getIsDirigente()));
 
                         // Permisos basados en rol
                         response.put("permisos",
@@ -296,6 +297,7 @@ public class AuthController {
                                         .requiresPasswordChange(targetUser.getRequiresPasswordChange())
                                         .fotoPerfil(targetUser.getFotoPerfil())
                                         .telefono(targetUser.getTelefono())
+                                        .isDirigente(Boolean.TRUE.equals(targetUser.getIsDirigente()))
                                         .build());
                 } catch (Exception e) {
                         return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));

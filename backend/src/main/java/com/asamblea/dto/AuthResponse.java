@@ -19,4 +19,6 @@ public class AuthResponse {
     private Boolean requiresPasswordChange;
     private String fotoPerfil;
     private String telefono;
+    private Boolean isDirigente;
+    private String error;
 }

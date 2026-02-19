@@ -733,19 +733,69 @@ public class ReporteController {
                 auth.getName(),
                 request.getRemoteAddr());
         List<Object[]> ranking = usuarioRepository.findRankingByAsignaciones();
-        List<Map<String, Object>> result = new ArrayList<>();
 
+        // Construir mapa de ranking por username
+        Map<String, Map<String, Object>> rankingMap = new java.util.LinkedHashMap<>();
         for (Object[] row : ranking) {
+            String username = (String) row[0];
             Map<String, Object> map = new HashMap<>();
-            map.put("username", row[0]);
+            map.put("username", username);
             map.put("cargo", row[1]);
             map.put("meta", row[2]);
             map.put("registrados", row[3]);
             map.put("porcentaje", row[4]);
             map.put("nombreCompleto", row[5] != null ? row[5] : row[0]);
             map.put("sucursal", row[6] != null ? row[6] : "N/A");
-            result.add(map);
+            map.put("esDirigente", false);
+            map.put("incluyePunteros", 0);
+            map.put("registradosPunteros", 0L);
+            rankingMap.put(username, map);
         }
+
+        // Sumar asignaciones de punteros a sus dirigentes
+        List<Usuario> dirigentes = usuarioRepository.findDirigentesActivos();
+        for (Usuario dirigente : dirigentes) {
+            String dirUsername = dirigente.getUsername();
+            if (!rankingMap.containsKey(dirUsername)) continue;
+
+            Map<String, Object> dirItem = rankingMap.get(dirUsername);
+            dirItem.put("esDirigente", true);
+
+            List<Usuario> punteros = usuarioRepository.findByDirigenteIdAndActivoTrue(dirigente.getId());
+            long totalPunterosReg = 0;
+            int cantPunteros = 0;
+
+            for (Usuario puntero : punteros) {
+                long asigPuntero = listaAsignacionRepository.findByUsuarioId(puntero.getId())
+                        .stream()
+                        .mapToLong(l -> asignacionRepository.countByListaAsignacionId(l.getId()))
+                        .sum();
+                totalPunterosReg += asigPuntero;
+                cantPunteros++;
+                rankingMap.remove(puntero.getUsername());
+            }
+
+            if (cantPunteros > 0) {
+                long registradosPropios = ((Number) dirItem.get("registrados")).longValue();
+                long nuevoTotal = registradosPropios + totalPunterosReg;
+                dirItem.put("registrados", nuevoTotal);
+                dirItem.put("registradosPunteros", totalPunterosReg);
+                dirItem.put("incluyePunteros", cantPunteros);
+
+                Integer meta = (Integer) dirItem.get("meta");
+                if (meta != null && meta > 0) {
+                    dirItem.put("porcentaje", nuevoTotal * 100.0 / meta);
+                }
+            }
+        }
+
+        // Reordenar por total
+        List<Map<String, Object>> result = rankingMap.values().stream()
+                .sorted((a, b) -> Long.compare(
+                        ((Number) b.get("registrados")).longValue(),
+                        ((Number) a.get("registrados")).longValue()))
+                .collect(Collectors.toList());
+
         return ResponseEntity.ok(result);
     }
 

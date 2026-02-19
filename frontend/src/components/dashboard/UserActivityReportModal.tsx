@@ -37,11 +37,16 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
     const [users, setUsers] = useState<UsuarioActivity[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [filter, setFilter] = useState<"todos" | "habituales" | "no-entraron" | "sin-registros">(initialFilter);
+    const [coopNombre, setCoopNombre] = useState('Sistema de Asambleas');
 
 
     useEffect(() => {
         if (isOpen) {
             fetchData();
+            fetch('/api/cooperativa/publica')
+                .then(r => r.ok ? r.json() : null)
+                .then(data => { if (data?.nombre) setCoopNombre(data.nombre); })
+                .catch(() => { });
         }
     }, [isOpen]);
 
@@ -65,7 +70,7 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
     const handleDownload = async (type: 'pdf' | 'excel') => {
         try {
             const token = localStorage.getItem("token");
-            const endpoint = type === 'pdf' ? '/api/usuarios/exportar-pdf':'/api/usuarios/exportar-excel';
+            const endpoint = type === 'pdf' ? '/api/usuarios/exportar-pdf' : '/api/usuarios/exportar-excel';
             const res = await axios.get(`${endpoint}?filtro=${filter}`, {
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
@@ -74,7 +79,7 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
             const url = window.URL.createObjectURL(new Blob([res.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `reporte_usuarios_${filter}.${type === 'pdf' ? 'pdf':'xlsx'}`);
+            link.setAttribute('download', `reporte_usuarios_${filter}.${type === 'pdf' ? 'pdf' : 'xlsx'}`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -125,7 +130,7 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
                                 <h2 className="text-2xl font-black text-slate-800 tracking-tight">Reporte de Usuarios & Actividad</h2>
                                 <p className="text-slate-400 text-sm font-bold uppercase tracking-widest flex items-center gap-2">
                                     <Activity size={12} className="text-emerald-500" />
-                                    Cooperativa Multiactiva Lambaré Ltda.
+                                    {coopNombre}
                                 </p>
                             </div>
                         </div>
@@ -177,7 +182,7 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
                                     onClick={() => setFilter(tab.id as any)}
                                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filter === tab.id
                                         ? "bg-white text-indigo-600 shadow-sm border border-slate-200"
-                                       :"text-slate-400 hover:text-slate-600"
+                                        : "text-slate-400 hover:text-slate-600"
                                         }`}
                                 >
                                     <tab.icon size={14} />
@@ -199,7 +204,7 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
                                 </motion.div>
                                 <p className="text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">Analizando actividad de usuarios...</p>
                             </div>
-                        ):filteredUsers.length> 0 ? (
+                        ) : filteredUsers.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredUsers.map((user, idx) => (
                                     <motion.div
@@ -216,7 +221,7 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
                                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                                     Online
                                                 </span>
-                                            ):(
+                                            ) : (
                                                 <span className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 text-slate-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-100">
                                                     Offline
                                                 </span>
@@ -224,9 +229,9 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
                                         </div>
 
                                         <div className="flex items-start gap-4 mb-4">
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shrink-0 ${idx === 0 && filter === "habituales" ? "bg-amber-100 text-amber-600":"bg-slate-100 text-slate-500"
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shrink-0 ${idx === 0 && filter === "habituales" ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-500"
                                                 }`}>
-                                                {filter === "habituales" ? idx + 1:user.nombreCompleto.charAt(0)}
+                                                {filter === "habituales" ? idx + 1 : user.nombreCompleto.charAt(0)}
                                             </div>
                                             <div className="min-w-0">
                                                 <h3 className="font-black text-slate-800 text-sm truncate uppercase tracking-tight">{user.nombreCompleto}</h3>
@@ -265,7 +270,7 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
                                     </motion.div>
                                 ))}
                             </div>
-                        ):(
+                        ) : (
                             <div className="flex flex-col items-center justify-center h-64 text-slate-400">
                                 <Users size={48} className="mb-4 opacity-20" />
                                 <p className="font-bold uppercase tracking-widest text-sm">No se encontraron usuarios</p>
@@ -274,7 +279,7 @@ export function UserActivityReportModal({ isOpen, onClose, initialFilter = "todo
                     </div>
 
                     <div className="p-4 bg-slate-50 border-t border-slate-100 text-center text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                        Panel de Auditoría de Lambaré • Datos actualizados en tiempo real
+                        Panel de Auditoría • Datos actualizados en tiempo real
                     </div>
                 </motion.div>
             </div>

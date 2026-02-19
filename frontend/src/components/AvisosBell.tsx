@@ -42,6 +42,7 @@ export default function AvisosBell() {
     const [userRole, setUserRole] = useState<string>('');
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const shownModalIds = useRef<Set<number>>(new Set());
 
     const isAdmin = userRole === 'SUPER_ADMIN' || userRole === 'DIRECTIVO';
 
@@ -64,14 +65,21 @@ export default function AvisosBell() {
         return () => clearInterval(interval);
     }, []);
 
-    // Mostrar modal automático para avisos prioritarios
+    // Mostrar modal automático para avisos prioritarios (solo una vez por sesión)
     useEffect(() => {
+        // Respetar preferencia del usuario
+        if (localStorage.getItem('avisos_modal_disabled') === 'true') return;
+
         const pendingCritical = avisos.find(
-            a => !a.leidoAt && (a.prioridad === 'CRITICA' || a.prioridad === 'ALTA' || a.mostrarModal)
+            (a: Aviso) => !a.leidoAt && (a.prioridad === 'CRITICA' || a.prioridad === 'ALTA' || a.mostrarModal)
+                && !shownModalIds.current.has(a.id)
         );
         if (pendingCritical && !showModal) {
+            shownModalIds.current.add(pendingCritical.id);
             setSelectedAviso(pendingCritical);
             setShowModal(true);
+            // Marcar como leído automáticamente al mostrar
+            marcarLeido(pendingCritical.id);
         }
     }, [avisos]);
 
@@ -536,6 +544,17 @@ export default function AvisosBell() {
                                             Cerrar
                                         </motion.button>
                                     )}
+
+                                    {/* Opción para desactivar notificaciones automáticas */}
+                                    <button
+                                        onClick={() => {
+                                            localStorage.setItem('avisos_modal_disabled', 'true');
+                                            setShowModal(false);
+                                        }}
+                                        className="w-full py-2 text-xs text-slate-400 hover:text-red-500 font-medium transition-colors touch-manipulation"
+                                    >
+                                        🔕 No mostrar más avisos automáticos
+                                    </button>
                                 </div>
                             </motion.div>
                         </div>

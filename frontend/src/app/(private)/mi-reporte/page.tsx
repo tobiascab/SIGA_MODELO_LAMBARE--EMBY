@@ -49,9 +49,18 @@ export default function MiReportePage() {
     const [reporte, setReporte] = useState<MiReporte | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [coopNombre, setCoopNombre] = useState('Sistema de Asambleas');
+    const [coopLogo, setCoopLogo] = useState('/logo.png');
 
     useEffect(() => {
         loadMiReporte();
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data?.nombre) setCoopNombre(data.nombre);
+                if (data?.logo) setCoopLogo(data.logo);
+            })
+            .catch(() => { });
     }, []);
 
     const loadMiReporte = async () => {
@@ -125,7 +134,7 @@ export default function MiReportePage() {
         doc.rect(0, 40, pageWidth, 2, 'F');
 
         // Intentar cargar logo
-        const logoUrl = '/logo.png';
+        const logoUrl = coopLogo;
         try {
             const img = new Image();
             img.crossOrigin = 'anonymous';
@@ -167,12 +176,12 @@ export default function MiReportePage() {
 
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(18);
-        doc.text('COOPERATIVA MULTIACTIVA LAMBARÉ LTDA.', 42, 22);
+        doc.text(coopNombre.toUpperCase(), 42, 22);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.text('SIGA - Mi Reporte Personal', 42, 30);
         doc.setFontSize(8);
-        doc.text(`Fecha: ${fechaHora}`, pageWidth-14, 36, { align: 'right' });
+        doc.text(`Fecha: ${fechaHora}`, pageWidth - 14, 36, { align: 'right' });
 
         // Título
         doc.setTextColor(17, 94, 89);
@@ -185,7 +194,7 @@ export default function MiReportePage() {
 
         // Info usuario
         doc.setFillColor(240, 253, 250);
-        doc.roundedRect(14, 64, pageWidth-28, 28, 3, 3, 'F');
+        doc.roundedRect(14, 64, pageWidth - 28, 28, 3, 3, 'F');
 
         doc.setTextColor(100, 116, 139);
         doc.setFontSize(8);
@@ -204,10 +213,10 @@ export default function MiReportePage() {
         const total = reporte.stats.total;
         const vyv = reporte.stats.vyv;
         const soloVoz = reporte.stats.soloVoz;
-        const porcVyV = total> 0 ? Math.round((vyv /total) * 100):0;
-        const porcSoloVoz = total> 0 ? Math.round((soloVoz /total) * 100):0;
+        const porcVyV = total > 0 ? Math.round((vyv / total) * 100) : 0;
+        const porcSoloVoz = total > 0 ? Math.round((soloVoz / total) * 100) : 0;
 
-        const statsX = pageWidth-115;
+        const statsX = pageWidth - 115;
         doc.setFillColor(13, 148, 136);
         doc.roundedRect(statsX, 68, 30, 20, 2, 2, 'F');
         doc.setTextColor(255, 255, 255);
@@ -280,20 +289,20 @@ export default function MiReportePage() {
 
         // Pie
         const finalY = (doc as any).lastAutoTable.finalY + 10;
-        if (finalY <pageHeight-35) {
+        if (finalY < pageHeight - 35) {
             doc.setFillColor(248, 250, 252);
-            doc.roundedRect(14, finalY, pageWidth-28, 18, 3, 3, 'F');
+            doc.roundedRect(14, finalY, pageWidth - 28, 18, 3, 3, 'F');
             doc.setFontSize(7);
             doc.setTextColor(100, 116, 139);
             doc.text('Documento generado por SIGA - Sistema Integral de Gestión de Asamblea', 20, finalY + 7);
             doc.text(`Generado el: ${fechaHora}`, 20, finalY + 13);
 
             doc.setFillColor(13, 148, 136);
-            doc.roundedRect(pageWidth-45, finalY + 2, 25, 14, 2, 2, 'F');
+            doc.roundedRect(pageWidth - 45, finalY + 2, 25, 14, 2, 2, 'F');
             doc.setTextColor(255, 255, 255);
             doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
-            doc.text('SIGA', pageWidth-40, finalY + 11);
+            doc.text('SIGA', pageWidth - 40, finalY + 11);
         }
 
         doc.save(`mi_reporte_${reporte.usuario.username}_${now.toISOString().slice(0, 10)}.pdf`);
@@ -325,7 +334,7 @@ export default function MiReportePage() {
 
     if (!reporte) return null;
 
-    const porcVyV = reporte.stats.total> 0 ? Math.round((reporte.stats.vyv /reporte.stats.total) * 100):0;
+    const porcVyV = reporte.stats.total > 0 ? Math.round((reporte.stats.vyv / reporte.stats.total) * 100) : 0;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 p-4 sm:p-6 lg:p-8 space-y-6">
@@ -440,7 +449,7 @@ export default function MiReportePage() {
                         </div>
                         <p className="text-slate-500 font-medium">Aún no tienes registros de asistencia</p>
                     </div>
-                ):(
+                ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white">
@@ -476,7 +485,7 @@ export default function MiReportePage() {
                                         <td className="px-2 py-3 text-center">
                                             <span className={`px-2 py-1 rounded-lg text-xs font-bold ${registro.esVyV
                                                 ? 'bg-emerald-100 text-teal-500'
-                                               :'bg-amber-100 text-amber-700'
+                                                : 'bg-amber-100 text-amber-700'
                                                 }`}>
                                                 {registro.condicion}
                                             </span>

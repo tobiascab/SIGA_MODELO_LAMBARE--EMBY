@@ -64,6 +64,20 @@ public interface SocioRepository extends JpaRepository<Socio, Long> {
         @Query("SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE LOWER(s.nombreCompleto) LIKE LOWER(CONCAT('%', :term, '%')) OR s.cedula LIKE CONCAT('%', :term, '%') OR s.numeroSocio LIKE CONCAT('%', :term, '%') ORDER BY CASE WHEN s.numeroSocio = :term THEN 0 WHEN s.cedula = :term THEN 0 WHEN s.numeroSocio LIKE CONCAT(:term, '%') THEN 1 WHEN s.cedula LIKE CONCAT(:term, '%') THEN 1 ELSE 2 END, s.nombreCompleto ASC")
         List<Socio> buscarParcial(String term);
 
+        // --- BÚSQUEDAS ESPECÍFICAS POR TIPO ---
+
+        // Buscar SOLO por cédula (exacta o parcial)
+        @Query("SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE s.cedula = :term OR s.cedula LIKE CONCAT(:term, '%') ORDER BY CASE WHEN s.cedula = :term THEN 0 ELSE 1 END")
+        List<Socio> buscarPorCedula(String term);
+
+        // Buscar SOLO por número de socio (exacto o parcial)
+        @Query("SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE s.numeroSocio = :term OR s.numeroSocio LIKE CONCAT(:term, '%') ORDER BY CASE WHEN s.numeroSocio = :term THEN 0 ELSE 1 END")
+        List<Socio> buscarPorNumeroSocio(String term);
+
+        // Buscar SOLO por nombre (parcial)
+        @Query("SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE LOWER(s.nombreCompleto) LIKE LOWER(CONCAT('%', :term, '%')) ORDER BY s.nombreCompleto ASC")
+        List<Socio> buscarPorNombre(String term);
+
         // Buscar socios que NO están en ninguna asignación (Sin asignar)
         @Query("SELECT s FROM Socio s LEFT JOIN FETCH s.sucursal WHERE NOT EXISTS (SELECT 1 FROM Asignacion a WHERE a.socio.id = s.id) ORDER BY s.nombreCompleto ASC")
         List<Socio> findSociosSinAsignar();

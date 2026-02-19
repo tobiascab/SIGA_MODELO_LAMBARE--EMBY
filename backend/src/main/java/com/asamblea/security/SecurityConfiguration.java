@@ -44,6 +44,7 @@ public class SecurityConfiguration {
                                                                                                         // Balance
                                                 .requestMatchers("/uploads/**").permitAll() // Archivos estáticos (PDFs,
                                                                                             // imágenes)
+                                                .requestMatchers("/api/cooperativa/publica").permitAll() // Datos públicos de la cooperativa (logo, nombre)
                                                 .requestMatchers("/api/configuracion").permitAll()
                                                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
                                                 .requestMatchers("/api/socios/reset-padron").permitAll()

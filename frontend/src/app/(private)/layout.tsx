@@ -18,6 +18,7 @@ import { SessionExpiredModal } from "@/components/auth/SessionExpiredModal";
 import { HeartbeatManager } from "@/components/layout/HeartbeatManager";
 import { DeadlineNotification } from "@/components/DeadlineNotification";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { InactivityGuard } from "@/components/auth/InactivityGuard";
 import { CandidateSpotlight } from "@/components/dashboard/CandidateSpotlight";
 import { WelcomeStatsModal } from "@/components/modals/WelcomeStatsModal";
 
@@ -131,6 +132,7 @@ export default function PrivateLayout({
                     </Suspense>
                     <SessionExpiredModal isOpen={isSessionExpired} />
                     <DeadlineNotification />
+                    <InactivityGuard />
                     <PWAInstallPrompt />
                     <CandidateSpotlight />
                     <WelcomeStatsModal />

@@ -38,7 +38,8 @@ import {
     Phone,
     TableProperties,
     BookOpen,
-    Search
+    Search,
+    Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCooperativa } from "@/context/CooperativaContext";
@@ -74,6 +75,7 @@ const menuItems = [
         submenu: [
             { id: "asignacion-rapida", name: "Asignación Rápida", href: "/asignacion-rapida", icon: Zap },
             { id: "asignaciones", name: "Mis Listas", href: "/asignaciones", icon: UserCheck },
+            { id: "ver-punteros", name: "Ver Punteros", href: "/ver-punteros", icon: Target },
             { id: "asignaciones-admin", name: "Asignación Master", href: "/asignaciones-admin", icon: ShieldAlert },
         ]
     },
@@ -207,13 +209,13 @@ export function Sidebar() {
             return hasPermission("importar") || hasPermission("importar-funcionarios") || hasPermission("socios");
         }
         if (itemId === "operativa") {
-            return hasPermission("asignacion-rapida") || hasPermission("asignaciones") || hasPermission("asignaciones-admin");
+            return hasPermission("asignacion-rapida") || hasPermission("asignaciones") || hasPermission("ver-punteros") || hasPermission("asignaciones-admin");
         }
         if (itemId === "asistencia-group") {
             return hasPermission("asistencia") || hasPermission("checkin") || hasPermission("consulta") || hasPermission("gestion-asistencia");
         }
         if (itemId === "reportes") {
-            return hasPermission("reportes-general") || hasPermission("ranking-gestion") || hasPermission("reportes-asesores") || hasPermission("reportes-sucursal") || hasPermission("reportes-funcionarios") || hasPermission("reportes-asistencia") || hasPermission("auditoria-usuarios");
+            return hasPermission("reportes-general") || hasPermission("reportes-ubicacion") || hasPermission("reportes-rankings-vyv") || hasPermission("reportes-cumplimiento") || hasPermission("reportes-ranking-asistencia") || hasPermission("ranking-gestion") || hasPermission("reportes-asesores") || hasPermission("reportes-sucursal") || hasPermission("reportes-funcionarios") || hasPermission("reportes-asistencia") || hasPermission("auditoria-usuarios");
         }
         if (itemId === "comunicacion") {
             return hasPermission("exportar-vyv") || hasPermission("mensajes-chat") || hasPermission("mensajes-avisos");
@@ -240,9 +242,11 @@ export function Sidebar() {
 
             // Operativa
             case "asignacion-rapida":
-                return user.rol === "SUPER_ADMIN";
+                return user.rol === "SUPER_ADMIN" || user.rol === "PUNTERO";
             case "asignaciones": // Mis Listas
-                return user.rol === "USUARIO_SOCIO" || user.rol === "DIRECTIVO" || user.rol === "SUPER_ADMIN";
+                return user.rol === "USUARIO_SOCIO" || user.rol === "DIRECTIVO" || user.rol === "SUPER_ADMIN" || user.rol === "PUNTERO";
+            case "ver-punteros":
+                return user.isDirigente === true || user.rol === "SUPER_ADMIN";
             case "asignaciones-admin": // Master
                 return user.rol === "ADMIN" || user.rol === "SUPER_ADMIN";
 
@@ -395,12 +399,13 @@ export function Sidebar() {
             )}>
                 <div className="flex-shrink-0">
                     <img
-                        src="/logo.png?v=fixed"
-                        alt="Logo"
+                        src={cooperativa.logo || '/logo.png'}
+                        alt={cooperativa.nombreCorto || 'Logo'}
                         className={cn(
                             "object-contain rounded-full bg-white shadow-lg transition-all duration-300",
                             effectiveCollapsed ? "h-10 w-10 p-0.5" : "h-12 w-12 p-1"
                         )}
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
                     />
                 </div>
                 {!effectiveCollapsed && (
@@ -737,8 +742,9 @@ export function Sidebar() {
                     )}>
                         <div className="flex-shrink-0">
                             <img
-                                src="/logo.png?v=fixed"
-                                alt="Logo"
+                                src={cooperativa.logo || '/logo.png'}
+                                alt={cooperativa.nombreCorto || 'Logo'}
+                                onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.src = '/logo.png'; }}
                                 className={cn(
                                     "object-contain rounded-full bg-white shadow-lg transition-all duration-300",
                                     effectiveCollapsed ? "h-10 w-10 p-0.5" : "h-12 w-12 p-1"

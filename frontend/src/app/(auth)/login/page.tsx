@@ -1,10 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Lock, User, RefreshCcw, Eye, EyeOff, ChevronRight, Sparkles, Shield, Fingerprint } from "lucide-react";
 import axios from "axios";
+import {
+    isBiometricAvailable,
+    isBiometricEnabled,
+    saveBiometricCredentials,
+    authenticateWithBiometric,
+} from "@/lib/biometric";
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
@@ -18,6 +23,41 @@ export default function LoginPage() {
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+
+    // Cooperativa data (dynamic from admin)
+    const [coopData, setCoopData] = useState({ nombre: '', nombreCorto: '', logo: '/logo.png', eslogan: '' });
+
+    // Fetch cooperativa data on mount
+    useEffect(() => {
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data) setCoopData(data); })
+            .catch(() => { });
+    }, []);
+
+    // Biometric states
+    const [biometricAvailable, setBiometricAvailable] = useState(false);
+    const [biometricReady, setBiometricReady] = useState(false);
+    const [showBiometricOffer, setShowBiometricOffer] = useState(false);
+    const [biometricLoading, setBiometricLoading] = useState(false);
+    const [pendingCredentials, setPendingCredentials] = useState<{ username: string; password: string } | null>(null);
+
+    // Check biometric availability on mount (only on mobile/tablet)
+    useEffect(() => {
+        const checkBiometric = async () => {
+            // Only offer biometric on mobile/tablet devices, not desktop
+            const isMobileDevice = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                || ('ontouchstart' in window && window.innerWidth < 1024);
+            if (!isMobileDevice) return;
+
+            const available = await isBiometricAvailable();
+            setBiometricAvailable(available);
+            if (available && isBiometricEnabled()) {
+                setBiometricReady(true);
+            }
+        };
+        checkBiometric();
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,11 +76,23 @@ export default function LoginPage() {
 
             if (userData.requiresPasswordChange) {
                 setShowChangePassword(true);
+            } else if (biometricAvailable && !isBiometricEnabled()) {
+                // Offer biometric setup after successful login
+                setPendingCredentials({ username, password });
+                setShowBiometricOffer(true);
             } else {
+                // If biometric already enabled, update stored credentials silently
+                if (biometricAvailable && isBiometricEnabled()) {
+                    saveBiometricCredentials(username, password);
+                }
                 router.push("/dashboard");
             }
         } catch (err: any) {
-            setError("Usuario o contraseña incorrectos");
+            if (err.response?.status === 403 && err.response?.data?.error) {
+                setError(err.response.data.error);
+            } else {
+                setError("Usuario o contraseña incorrectos");
+            }
             localStorage.removeItem("token");
             localStorage.removeItem("user");
         } finally {
@@ -83,6 +135,104 @@ export default function LoginPage() {
             setLoading(false);
         }
     };
+
+    // Handle biometric login
+    const handleBiometricLogin = async () => {
+        setBiometricLoading(true);
+        setError("");
+        try {
+            const creds = await authenticateWithBiometric();
+            if (creds) {
+                // Use stored credentials to login
+                const response = await axios.post("/api/auth/login", {
+                    username: creds.username,
+                    password: creds.password,
+                });
+                const userData = response.data;
+                localStorage.setItem("token", userData.token);
+                localStorage.setItem("user", JSON.stringify(userData));
+                // Update stored credentials in case password changed
+                saveBiometricCredentials(creds.username, creds.password);
+                router.push("/dashboard");
+            } else {
+                setError("Verificación biométrica cancelada");
+            }
+        } catch (err: any) {
+            setError("Error en acceso biométrico. Usá usuario y contraseña.");
+        } finally {
+            setBiometricLoading(false);
+        }
+    };
+
+    // Handle biometric offer response
+    const handleBiometricAccept = () => {
+        if (pendingCredentials) {
+            saveBiometricCredentials(pendingCredentials.username, pendingCredentials.password);
+        }
+        setShowBiometricOffer(false);
+        router.push("/dashboard");
+    };
+
+    const handleBiometricDecline = () => {
+        setShowBiometricOffer(false);
+        router.push("/dashboard");
+    };
+
+    // ========================================================================
+    // PANTALLA DE OFERTA BIOMÉTRICA (después de login exitoso)
+    // ========================================================================
+    if (showBiometricOffer) {
+        return (
+            <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-100 via-emerald-50 to-amber-50 px-3 py-4 sm:p-4 md:p-6">
+                <main className="relative z-10 w-full max-w-md animate-fade-in">
+                    <div className="overflow-hidden rounded-3xl bg-white/95 backdrop-blur-xl border border-white/50 shadow-2xl">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-center">
+                            <div className="h-20 w-20 mx-auto bg-white/20 rounded-2xl flex items-center justify-center mb-4 backdrop-blur-sm">
+                                <Fingerprint className="h-10 w-10 text-white" />
+                            </div>
+                            <h2 className="text-xl font-black text-white">Acceso Rápido</h2>
+                            <p className="text-emerald-100 text-sm mt-1">¿Querés usar tu huella o Face ID para ingresar?</p>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 space-y-4">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-3 text-sm text-slate-600">
+                                    <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                                        <Shield className="h-4 w-4 text-emerald-500" />
+                                    </div>
+                                    <span>Ingresá más rápido sin escribir contraseña</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-sm text-slate-600">
+                                    <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                                        <Fingerprint className="h-4 w-4 text-emerald-500" />
+                                    </div>
+                                    <span>Usa la huella dactilar o Face ID de tu dispositivo</span>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={handleBiometricDecline}
+                                    className="flex-1 py-3 px-4 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 active:scale-95 transition-all"
+                                >
+                                    Ahora no
+                                </button>
+                                <button
+                                    onClick={handleBiometricAccept}
+                                    className="flex-1 py-3 px-4 text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl shadow-lg shadow-emerald-200 hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Fingerprint className="h-4 w-4" />
+                                    Habilitar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     // ========================================================================
     // PANTALLA DE CAMBIO DE CONTRASEÑA
@@ -164,30 +314,33 @@ export default function LoginPage() {
                     {/* Card con sombras elegantes */}
                     <div className="overflow-hidden rounded-3xl bg-white shadow-[0_20px_60px_-15px_rgba(16,185,129,0.3)] border border-emerald-100">
 
-                        {/* Header Verde */}
-                        <div className="relative bg-gradient-to-br from-emerald-500 via-emerald-500 to-emerald-600 px-5 py-5">
-                            <div className="absolute -top-10 -right-10 w-24 h-24 bg-white/10 rounded-full blur-xl" />
+                        {/* Header Bordó + Gold */}
+                        <div className="relative bg-gradient-to-br from-emerald-500 via-emerald-500 to-emerald-600 px-5 py-6">
+                            <div className="absolute -top-10 -right-10 w-24 h-24 bg-amber-400/10 rounded-full blur-xl" />
 
-                            <div className="relative z-10 flex items-center gap-4">
-                                {/* Logo pequeño */}
-                                <div className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg border border-white/30 shrink-0">
-                                    <Image
-                                        src="/logo-cooperativa.webp"
-                                        alt="Logo"
-                                        width={48}
-                                        height={48}
-                                        priority
-                                        className="object-contain"
+                            <div className="relative z-10 flex flex-col items-center text-center gap-3">
+                                {/* Logo */}
+                                <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center shadow-lg border-2 border-amber-400 overflow-hidden">
+                                    <img
+                                        src={coopData.logo || '/logo.png'}
+                                        alt={coopData.nombreCorto || 'Logo'}
+                                        className="w-full h-full object-cover bg-white"
+                                        onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
                                     />
                                 </div>
 
-                                <div className="min-w-0">
-                                    <h1 className="text-base font-black text-white leading-tight">
-                                        Cooperativa Multiactiva Lambaré Ltda.
+                                <div>
+                                    <h1 className="text-2xl font-black text-white leading-tight tracking-tight">
+                                        {coopData.nombreCorto || 'SIGA'}
                                     </h1>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-xs font-black text-white/90 tracking-widest">SIGA</span>
-                                        <span className="text-[10px] text-emerald-100 bg-white/20 px-1.5 py-0.5 rounded">2026</span>
+                                    {coopData.nombre && coopData.nombreCorto && (
+                                        <p className="text-xs text-white/70 font-medium mt-0.5 leading-tight">
+                                            {coopData.nombre}
+                                        </p>
+                                    )}
+                                    <div className="flex items-center justify-center gap-2 mt-1.5">
+                                        <span className="text-sm font-black text-amber-300 tracking-widest">SIGA</span>
+                                        <span className="text-[10px] text-amber-200 bg-white/15 px-1.5 py-0.5 rounded font-bold">{coopData.eslogan || 'Sistema de Asambleas'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -275,6 +428,27 @@ export default function LoginPage() {
                                 </button>
                             </form>
 
+                            {/* Biometric Login Button - Mobile */}
+                            {biometricReady && (
+                                <button
+                                    onClick={handleBiometricLogin}
+                                    disabled={biometricLoading}
+                                    className="w-full mt-3 rounded-xl bg-gradient-to-r from-slate-800 to-slate-900 py-3.5 font-bold text-white shadow-lg active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {biometricLoading ? (
+                                        <>
+                                            <RefreshCcw className="h-4 w-4 animate-spin" />
+                                            <span>VERIFICANDO...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Fingerprint className="h-5 w-5" />
+                                            <span>INGRESAR CON HUELLA / FACE ID</span>
+                                        </>
+                                    )}
+                                </button>
+                            )}
+
                             {/* Footer Minimalista */}
                             <p className="mt-4 text-center text-[9px] text-slate-400 font-medium">
                                 © 2026 Avanzantec Group SRL
@@ -301,36 +475,34 @@ export default function LoginPage() {
                         <div className="grid md:grid-cols-2">
                             {/* Panel izquierdo - Branding */}
                             <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500 via-emerald-500 to-emerald-600 p-12 flex flex-col justify-center items-center min-h-[600px]">
-                                <div className="absolute -left-10 -top-10 h-[300px] w-[300px] rounded-[60%_40%_70%_30%/50%_60%_40%_50%] bg-emerald-500/30 blur-2xl" aria-hidden="true"></div>
-                                <div className="absolute -right-10 bottom-0 h-[250px] w-[250px] rounded-[40%_60%_30%_70%/60%_40%_70%_30%] bg-emerald-400/30 blur-2xl" aria-hidden="true"></div>
+                                <div className="absolute -left-10 -top-10 h-[300px] w-[300px] rounded-[60%_40%_70%_30%/50%_60%_40%_50%] bg-amber-500/15 blur-2xl" aria-hidden="true"></div>
+                                <div className="absolute -right-10 bottom-0 h-[250px] w-[250px] rounded-[40%_60%_30%_70%/60%_40%_70%_30%] bg-amber-400/15 blur-2xl" aria-hidden="true"></div>
 
                                 <div className="relative z-10 text-center space-y-8">
                                     <div className="flex justify-center">
-                                        <div className="h-40 w-40 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center shadow-2xl border-4 border-white/30 overflow-hidden relative">
-                                            <Image
-                                                src="/logo-cooperativa.webp"
-                                                alt="Logo oficial de Cooperativa Multiactiva Lambaré Ltda. Ltda"
-                                                width={144}
-                                                height={144}
-                                                priority
-                                                className="object-contain"
+                                        <div className="h-40 w-40 rounded-full bg-white backdrop-blur-md flex items-center justify-center shadow-2xl border-4 border-amber-400 overflow-hidden relative ring-2 ring-amber-300/50">
+                                            <img
+                                                src={coopData.logo || '/logo.png'}
+                                                alt={coopData.nombre || 'Logo'}
+                                                className="w-full h-full object-cover bg-white"
+                                                onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
                                             />
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
                                         <h2 className="text-5xl font-black text-white tracking-tight leading-tight">
-                                            Cooperativa<br />Lambaré Ltda.
+                                            {coopData.nombreCorto || coopData.nombre || 'Cooperativa'}
                                         </h2>
-                                        <div className="h-1 w-24 mx-auto bg-white/40 rounded-full"></div>
+                                        <div className="h-1 w-24 mx-auto bg-amber-400/70 rounded-full"></div>
                                     </div>
 
                                     <div className="space-y-2">
-                                        <p className="text-emerald-50 text-3xl font-black tracking-widest">
+                                        <p className="text-amber-300 text-3xl font-black tracking-widest">
                                             SIGA
                                         </p>
                                         <p className="text-emerald-100 text-lg font-bold">
-                                            Lambaré - 2026
+                                            {coopData.eslogan || 'Sistema de Asambleas'}
                                         </p>
                                     </div>
                                 </div>
@@ -414,6 +586,27 @@ export default function LoginPage() {
                                                     </>
                                                 )}
                                             </button>
+
+                                            {/* Biometric Login Button - Desktop */}
+                                            {biometricReady && (
+                                                <button
+                                                    onClick={handleBiometricLogin}
+                                                    disabled={biometricLoading}
+                                                    className="group w-full rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 py-4 font-black text-white shadow-lg hover:shadow-xl active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                                                >
+                                                    {biometricLoading ? (
+                                                        <>
+                                                            <RefreshCcw className="h-5 w-5 animate-spin" />
+                                                            <span>VERIFICANDO...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Fingerprint className="h-5 w-5" />
+                                                            <span>INGRESAR CON HUELLA / FACE ID</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
                                         </form>
 
                                         <footer className="pt-4 border-t border-slate-100 flex flex-col items-center gap-1">

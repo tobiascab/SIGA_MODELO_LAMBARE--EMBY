@@ -310,4 +310,130 @@ public class ReporteRankingsController {
         List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, userId);
         return ResponseEntity.ok(result);
     }
+
+    /**
+     * Reporte: Asistencia vs Listas
+     * - Personas que vinieron sin estar en ninguna lista
+     * - Porcentaje de asistencia de punteros vs dirigentes
+     */
+    @GetMapping("/asistencia/reporte-listas")
+    public ResponseEntity<?> getReporteAsistenciaVsListas(Authentication auth) {
+        if (!isAuthorized(auth))
+            return ResponseEntity.status(403).build();
+
+        try {
+            // Total de asistencias
+            String sqlTotalAsistencias = "SELECT COUNT(*) FROM asistencias";
+            long totalAsistencias = jdbcTemplate.queryForObject(sqlTotalAsistencias, Long.class);
+
+            // Asistentes que SÍ están en alguna lista (puntero o dirigente)
+            String sqlAsistentesEnListas = """
+                SELECT COUNT(DISTINCT asis.id_socio) 
+                FROM asistencias asis
+                INNER JOIN asignaciones_socios asig ON asig.socio_id = asis.id_socio
+            """;
+            long asistentesEnListas = jdbcTemplate.queryForObject(sqlAsistentesEnListas, Long.class);
+
+            // Asistentes que NO están en ninguna lista (independientes)
+            String sqlIndependientes = """
+                SELECT COUNT(DISTINCT asis.id_socio)
+                FROM asistencias asis
+                WHERE asis.id_socio NOT IN (
+                    SELECT DISTINCT asig.socio_id FROM asignaciones_socios asig
+                )
+            """;
+            long asistentesIndependientes = jdbcTemplate.queryForObject(sqlIndependientes, Long.class);
+
+            // Asistentes de listas de PUNTEROS (usuarios con rol PUNTERO)
+            String sqlAsistenciaPunteros = """
+                SELECT COUNT(DISTINCT asis.id_socio)
+                FROM asistencias asis
+                INNER JOIN asignaciones_socios asig ON asig.socio_id = asis.id_socio
+                INNER JOIN listas_asignacion la ON la.id = asig.lista_id
+                INNER JOIN usuarios u ON u.id = la.user_id
+                WHERE u.rol = 'PUNTERO'
+            """;
+            long asistenciaDePunteros = jdbcTemplate.queryForObject(sqlAsistenciaPunteros, Long.class);
+
+            // Total asignados por punteros
+            String sqlTotalPunteros = """
+                SELECT COUNT(DISTINCT asig.socio_id)
+                FROM asignaciones_socios asig
+                INNER JOIN listas_asignacion la ON la.id = asig.lista_id
+                INNER JOIN usuarios u ON u.id = la.user_id
+                WHERE u.rol = 'PUNTERO'
+            """;
+            long totalAsignadosPunteros = jdbcTemplate.queryForObject(sqlTotalPunteros, Long.class);
+
+            // Asistentes de listas de DIRIGENTES (usuarios con is_dirigente=true y NO punteros)
+            String sqlAsistenciaDirigentes = """
+                SELECT COUNT(DISTINCT asis.id_socio)
+                FROM asistencias asis
+                INNER JOIN asignaciones_socios asig ON asig.socio_id = asis.id_socio
+                INNER JOIN listas_asignacion la ON la.id = asig.lista_id
+                INNER JOIN usuarios u ON u.id = la.user_id
+                WHERE u.rol != 'PUNTERO' AND (u.is_dirigente = true OR u.rol = 'SUPER_ADMIN')
+            """;
+            long asistenciaDeDirigentes = jdbcTemplate.queryForObject(sqlAsistenciaDirigentes, Long.class);
+
+            // Total asignados por dirigentes
+            String sqlTotalDirigentes = """
+                SELECT COUNT(DISTINCT asig.socio_id)
+                FROM asignaciones_socios asig
+                INNER JOIN listas_asignacion la ON la.id = asig.lista_id
+                INNER JOIN usuarios u ON u.id = la.user_id
+                WHERE u.rol != 'PUNTERO' AND (u.is_dirigente = true OR u.rol = 'SUPER_ADMIN')
+            """;
+            long totalAsignadosDirigentes = jdbcTemplate.queryForObject(sqlTotalDirigentes, Long.class);
+
+            // Detalle por usuario: quién trajo más asistentes
+            String sqlDetallePorUsuario = """
+                SELECT
+                    u.id,
+                    u.nombre_completo,
+                    u.username,
+                    u.rol,
+                    u.is_dirigente,
+                    COUNT(DISTINCT asig.socio_id) as total_asignados,
+                    COUNT(DISTINCT CASE WHEN asis.id IS NOT NULL THEN asig.socio_id END) as asistieron,
+                    ROUND(
+                        CASE WHEN COUNT(DISTINCT asig.socio_id) > 0
+                        THEN COUNT(DISTINCT CASE WHEN asis.id IS NOT NULL THEN asig.socio_id END) * 100.0 / COUNT(DISTINCT asig.socio_id)
+                        ELSE 0 END, 1
+                    ) as porcentaje_asistencia
+                FROM usuarios u
+                INNER JOIN listas_asignacion la ON la.user_id = u.id
+                INNER JOIN asignaciones_socios asig ON asig.lista_id = la.id
+                LEFT JOIN asistencias asis ON asis.id_socio = asig.socio_id
+                WHERE u.activo = true
+                GROUP BY u.id, u.nombre_completo, u.username, u.rol, u.is_dirigente
+                ORDER BY asistieron DESC
+            """;
+            List<Map<String, Object>> detallePorUsuario = jdbcTemplate.queryForList(sqlDetallePorUsuario);
+
+            // Calcular porcentajes
+            double porcentajePunteros = totalAsignadosPunteros > 0
+                    ? Math.round(asistenciaDePunteros * 1000.0 / totalAsignadosPunteros) / 10.0 : 0;
+            double porcentajeDirigentes = totalAsignadosDirigentes > 0
+                    ? Math.round(asistenciaDeDirigentes * 1000.0 / totalAsignadosDirigentes) / 10.0 : 0;
+            double porcentajeIndependientes = totalAsistencias > 0
+                    ? Math.round(asistentesIndependientes * 1000.0 / totalAsistencias) / 10.0 : 0;
+
+            return ResponseEntity.ok(Map.ofEntries(
+                    Map.entry("totalAsistencias", totalAsistencias),
+                    Map.entry("asistentesEnListas", asistentesEnListas),
+                    Map.entry("asistentesIndependientes", asistentesIndependientes),
+                    Map.entry("porcentajeIndependientes", porcentajeIndependientes),
+                    Map.entry("asistenciaDePunteros", asistenciaDePunteros),
+                    Map.entry("totalAsignadosPunteros", totalAsignadosPunteros),
+                    Map.entry("porcentajePunteros", porcentajePunteros),
+                    Map.entry("asistenciaDeDirigentes", asistenciaDeDirigentes),
+                    Map.entry("totalAsignadosDirigentes", totalAsignadosDirigentes),
+                    Map.entry("porcentajeDirigentes", porcentajeDirigentes),
+                    Map.entry("detallePorUsuario", detallePorUsuario)
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

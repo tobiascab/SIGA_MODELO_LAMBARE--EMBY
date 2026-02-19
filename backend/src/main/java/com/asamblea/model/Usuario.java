@@ -86,6 +86,16 @@ public class Usuario implements UserDetails {
     @Column(name = "token_version")
     private Integer tokenVersion = 0;
 
+    @Column(name = "is_dirigente")
+    private Boolean isDirigente = false;
+
+    @Column(name = "login_habilitado", columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean loginHabilitado = true;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "dirigente_id")
+    private Usuario dirigente; // Para punteros: quién los habilitó
+
     /**
      * Roles del Sistema:
      * - SUPER_ADMIN: Acceso total, puede editar, cargar, eliminar todo
@@ -100,7 +110,8 @@ public class Usuario implements UserDetails {
         DIRECTIVO("Directivo", "Ver todo, asignar, sin editar"),
         OPERADOR("Operador Check-in", "Registro de asistencia"),
         USUARIO_SOCIO("Usuario Socio", "Acceso limitado personal"),
-        ASESOR_DE_CREDITO("Asesor de Crédito", "Gestión de créditos y asignaciones");
+        ASESOR_DE_CREDITO("Asesor de Crédito", "Gestión de créditos y asignaciones"),
+        PUNTERO("Puntero", "Captador de socios designado por un dirigente");
 
         private final String nombre;
         private final String descripcion;
@@ -195,12 +206,12 @@ public class Usuario implements UserDetails {
     }
 
     /**
-     * Verifica si el usuario tiene un rol básico (USUARIO_SOCIO o
-     * ASESOR_DE_CREDITO)
-     * Ambos roles tienen exactamente los mismos permisos
+     * Verifica si el usuario tiene un rol básico (USUARIO_SOCIO,
+     * ASESOR_DE_CREDITO, o PUNTERO)
+     * Todos estos roles tienen exactamente los mismos permisos base
      */
     public boolean esUsuarioBasico() {
-        return rol == Rol.USUARIO_SOCIO || rol == Rol.ASESOR_DE_CREDITO;
+        return rol == Rol.USUARIO_SOCIO || rol == Rol.ASESOR_DE_CREDITO || rol == Rol.PUNTERO;
     }
 
     /**
@@ -208,6 +219,20 @@ public class Usuario implements UserDetails {
      */
     public boolean esAsesor() {
         return rol == Rol.ASESOR_DE_CREDITO;
+    }
+
+    /**
+     * Verifica si el usuario es puntero
+     */
+    public boolean esPuntero() {
+        return rol == Rol.PUNTERO;
+    }
+
+    /**
+     * Verifica si el usuario es dirigente
+     */
+    public boolean esDirigente() {
+        return isDirigente != null && isDirigente;
     }
 
     // --- MÉTODOS DE COMPATIBILIDAD (idSocio) ---

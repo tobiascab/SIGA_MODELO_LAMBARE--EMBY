@@ -10,6 +10,15 @@ export default function PageTransition() {
     const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
     const [loadingText, setLoadingText] = useState('Cargando...');
+    const [logoUrl, setLogoUrl] = useState('/logo.png');
+
+    // Load cooperativa logo on mount
+    useEffect(() => {
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data?.logo) setLogoUrl(data.logo); })
+            .catch(() => { });
+    }, []);
 
     // Textos dinámicos según la ruta
     const getLoadingText = useCallback((path: string) => {
@@ -27,15 +36,11 @@ export default function PageTransition() {
     }, []);
 
     useEffect(() => {
-        // Mostrar loading al iniciar navegación
         setIsLoading(true);
         setLoadingText(getLoadingText(pathname));
-
-        // Ocultar después de un tiempo mínimo (para que la animación se vea)
         const timer = setTimeout(() => {
             setIsLoading(false);
-        }, 400); // Mínimo 400ms para transición suave
-
+        }, 400);
         return () => clearTimeout(timer);
     }, [pathname, searchParams, getLoadingText]);
 
@@ -49,7 +54,6 @@ export default function PageTransition() {
                     transition={{ duration: 0.2 }}
                     className="fixed inset-0 z-[200] flex items-center justify-center bg-gradient-to-br from-slate-50/95 via-white/95 to-teal-50/95 backdrop-blur-sm"
                 >
-                    {/* Contenedor principal */}
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -61,7 +65,6 @@ export default function PageTransition() {
                         }}
                         className="flex flex-col items-center gap-6"
                     >
-                        {/* Logo animado */}
                         <motion.div
                             className="relative"
                             animate={{
@@ -74,7 +77,6 @@ export default function PageTransition() {
                             }}
                         >
                             <div className="relative w-28 h-28">
-                                {/* Anillo exterior giratorio */}
                                 <motion.div
                                     className="absolute inset-0 rounded-full border-4 border-teal-200"
                                     animate={{ rotate: 360 }}
@@ -89,14 +91,12 @@ export default function PageTransition() {
                                     }}
                                 />
 
-                                {/* Logo central con fondo blanco */}
                                 <div className="absolute inset-3 bg-white rounded-full flex items-center justify-center shadow-xl border-2 border-slate-100">
                                     <img
-                                        src="/logo-cooperativa.png"
-                                        alt="Cooperativa Multiactiva Lambaré Ltda."
+                                        src={logoUrl}
+                                        alt="Logo"
                                         className="w-16 h-16 object-contain"
                                         onError={(e) => {
-                                            // Fallback a logo.png
                                             (e.target as HTMLImageElement).src = '/logo.png';
                                         }}
                                     />

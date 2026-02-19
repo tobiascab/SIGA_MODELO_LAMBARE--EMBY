@@ -22,6 +22,8 @@ export default function SucursalesReportPage() {
     });
     const [loading, setLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [coopNombre, setCoopNombre] = useState('Sistema de Asambleas');
+    const [coopLogo, setCoopLogo] = useState('/logo-cooperativa.png');
 
     // Colores corporativos para los gráficos
     const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
@@ -83,6 +85,13 @@ export default function SucursalesReportPage() {
         };
 
         fetchData();
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data?.nombre) setCoopNombre(data.nombre);
+                if (data?.logo) setCoopLogo(data.logo);
+            })
+            .catch(() => { });
     }, []);
 
     const handlePrint = () => {
@@ -116,7 +125,7 @@ export default function SucursalesReportPage() {
                 {/* HEADER */}
                 <header className="flex items-center justify-between mb-10 border-b-2 border-slate-200 pb-6">
                     <div className="flex items-center gap-6">
-                        <img src="/logo-cooperativa.png" alt="Logo" className="h-20 w-auto object-contain" />
+                        <img src={coopLogo} alt="Logo" className="h-20 w-auto object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }} />
                         <div>
                             <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Reporte de Sucursales</h1>
                             <p className="text-slate-500 font-medium">Análisis de Gestión y Metas 2025</p>
@@ -306,7 +315,7 @@ export default function SucursalesReportPage() {
                 </div>
 
                 <div className="mt-8 text-center print:mt-12">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Cooperativa Multiactiva Lambaré Ltda. Ltda • Gestión Estratégica</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{coopNombre} • Gestión Estratégica</p>
                 </div>
             </div>
             {/* ESTILOS PARA IMPRESIÓN */}

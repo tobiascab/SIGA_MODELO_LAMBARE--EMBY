@@ -61,14 +61,17 @@ interface Usuario {
     sucursal: string | null;
     sucursalId: number | null;
     permisosEspeciales: string | null;
-    passwordVisible: string | null; // Contraseña visible para admins
+    passwordVisible: string | null;
     idSocio: number | null;
     tipo: "USUARIO" | "SOCIO";
     nroSocio?: string;
-    numeroSocio?: string; // New field from backend
+    numeroSocio?: string;
     cedula?: string;
     cargo?: string;
     meta?: number;
+    isDirigente?: boolean;
+    dirigenteId?: number | null;
+    dirigenteNombre?: string | null;
 }
 
 interface Rol {
@@ -95,6 +98,31 @@ export default function UsuariosPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null);
     const [isExporting, setIsExporting] = useState(false);
+    const [modalStep, setModalStep] = useState(0); // 0=search, 1=datos, 2=rol, 3=permisos
+    const TOTAL_STEPS = 4;
+
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        if (showModal) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+            document.body.style.top = `-${window.scrollY}px`;
+        } else {
+            const scrollY = document.body.style.top;
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            document.body.style.top = '';
+            window.scrollTo(0, parseInt(scrollY || '0') * -1);
+        }
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            document.body.style.top = '';
+        };
+    }, [showModal]);
 
     // Socio Search State
     const [socioQuery, setSocioQuery] = useState("");
@@ -143,7 +171,10 @@ export default function UsuariosPage() {
         { id: "consulta", label: "Consulta Asistencia", icon: Search, color: "from-cyan-500 to-blue-500", bgColor: "bg-cyan-50", borderColor: "border-cyan-200", textColor: "text-cyan-700" },
         { id: "gestion-asistencia", label: "Gestión Asistencia", icon: ShieldAlert, color: "from-orange-500 to-red-500", bgColor: "bg-orange-50", borderColor: "border-orange-200", textColor: "text-orange-700" },
         { id: "reportes-general", label: "Reportes Generales", icon: FileText, color: "from-slate-500 to-gray-600", bgColor: "bg-slate-50", borderColor: "border-slate-200", textColor: "text-slate-700" },
+        { id: "reportes-ubicacion", label: "Padrón por Ubicación", icon: Globe, color: "from-teal-500 to-cyan-600", bgColor: "bg-teal-50", borderColor: "border-teal-200", textColor: "text-teal-700" },
         { id: "reportes-rankings-vyv", label: "Rankings VyV", icon: Award, color: "from-amber-500 to-yellow-600", bgColor: "bg-amber-50", borderColor: "border-amber-200", textColor: "text-amber-700" },
+        { id: "reportes-cumplimiento", label: "Cumplimiento Listas", icon: ClipboardList, color: "from-emerald-500 to-green-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200", textColor: "text-emerald-700" },
+        { id: "reportes-ranking-asistencia", label: "Ranking Asistencia", icon: BarChart3, color: "from-sky-500 to-indigo-600", bgColor: "bg-sky-50", borderColor: "border-sky-200", textColor: "text-sky-700" },
         { id: "ranking-gestion", label: "Ranking de Gestión", icon: Award, color: "from-amber-400 to-yellow-600", bgColor: "bg-amber-50", borderColor: "border-amber-200", textColor: "text-amber-700" },
         { id: "reportes-asesores", label: "Reporte Asesores", icon: UserCheck, color: "from-blue-500 to-indigo-500", bgColor: "bg-blue-50", borderColor: "border-blue-200", textColor: "text-blue-700" },
         { id: "reportes-sucursal", label: "Reportes Sucursal", icon: Building2, color: "from-indigo-500 to-violet-600", bgColor: "bg-indigo-50", borderColor: "border-indigo-200", textColor: "text-indigo-700" },
@@ -163,6 +194,14 @@ export default function UsuariosPage() {
         { id: "gestion-listas", label: "Gestión de Listas", icon: ClipboardList, color: "from-cyan-500 to-teal-500", bgColor: "bg-cyan-50", borderColor: "border-cyan-200", textColor: "text-cyan-700" },
         { id: "configuracion", label: "Configuración", icon: Settings, color: "from-zinc-500 to-gray-600", bgColor: "bg-zinc-50", borderColor: "border-zinc-200", textColor: "text-zinc-700" },
         { id: "backups", label: "Backups", icon: Globe, color: "from-violet-500 to-purple-600", bgColor: "bg-violet-50", borderColor: "border-violet-200", textColor: "text-violet-700" },
+    ];
+
+    // IDs de todas las pantallas de reportes para el toggle "REPORTES COMPLETO"
+    const REPORT_SCREEN_IDS = [
+        "reportes-general", "reportes-ubicacion", "reportes-rankings-vyv",
+        "reportes-cumplimiento", "reportes-ranking-asistencia",
+        "ranking-gestion", "reportes-asesores", "reportes-sucursal",
+        "reportes-funcionarios", "reportes-asistencia", "auditoria-usuarios"
     ];
 
     const fetchData = useCallback(async (query = "") => {
@@ -194,7 +233,7 @@ export default function UsuariosPage() {
         return () => clearTimeout(timer);
     }, [searchTerm, fetchData]);
 
-    const openNewModal = () => {
+    const openNewModal = async () => {
         setEditingUser(null);
         setSelectedSocio(null);
         setSocioQuery("");
@@ -212,7 +251,42 @@ export default function UsuariosPage() {
             cargo: "",
             meta: 50
         });
-        setShowModal(true);
+
+        const { value: isSocio } = await Swal.fire({
+            title: '👤 Nuevo Usuario',
+            html: '<p style="font-size:14px;color:#475569">¿El nuevo usuario es <b>socio de la cooperativa</b>?</p>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, es socio',
+            cancelButtonText: 'No, no es socio',
+            confirmButtonColor: '#14b8a6',
+            cancelButtonColor: '#64748b',
+            reverseButtons: true,
+        });
+
+        if (isSocio) {
+            // Show mini-tutorial for searching socios
+            await Swal.fire({
+                title: '🔍 Buscar Socio',
+                html: `
+                    <div style="text-align:left;font-size:13px;color:#475569;line-height:1.6">
+                        <p style="margin-bottom:8px"><b>Paso 1:</b> En la siguiente pantalla, busca al socio por su <b>cédula, número de socio o nombre</b>.</p>
+                        <p style="margin-bottom:8px"><b>Paso 2:</b> Selecciona al socio correcto de la lista de resultados.</p>
+                        <p><b>Paso 3:</b> Los datos del socio se cargarán automáticamente. Solo falta asignar usuario, contraseña y permisos.</p>
+                    </div>
+                `,
+                icon: 'info',
+                confirmButtonText: 'Entendido, buscar socio →',
+                confirmButtonColor: '#14b8a6',
+            });
+            setShowModal(true);
+            setModalStep(0); // Start at search step
+        } else if (isSocio === false) {
+            // Not a socio - skip search, go directly to data entry
+            setShowModal(true);
+            setModalStep(1); // Skip to data entry step
+        }
+        // If dismissed (clicked outside), do nothing
     };
 
     const searchSocios = async () => {
@@ -305,6 +379,7 @@ export default function UsuariosPage() {
     };
 
     const openEditModal = async (user: Usuario) => {
+        setModalStep(1); // Skip search step when editing
         // SEGURIDAD: Si soy el Super Admin Original (ID 1), pedir código para editar
         if (currentUser?.id === 1) {
             const { value: code } = await Swal.fire({
@@ -397,7 +472,8 @@ export default function UsuariosPage() {
                 setMessage({ type: "success", text: "Usuario creado correctamente" });
             }
 
-            fetchData(searchTerm);
+            fetchData("");
+            setSearchTerm("");
             setTimeout(() => {
                 setShowModal(false);
                 setMessage(null);
@@ -500,7 +576,26 @@ export default function UsuariosPage() {
             case "DIRECTIVO": return "bg-blue-100 text-blue-700 border-blue-200";
             case "OPERADOR": return "bg-teal-100 text-teal-500 border-teal-200";
             case "USUARIO_SOCIO": return "bg-slate-100 text-slate-700 border-slate-200";
+            case "PUNTERO": return "bg-orange-100 text-orange-700 border-orange-200";
             default: return "bg-slate-100 text-slate-700 border-slate-200";
+        }
+    };
+
+    const handleToggleDirigente = async (user: Usuario) => {
+        if (!user.id) return;
+        try {
+            const token = localStorage.getItem("token");
+            const res = await axios.put(`/api/usuarios/${user.id}/toggle-dirigente`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+            Toast.fire({
+                icon: 'success',
+                title: res.data.isDirigente ? `${user.nombreCompleto} ahora es DIRIGENTE (meta: ${res.data.meta})` : `${user.nombreCompleto} ya no es dirigente`
+            });
+            fetchData(searchTerm);
+        } catch (error: any) {
+            Swal.fire('Error', error.response?.data?.error || 'No se pudo cambiar el estado', 'error');
         }
     };
 
@@ -542,8 +637,20 @@ export default function UsuariosPage() {
                 className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col gap-3 relative"
             >
                 <div className="flex items-center justify-between">
-                    <div className={`px-2 py-1 rounded-lg text-[10px] font-black border ${getRolColor(user.rol)}`}>
-                        {user.rolNombre}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className={`px-2 py-1 rounded-lg text-[10px] font-black border ${getRolColor(user.rol)}`}>
+                            {user.rolNombre}
+                        </div>
+                        {user.isDirigente && (
+                            <div className="px-2 py-1 rounded-lg text-[10px] font-black bg-amber-100 text-amber-700 border border-amber-200">
+                                DIRIGENTE
+                            </div>
+                        )}
+                        {user.rol === 'PUNTERO' && user.dirigenteNombre && (
+                            <div className="px-2 py-1 rounded-lg text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-200 truncate max-w-[160px]" title={`Puntero de ${user.dirigenteNombre}`}>
+                                Puntero de: {user.dirigenteNombre}
+                            </div>
+                        )}
                     </div>
                     {user.tipo === "USUARIO" ? (
                         <span className={`h-2 w-2 rounded-full ${user.activo ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
@@ -578,8 +685,7 @@ export default function UsuariosPage() {
                     </div>
                 </div>
 
-                {/* Mobile-optimized action buttons with touch-friendly sizes */}
-                <div className="flex gap-2 mt-1">
+                <div className="flex flex-wrap gap-2 mt-1">
                     {isOperator ? (
                         <>
                             {(user.rol !== 'SUPER_ADMIN' || (currentUser?.id === 1 && user.id !== 1)) && (
@@ -598,6 +704,19 @@ export default function UsuariosPage() {
                                         {user.activo ? <><Trash2 className="h-4 w-4" /><span>Baja</span></> : <><CheckCircle2 className="h-4 w-4" /><span>Activar</span></>}
                                     </button>
                                 </>
+                            )}
+                            {/* Toggle Dirigente - solo visible para SUPER_ADMIN */}
+                            {currentUser?.rol === 'SUPER_ADMIN' && user.activo && user.id !== currentUser?.id && (
+                                <button
+                                    onClick={() => handleToggleDirigente(user)}
+                                    className={`flex-1 min-h-[44px] py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all touch-manipulation select-none active:scale-95 flex items-center justify-center gap-2 border-2 ${user.isDirigente
+                                        ? 'bg-amber-500 text-white hover:bg-amber-600 border-amber-600'
+                                        : 'bg-white text-amber-600 hover:bg-amber-50 border-amber-300'
+                                        }`}
+                                >
+                                    <Award className="h-4 w-4" />
+                                    <span>{user.isDirigente ? 'Quitar Dir.' : 'Dirigente'}</span>
+                                </button>
                             )}
                             {(currentUser?.rol === 'SUPER_ADMIN' || currentUser?.rol === 'ADMIN' || (typeof window !== 'undefined' && localStorage.getItem("user")?.includes("SUPER_ADMIN"))) && user.id !== currentUser?.id && user.activo && (
                                 <button
@@ -1030,26 +1149,54 @@ export default function UsuariosPage() {
 
             {/* Modal Crear/Editar */}
             {showModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
-                        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-teal-500 rounded-2xl shadow-lg shadow-teal-200">
-                                    <Shield className="h-6 w-6 text-white" />
+                <div
+                    className="fixed inset-0 z-[9999] flex flex-col sm:flex sm:flex-row sm:items-center sm:justify-center sm:bg-slate-900/60 sm:backdrop-blur-md sm:p-4"
+                    style={{ overscrollBehavior: 'contain' }}
+                >
+                    {/* Mobile: fullscreen white bg | Desktop: centered card */}
+                    <div className="bg-white w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-xl sm:rounded-3xl sm:shadow-2xl flex flex-col" style={{ overscrollBehavior: 'contain' }}>
+                        {/* Header */}
+                        <div className="px-4 py-3 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-white flex-shrink-0 safe-area-top">
+                            <div className="flex items-center gap-2 sm:gap-4">
+                                <div className="p-2 sm:p-3 bg-teal-500 rounded-xl sm:rounded-2xl shadow-lg shadow-teal-200">
+                                    <Shield className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold text-slate-800">
-                                        {editingUser ? "Configurar Operador" : "Habilitar Nuevo Usuario"}
+                                    <h2 className="text-sm sm:text-xl font-bold text-slate-800">
+                                        {editingUser ? "Configurar Operador" : "Nuevo Usuario"}
                                     </h2>
-                                    <p className="text-slate-500 text-xs font-medium">Define el rol y los permisos granulares</p>
+                                    <p className="text-slate-400 text-[10px] sm:text-xs font-medium">
+                                        {!editingUser && modalStep === 0 && "Paso 1 de 4 — Buscar Socio"}
+                                        {modalStep === 1 && "Paso 2 de 4 — Datos de Acceso"}
+                                        {modalStep === 2 && "Paso 3 de 4 — Rol y Configuración"}
+                                        {modalStep === 3 && "Paso 4 de 4 — Permisos"}
+                                        {editingUser && modalStep === 0 && "Configurar permisos y datos"}
+                                    </p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-white hover:shadow-md rounded-xl transition-all">
-                                <X className="h-6 w-6 text-slate-400" />
+                            <button onClick={() => { setShowModal(false); setSearchTerm(''); setModalStep(0); }} className="p-2 hover:bg-slate-100 rounded-xl transition-all">
+                                <X className="h-5 w-5 text-slate-400" />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                        {/* Mobile Step Progress Bar */}
+                        <div className="sm:hidden flex-shrink-0 px-4 py-2 bg-slate-50 border-b border-slate-100">
+                            <div className="flex gap-1">
+                                {[0, 1, 2, 3].map(i => {
+                                    if (editingUser && i === 0) return <div key={i} />;
+                                    return (
+                                        <div
+                                            key={i}
+                                            className={`h-1 flex-1 rounded-full transition-all duration-300 ${modalStep >= i ? 'bg-teal-500' : 'bg-slate-200'
+                                                }`}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Scrollable Form Content */}
+                        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:p-6 space-y-4 sm:space-y-6" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
                             {message && (
                                 <div className={`p-4 rounded-2xl text-sm font-bold flex items-center gap-3 ${message.type === "success" ? "bg-emerald-50 text-teal-500 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
                                     {message.type === "success" ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
@@ -1057,10 +1204,10 @@ export default function UsuariosPage() {
                                 </div>
                             )}
 
-                            {/* SEARCH SECTION FOR NEW USERS */}
+                            {/* STEP 0: SEARCH SECTION FOR NEW USERS */}
                             {!editingUser && (
-                                <div className="space-y-4 mb-8 pb-8 border-b border-slate-100">
-                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                                <div className={`space-y-3 sm:mb-6 sm:pb-6 sm:border-b border-slate-100 ${modalStep !== 0 ? 'hidden sm:block' : ''}`}>
+                                    <h3 className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">
                                         Paso 1: Buscar en Padrón de Socios
                                     </h3>
 
@@ -1073,13 +1220,13 @@ export default function UsuariosPage() {
                                                     onChange={(e) => setSocioQuery(e.target.value)}
                                                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), searchSocios())}
                                                     placeholder="Buscar por Cédula, N° Socio o Nombre..."
-                                                    className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-teal-500 outline-none text-sm transition-all"
+                                                    className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-teal-500 outline-none text-sm transition-all"
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={searchSocios}
                                                     disabled={searchingSocio}
-                                                    className="px-6 py-3 bg-teal-500 text-white font-bold rounded-xl hover:bg-teal-500 transition-all flex items-center gap-2"
+                                                    className="px-4 py-2.5 sm:px-6 sm:py-3 bg-teal-500 text-white font-bold rounded-xl hover:bg-teal-600 transition-all flex items-center gap-2 text-sm"
                                                 >
                                                     {searchingSocio ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                                                     Buscar
@@ -1145,8 +1292,9 @@ export default function UsuariosPage() {
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
+                            {/* STEP 1: USER DATA */}
+                            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 ${modalStep !== 1 ? 'hidden sm:grid' : ''}`}>
+                                <div className="space-y-3 sm:space-y-4">
                                     <div>
                                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nombre de Usuario</label>
                                         <div className="relative">
@@ -1154,7 +1302,7 @@ export default function UsuariosPage() {
                                                 type="text"
                                                 value={form.username}
                                                 onChange={(e) => setForm({ ...form, username: e.target.value })}
-                                                className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all font-mono text-sm pl-12"
+                                                className="w-full px-4 py-2 sm:px-5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all font-mono text-sm pl-10 sm:pl-12"
                                                 placeholder="ej: jdoe"
                                                 required
                                                 disabled={!!editingUser}
@@ -1186,7 +1334,7 @@ export default function UsuariosPage() {
                                                 type="text"
                                                 value={form.telefono}
                                                 onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                                                className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all font-mono"
+                                                className="w-full px-4 py-2 sm:px-5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all font-mono text-sm"
                                                 placeholder="ej: 0981..."
                                             />
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -1204,7 +1352,7 @@ export default function UsuariosPage() {
                                                 type={showPassword ? "text" : "password"}
                                                 value={form.password}
                                                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                                className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all pr-12 font-mono"
+                                                className="w-full px-4 py-2 sm:px-5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all pr-10 sm:pr-12 font-mono text-sm"
                                                 placeholder={editingUser ? "Dejar vacío para no cambiar" : "••••••••"}
                                                 required={!editingUser}
                                             />
@@ -1233,14 +1381,14 @@ export default function UsuariosPage() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
+                                <div className="space-y-3 sm:space-y-4">
                                     <div>
                                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nombre Completo</label>
                                         <input
                                             type="text"
                                             value={form.nombreCompleto}
                                             onChange={(e) => setForm({ ...form, nombreCompleto: e.target.value })}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all"
+                                            className="w-full px-4 py-2 sm:px-5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all text-sm"
                                             placeholder="Nombre Apellido"
                                             required
                                         />
@@ -1252,22 +1400,23 @@ export default function UsuariosPage() {
                                             type="email"
                                             value={form.email}
                                             onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all"
+                                            className="w-full px-4 py-2 sm:px-5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all text-sm"
                                             placeholder="correo@ejemplo.com"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
+                            {/* STEP 2: ROLE AND CONFIG */}
+                            <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 ${modalStep !== 2 ? 'hidden sm:grid' : ''}`}>
+                                <div className="space-y-3 sm:space-y-4">
                                     <div>
                                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Rol de Sistema</label>
                                         <div className="relative">
                                             <select
                                                 value={form.rol}
                                                 onChange={(e) => setForm({ ...form, rol: e.target.value })}
-                                                className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-teal-500 focus:bg-white outline-none appearance-none transition-all font-bold text-slate-700"
+                                                className="w-full px-4 py-2 sm:px-5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:border-teal-500 focus:bg-white outline-none appearance-none transition-all font-bold text-slate-700 text-sm"
                                             >
                                                 {roles.map((rol) => (
                                                     <option key={rol.value} value={rol.value}>
@@ -1284,24 +1433,40 @@ export default function UsuariosPage() {
                                     {/* NUEVO CAMPO: CARGO */}
                                     <div>
                                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Cargo (Opcional)</label>
-                                        <input
-                                            type="text"
-                                            value={form.cargo || ""}
-                                            onChange={(e) => setForm({ ...form, cargo: e.target.value })}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all placeholder:text-slate-300"
-                                            placeholder="Ej: Asesor, Supervisor, Cajero"
-                                        />
+                                        <div className="relative">
+                                            <select
+                                                value={form.cargo || ""}
+                                                onChange={(e) => setForm({ ...form, cargo: e.target.value })}
+                                                className="w-full px-4 py-2 sm:px-5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:border-teal-500 focus:bg-white outline-none appearance-none transition-all font-bold text-slate-700 text-sm"
+                                            >
+                                                <option value="">Sin cargo</option>
+                                                <option value="Dirigente">Dirigente</option>
+                                                <option value="Presidente">Presidente</option>
+                                                <option value="Vicepresidente">Vicepresidente</option>
+                                                <option value="Secretario/a">Secretario/a</option>
+                                                <option value="Tesorero/a">Tesorero/a</option>
+                                                <option value="Vocal">Vocal</option>
+                                                <option value="Síndico">Síndico</option>
+                                                <option value="Supervisor">Supervisor</option>
+                                                <option value="Asesor">Asesor</option>
+                                                <option value="Cajero/a">Cajero/a</option>
+                                                <option value="Operador">Operador</option>
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
+                                <div className="space-y-3 sm:space-y-4">
                                     <div>
                                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Sucursal Asignada</label>
                                         <div className="relative">
                                             <select
                                                 value={form.sucursalId}
                                                 onChange={(e) => setForm({ ...form, sucursalId: e.target.value })}
-                                                className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-teal-500 focus:bg-white outline-none appearance-none transition-all font-bold text-slate-700"
+                                                className="w-full px-4 py-2 sm:px-5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:border-teal-500 focus:bg-white outline-none appearance-none transition-all font-bold text-slate-700 text-sm"
                                             >
                                                 <option value="">Sin Restricción (Todas)</option>
                                                 {sucursales.map((suc) => (
@@ -1324,7 +1489,7 @@ export default function UsuariosPage() {
                                                 type="number"
                                                 value={form.meta || 50}
                                                 onChange={(e) => setForm({ ...form, meta: parseInt(e.target.value) || 0 })}
-                                                className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all font-bold text-slate-700"
+                                                className="w-full px-4 py-2 sm:px-5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl focus:border-teal-500 focus:bg-white outline-none transition-all font-bold text-slate-700 text-sm"
                                                 disabled={form.rol !== 'SUPER_ADMIN'} // Solo Super Admin puede editar meta, O TODOS? "un campo de meta tambien en su perfil que puede ser modificable por el super admin"
                                             // Asumo que si el usuario logueado NO es super admin, no puede verlo/editarlo en el frontend, 
                                             // pero aquí estamos en la pantalla de gestión de usuarios que suele ser para admins.
@@ -1339,15 +1504,65 @@ export default function UsuariosPage() {
                                 </div>
                             </div>
 
-                            <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-3xl p-6 space-y-4 border border-slate-200">
-                                <label className="flex items-center gap-2 text-sm font-black text-slate-800 uppercase tracking-widest">
-                                    <Lock className="h-4 w-4 text-emerald-500" />
-                                    Permisos Granulares (Pantallas)
+                            {/* STEP 3: PERMISSIONS */}
+                            <div className={`bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl sm:rounded-3xl p-3 sm:p-5 space-y-3 border border-slate-200 ${modalStep !== 3 ? 'hidden sm:block' : ''}`}>
+                                <label className="flex items-center gap-2 text-xs sm:text-sm font-black text-slate-800 uppercase tracking-widest">
+                                    <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
+                                    Permisos (Pantallas)
                                 </label>
-                                <p className="text-[10px] text-slate-500 font-medium mb-4">
-                                    Habilita pantallas específicas de forma individual. Los permisos activos se muestran con color.
+                                <p className="text-[9px] sm:text-[10px] text-slate-500 font-medium">
+                                    Habilita pantallas individuales o por módulo.
                                 </p>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+
+                                {/* Quick Module Actions - ARRIBA de la grilla para visibilidad */}
+                                <div className="flex flex-wrap gap-2 pb-1">
+                                    {/* REPORTES COMPLETO toggle - prominente */}
+                                    {(() => {
+                                        const currentPerms = form.permisosEspeciales.split(',').filter(p => p !== '');
+                                        const allReportsSelected = REPORT_SCREEN_IDS.every(id => currentPerms.includes(id));
+                                        const someReportsSelected = REPORT_SCREEN_IDS.some(id => currentPerms.includes(id));
+                                        return (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (allReportsSelected) {
+                                                        const filtered = currentPerms.filter(p => !REPORT_SCREEN_IDS.includes(p));
+                                                        setForm(prev => ({ ...prev, permisosEspeciales: filtered.join(',') }));
+                                                    } else {
+                                                        const merged = [...new Set([...currentPerms, ...REPORT_SCREEN_IDS])];
+                                                        setForm(prev => ({ ...prev, permisosEspeciales: merged.join(',') }));
+                                                    }
+                                                }}
+                                                className={`text-[10px] sm:text-xs font-black uppercase tracking-wider px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 border-2 shadow-sm active:scale-95 ${allReportsSelected
+                                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-600 shadow-amber-200'
+                                                    : someReportsSelected
+                                                        ? 'bg-amber-50 text-amber-600 border-amber-400 shadow-amber-100'
+                                                        : 'bg-white text-amber-600 border-amber-300 hover:bg-amber-50 hover:border-amber-400'
+                                                    }`}
+                                            >
+                                                <FileText className="h-4 w-4" />
+                                                {allReportsSelected ? '✓ Reportes Completo' : '📊 Reportes Completo'}
+                                                <span className="text-[8px] sm:text-[9px] font-bold opacity-70">({REPORT_SCREEN_IDS.filter(id => currentPerms.includes(id)).length}/{REPORT_SCREEN_IDS.length})</span>
+                                            </button>
+                                        );
+                                    })()}
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm(prev => ({ ...prev, permisosEspeciales: AVAILABLE_SCREENS.map(s => s.id).join(',') }))}
+                                        className="text-[10px] font-bold text-emerald-500 hover:text-teal-500 px-3 py-1.5 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-all active:scale-95"
+                                    >
+                                        ✓ Todos
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm(prev => ({ ...prev, permisosEspeciales: '' }))}
+                                        className="text-[10px] font-bold text-red-600 hover:text-red-700 px-3 py-1.5 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-95"
+                                    >
+                                        ✕ Ninguno
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
                                     {AVAILABLE_SCREENS.map(screen => {
                                         const Icon = screen.icon;
                                         const hasAccess = form.permisosEspeciales.split(',').includes(screen.id);
@@ -1356,7 +1571,7 @@ export default function UsuariosPage() {
                                                 key={screen.id}
                                                 type="button"
                                                 onClick={() => togglePermiso(screen.id)}
-                                                className={`relative flex flex-col items-center justify-center gap-2 p-4 rounded-2xl text-[10px] font-bold border-2 transition-all duration-300 overflow-hidden group ${hasAccess
+                                                className={`relative flex flex-col items-center justify-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl sm:rounded-2xl text-[9px] sm:text-[10px] font-bold border-2 transition-all duration-300 overflow-hidden group ${hasAccess
                                                     ? `${screen.bgColor} ${screen.borderColor} ${screen.textColor} shadow-lg`
                                                     : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300 hover:shadow-md'
                                                     }`}
@@ -1367,11 +1582,11 @@ export default function UsuariosPage() {
                                                 )}
 
                                                 {/* Icon container */}
-                                                <div className={`relative z-10 p-2 rounded-xl transition-all ${hasAccess
+                                                <div className={`relative z-10 p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all ${hasAccess
                                                     ? `bg-gradient-to-br ${screen.color} shadow-lg`
                                                     : 'bg-slate-100 group-hover:bg-slate-200'
                                                     }`}>
-                                                    <Icon className={`h-5 w-5 ${hasAccess ? 'text-white' : 'text-slate-400'}`} />
+                                                    <Icon className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${hasAccess ? 'text-white' : 'text-slate-400'}`} />
                                                 </div>
 
                                                 {/* Label */}
@@ -1389,44 +1604,62 @@ export default function UsuariosPage() {
                                         );
                                     })}
                                 </div>
-
-                                {/* Quick actions */}
-                                <div className="flex gap-2 pt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setForm(prev => ({ ...prev, permisosEspeciales: AVAILABLE_SCREENS.map(s => s.id).join(',') }))}
-                                        className="text-[10px] font-bold text-emerald-500 hover:text-teal-500 px-3 py-1.5 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-all"
-                                    >
-                                        ✓ Seleccionar Todos
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setForm(prev => ({ ...prev, permisosEspeciales: '' }))}
-                                        className="text-[10px] font-bold text-red-600 hover:text-red-700 px-3 py-1.5 bg-red-50 rounded-lg hover:bg-red-100 transition-all"
-                                    >
-                                        ✕ Quitar Todos
-                                    </button>
-                                </div>
                             </div>
 
-                            <div className="flex gap-4 pt-4">
+                            {/* DESKTOP: Buttons inside form */}
+                            <div className="hidden sm:flex gap-3 pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="flex-1 py-4 border border-slate-200 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-all"
+                                    onClick={() => { setShowModal(false); setSearchTerm(''); setModalStep(0); }}
+                                    className="flex-1 py-4 border border-slate-200 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-all text-sm"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="flex-1 py-4 bg-teal-500 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-teal-500 disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-teal-100 transition-all"
+                                    className="flex-1 py-4 bg-teal-500 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-teal-100 transition-all text-sm"
                                 >
                                     {saving && <Loader2 className="h-5 w-5 animate-spin" />}
                                     {editingUser ? "Actualizar" : "Activar Acceso"}
                                 </button>
                             </div>
                         </form>
+
+                        {/* MOBILE: Fixed Bottom Navigation - Outside scrollable form */}
+                        <div className="sm:hidden flex-shrink-0 flex gap-2 px-4 py-3 bg-white border-t border-slate-100 safe-area-bottom">
+                            {modalStep > (editingUser ? 1 : 0) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setModalStep(prev => prev - 1)}
+                                    className="px-4 py-3 border border-slate-200 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-all text-sm"
+                                >
+                                    ← Atrás
+                                </button>
+                            )}
+                            {modalStep < TOTAL_STEPS - 1 ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setModalStep(prev => prev + 1)}
+                                    className="flex-1 py-3 bg-teal-500 text-white rounded-xl font-bold hover:bg-teal-600 transition-all text-sm flex items-center justify-center gap-1"
+                                >
+                                    Siguiente →
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    disabled={saving}
+                                    onClick={() => {
+                                        const form = document.querySelector('form');
+                                        if (form) form.requestSubmit();
+                                    }}
+                                    className="flex-1 py-3 bg-teal-500 text-white rounded-xl font-black uppercase tracking-wider hover:bg-teal-600 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-teal-100 transition-all text-sm"
+                                >
+                                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    {editingUser ? "Actualizar" : "Activar"}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

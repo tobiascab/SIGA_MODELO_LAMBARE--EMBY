@@ -40,6 +40,8 @@ export default function AsignacionRapidaPage() {
     const [searchedSocio, setSearchedSocio] = useState<Socio | null>(null);
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
+    const [adding, setAdding] = useState(false);
+    const [searchType, setSearchType] = useState(''); // '', 'cedula', 'nroSocio', 'nombre'
 
     // Modal para socio ya asignado
     const [showAlreadyAssignedModal, setShowAlreadyAssignedModal] = useState(false);
@@ -147,7 +149,7 @@ export default function AsignacionRapidaPage() {
 
         try {
             const token = localStorage.getItem("token");
-            const response = await axios.get(`/api/socios/buscar?term=${searchTerm}`, {
+            const response = await axios.get(`/api/socios/buscar?term=${searchTerm}${searchType ? `&tipo=${searchType}` : ''}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -164,12 +166,12 @@ export default function AsignacionRapidaPage() {
     };
 
     const handleAddSocio = async () => {
-        if (!miLista || !searchedSocio) return;
-
+        if (!miLista || !searchedSocio || adding) return;
+        setAdding(true);
         try {
             const token = localStorage.getItem("token");
             await axios.post(`/api/asignaciones/${miLista.id}/agregar-socio`,
-                { term: searchedSocio.cedula },
+                { term: searchedSocio.cedula, tipo: 'cedula' },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -247,6 +249,8 @@ export default function AsignacionRapidaPage() {
             } else {
                 setErrorMessage(error.response?.data?.error || error.response?.data?.message || "Error al agregar");
             }
+        } finally {
+            setAdding(false);
         }
     };
 
@@ -333,21 +337,51 @@ export default function AsignacionRapidaPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-white rounded-2xl shadow-xl border border-slate-100 p-4 md:p-5"
                 >
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
                         <div className="p-2 md:p-2.5 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg md:rounded-xl shadow-lg shadow-violet-200">
                             <Plus className="w-4 h-4 md:w-5 md:h-5 text-white" />
                         </div>
                         <div>
                             <h2 className="text-base md:text-lg font-black text-slate-800">Agregar Socio</h2>
-                            <p className="text-xs text-slate-500 hidden md:block">Escribe el número de cédula o número de socio</p>
+                            <p className="text-xs text-slate-500 hidden md:block">Seleccioná cómo querés buscar</p>
                         </div>
+                    </div>
+
+                    {/* Search Type Selector - 3-column grid */}
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-4">
+                        {[
+                            { value: '', label: 'Todos', icon: '🔍' },
+                            { value: 'cedula', label: 'CI', icon: '🪪' },
+                            { value: 'nroSocio', label: 'N° Socio', icon: '🔢' },
+                        ].map((opt) => (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setSearchType(opt.value)}
+                                className={`relative flex flex-col items-center justify-center gap-0.5 py-2.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all border-2 ${searchType === opt.value
+                                    ? 'bg-gradient-to-b from-violet-500 to-purple-600 text-white border-violet-400 shadow-lg shadow-violet-200 scale-[1.02]'
+                                    : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50 active:scale-95'
+                                    }`}
+                            >
+                                <span className="text-base sm:text-sm leading-none">{opt.icon}</span>
+                                <span className="leading-tight">{opt.label}</span>
+                                {searchType === opt.value && (
+                                    <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-1 bg-violet-300 rounded-full" />
+                                )}
+                            </button>
+                        ))}
                     </div>
 
                     <div className="relative">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Buscar socio (CI, N°)..."
+                            inputMode={searchType === 'cedula' || searchType === 'nroSocio' ? 'numeric' : 'text'}
+                            placeholder={
+                                searchType === 'cedula' ? 'Ingresá el N° de Cédula...' :
+                                    searchType === 'nroSocio' ? 'Ingresá el N° de Socio...' :
+                                        'Buscar socio (CI, N° Socio, Nombre)...'
+                            }
                             className="w-full pl-12 pr-4 py-3 md:py-4 bg-slate-50 border-2 border-slate-200 rounded-xl font-bold text-base md:text-lg text-slate-700 placeholder:text-slate-400 placeholder:font-normal focus:border-violet-500 focus:bg-white outline-none transition-all"
                             value={searchTerm}
                             onChange={(e) => {
@@ -419,13 +453,20 @@ export default function AsignacionRapidaPage() {
                                         </div>
                                     </div>
                                     <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
+                                        whileHover={{ scale: adding ? 1 : 1.05 }}
+                                        whileTap={{ scale: adding ? 1 : 0.95 }}
                                         onClick={handleAddSocio}
-                                        className="w-full sm:w-auto px-4 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-black text-sm sm:text-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
+                                        disabled={adding}
+                                        className={`w-full sm:w-auto px-4 sm:px-8 py-3 sm:py-4 rounded-xl font-black text-sm sm:text-lg transition-all flex items-center justify-center gap-2 shadow-lg min-w-[150px] ${adding
+                                            ? 'bg-emerald-400 text-white cursor-wait shadow-emerald-100'
+                                            : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-200'
+                                            }`}
                                     >
-                                        <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
-                                        AGREGAR
+                                        {adding ? (
+                                            <><Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" /> AGREGANDO...</>
+                                        ) : (
+                                            <><Plus className="w-5 h-5 sm:w-6 sm:h-6" /> AGREGAR</>
+                                        )}
                                     </motion.button>
                                 </div>
                             </motion.div>

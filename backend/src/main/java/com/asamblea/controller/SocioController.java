@@ -157,18 +157,42 @@ public class SocioController {
     // SEARCH ENDPOINT
     // -------------------------------------------------------------------------
     @GetMapping("/buscar")
-    public ResponseEntity<List<Map<String, Object>>> buscar(@RequestParam String term) {
+    public ResponseEntity<List<Map<String, Object>>> buscar(
+            @RequestParam String term,
+            @RequestParam(required = false) String tipo) {
         String cleanTerm = term.trim();
         List<Socio> sociosEncontrados;
 
-        List<Socio> exactos = socioRepository.buscarExacto(cleanTerm);
-        if (!exactos.isEmpty()) {
-            sociosEncontrados = exactos;
-        } else {
-            sociosEncontrados = socioRepository.buscarParcial(cleanTerm);
-            if (sociosEncontrados.size() > 50) {
-                sociosEncontrados = sociosEncontrados.subList(0, 50);
+        if (tipo != null && !tipo.isEmpty()) {
+            // Búsqueda específica por tipo
+            switch (tipo) {
+                case "cedula":
+                    sociosEncontrados = socioRepository.buscarPorCedula(cleanTerm);
+                    break;
+                case "nroSocio":
+                    sociosEncontrados = socioRepository.buscarPorNumeroSocio(cleanTerm);
+                    break;
+                case "nombre":
+                    sociosEncontrados = socioRepository.buscarPorNombre(cleanTerm);
+                    break;
+                default:
+                    // Fallback al comportamiento original
+                    List<Socio> exactos = socioRepository.buscarExacto(cleanTerm);
+                    sociosEncontrados = !exactos.isEmpty() ? exactos : socioRepository.buscarParcial(cleanTerm);
+                    break;
             }
+        } else {
+            // Comportamiento original (buscar en todo)
+            List<Socio> exactos = socioRepository.buscarExacto(cleanTerm);
+            if (!exactos.isEmpty()) {
+                sociosEncontrados = exactos;
+            } else {
+                sociosEncontrados = socioRepository.buscarParcial(cleanTerm);
+            }
+        }
+
+        if (sociosEncontrados.size() > 50) {
+            sociosEncontrados = sociosEncontrados.subList(0, 50);
         }
 
         List<Map<String, Object>> response = new ArrayList<>();
@@ -230,19 +254,21 @@ public class SocioController {
     // UPDATE STATUS ENDPOINT
     // -------------------------------------------------------------------------
     @PatchMapping("/{id}/estado")
-    public ResponseEntity<?> actualizarEstado(@PathVariable Long id, @RequestBody Map<String, Boolean> updates,
+    public ResponseEntity<?> actualizarEstado(@PathVariable Long id, @RequestBody Map<String, Object> updates,
             Authentication auth, HttpServletRequest request) {
         return socioRepository.findById(id).map(socio -> {
             if (updates.containsKey("aporteAlDia"))
-                socio.setAporteAlDia(updates.get("aporteAlDia"));
+                socio.setAporteAlDia(Boolean.TRUE.equals(updates.get("aporteAlDia")));
             if (updates.containsKey("solidaridadAlDia"))
-                socio.setSolidaridadAlDia(updates.get("solidaridadAlDia"));
+                socio.setSolidaridadAlDia(Boolean.TRUE.equals(updates.get("solidaridadAlDia")));
             if (updates.containsKey("fondoAlDia"))
-                socio.setFondoAlDia(updates.get("fondoAlDia"));
+                socio.setFondoAlDia(Boolean.TRUE.equals(updates.get("fondoAlDia")));
             if (updates.containsKey("incoopAlDia"))
-                socio.setIncoopAlDia(updates.get("incoopAlDia"));
+                socio.setIncoopAlDia(Boolean.TRUE.equals(updates.get("incoopAlDia")));
             if (updates.containsKey("creditoAlDia"))
-                socio.setCreditoAlDia(updates.get("creditoAlDia"));
+                socio.setCreditoAlDia(Boolean.TRUE.equals(updates.get("creditoAlDia")));
+            if (updates.containsKey("habilitadoVozVoto"))
+                socio.setHabilitadoVozVoto(String.valueOf(updates.get("habilitadoVozVoto")));
             socioRepository.save(socio);
             return ResponseEntity.ok(Map.of("message", "Estado actualizado correctamente", "socio", socio));
         }).orElse(ResponseEntity.notFound().build());
@@ -315,24 +341,51 @@ public class SocioController {
     }
 
     @GetMapping("/buscar-exacto")
-    public ResponseEntity<?> buscarSocio(@RequestParam String term) {
+    public ResponseEntity<?> buscarSocio(
+            @RequestParam String term,
+            @RequestParam(required = false) String tipo) {
         String cleanTerm = term.trim();
+        Optional<Socio> socioOpt = Optional.empty();
 
-        // 1. Buscar por número de socio exacto
-        Optional<Socio> socioOpt = socioRepository.findByNumeroSocio(cleanTerm);
+        if (tipo != null && !tipo.isEmpty()) {
+            // Búsqueda específica por tipo
+            switch (tipo) {
+                case "cedula":
+                    socioOpt = socioRepository.findByCedula(cleanTerm);
+                    break;
+                case "nroSocio":
+                    socioOpt = socioRepository.findByNumeroSocio(cleanTerm);
+                    break;
+                case "nombre":
+                    List<Socio> porNombreTipo = socioRepository.buscarPorNombre(cleanTerm);
+                    if (!porNombreTipo.isEmpty()) {
+                        socioOpt = Optional.of(porNombreTipo.get(0));
+                    }
+                    break;
+                default:
+                    socioOpt = socioRepository.findByNumeroSocio(cleanTerm);
+                    if (socioOpt.isEmpty()) {
+                        socioOpt = socioRepository.findByCedula(cleanTerm);
+                    }
+                    break;
+            }
+        } else {
+            // Comportamiento original: buscar en todo
+            // 1. Buscar por número de socio exacto
+            socioOpt = socioRepository.findByNumeroSocio(cleanTerm);
 
-        // 2. Si no encontró, buscar por cédula
-        if (socioOpt.isEmpty()) {
-            socioOpt = socioRepository.findByCedula(cleanTerm);
-        }
+            // 2. Si no encontró, buscar por cédula
+            if (socioOpt.isEmpty()) {
+                socioOpt = socioRepository.findByCedula(cleanTerm);
+            }
 
-        // 3. Si no encontró y el término tiene al menos 3 caracteres, buscar por nombre
-        // parcial
-        if (socioOpt.isEmpty() && cleanTerm.length() >= 3) {
-            List<Socio> porNombre = socioRepository.buscarParcial(cleanTerm);
-            if (!porNombre.isEmpty()) {
-                // Tomar el primero que coincida
-                socioOpt = Optional.of(porNombre.get(0));
+            // 3. Si no encontró y el término tiene al menos 3 caracteres, buscar por nombre
+            // parcial
+            if (socioOpt.isEmpty() && cleanTerm.length() >= 3) {
+                List<Socio> porNombre = socioRepository.buscarParcial(cleanTerm);
+                if (!porNombre.isEmpty()) {
+                    socioOpt = Optional.of(porNombre.get(0));
+                }
             }
         }
 

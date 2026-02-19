@@ -43,6 +43,7 @@ export default function DirectAssignmentMaster() {
     // INPUTS
     const [searchResponsable, setSearchResponsable] = useState("");
     const [searchSocio, setSearchSocio] = useState("");
+    const [searchType, setSearchType] = useState(''); // '', 'cedula', 'nroSocio', 'nombre'
 
     // UI
     const [loading, setLoading] = useState(false);
@@ -120,7 +121,7 @@ export default function DirectAssignmentMaster() {
         setSocioEncontrado(null);
         try {
             const token = localStorage.getItem("token");
-            const res = await axios.get(`/api/socios/buscar?term=${term}`, {
+            const res = await axios.get(`/api/socios/buscar?term=${term}${searchType ? `&tipo=${searchType}` : ''}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -190,7 +191,7 @@ export default function DirectAssignmentMaster() {
 
             await axios.post(
                 `/api/asignaciones/admin/asignar-a-usuario/${selectedTarget.idUsuario || selectedTarget.id}`,
-                { term: socioEncontrado.numeroSocio },
+                { term: socioEncontrado.numeroSocio, tipo: 'nroSocio' },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -433,13 +434,43 @@ export default function DirectAssignmentMaster() {
                         {/* Buscador de SOCIO */}
                         <div className="relative">
                             <div className="text-xs sm:text-sm font-bold text-slate-400 uppercase mb-1.5 sm:mb-2">Paso 2: Buscar Socio</div>
+
+                            {/* Search Type Selector - 3-column grid */}
+                            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 mb-4">
+                                {[
+                                    { value: '', label: 'Todos', icon: '🔍' },
+                                    { value: 'cedula', label: 'CI', icon: '🪪' },
+                                    { value: 'nroSocio', label: 'N° Socio', icon: '🔢' },
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => setSearchType(opt.value)}
+                                        className={`relative flex flex-col items-center justify-center gap-0.5 py-2.5 sm:py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all border-2 ${searchType === opt.value
+                                            ? 'bg-gradient-to-b from-emerald-500 to-teal-600 text-white border-emerald-400 shadow-lg shadow-emerald-200 scale-[1.02]'
+                                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 active:scale-95'
+                                            }`}
+                                    >
+                                        <span className="text-base sm:text-sm leading-none">{opt.icon}</span>
+                                        <span className="leading-tight">{opt.label}</span>
+                                        {searchType === opt.value && (
+                                            <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-1 bg-emerald-300 rounded-full" />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+
                             <div className="relative">
                                 <Search className={`absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-8 sm:w-8 transition-colors ${searchingSocio ? 'text-emerald-500 animate-pulse' : 'text-slate-300'}`} />
                                 <input
                                     ref={socioInputRef}
                                     type="text"
-                                    inputMode="numeric"
-                                    placeholder="Cédula o N° Socio..."
+                                    inputMode={searchType === 'cedula' || searchType === 'nroSocio' ? 'numeric' : 'text'}
+                                    placeholder={
+                                        searchType === 'cedula' ? 'Ingresá el N° de Cédula...' :
+                                            searchType === 'nroSocio' ? 'Ingresá el N° de Socio...' :
+                                                'Cédula o N° Socio...'
+                                    }
                                     className="w-full pl-10 sm:pl-16 pr-10 sm:pr-4 py-3.5 sm:py-6 bg-slate-50 border-2 border-slate-100 focus:border-emerald-500 focus:bg-white rounded-xl sm:rounded-2xl text-xl sm:text-3xl md:text-4xl font-black text-slate-800 placeholder:text-slate-300 outline-none transition-all shadow-inner"
                                     value={searchSocio}
                                     onChange={e => setSearchSocio(e.target.value)}

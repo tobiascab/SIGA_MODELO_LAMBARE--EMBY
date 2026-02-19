@@ -74,9 +74,18 @@ export default function ReporteOperadoresPage() {
     const [selectedOperador, setSelectedOperador] = useState<Operador | null>(null);
     const [listaDetalle, setListaDetalle] = useState<ListaDetalle | null>(null);
     const [loadingDetalle, setLoadingDetalle] = useState(false);
+    const [coopNombre, setCoopNombre] = useState('Sistema de Asambleas');
+    const [coopLogo, setCoopLogo] = useState('/logo.png');
 
     useEffect(() => {
         loadOperadores();
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data?.nombre) setCoopNombre(data.nombre);
+                if (data?.logo) setCoopLogo(data.logo);
+            })
+            .catch(() => { });
     }, []);
 
     const loadOperadores = async () => {
@@ -193,7 +202,7 @@ export default function ReporteOperadoresPage() {
         doc.rect(0, 40, pageWidth, 2, 'F');
 
         // Intentar cargar logo
-        const logoUrl = '/logo.png';
+        const logoUrl = coopLogo;
         try {
             const img = new Image();
             img.crossOrigin = 'anonymous';
@@ -217,7 +226,7 @@ export default function ReporteOperadoresPage() {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
-        doc.text('COOPERATIVA MULTIACTIVA LAMBARÉ LTDA.', 50, 22);
+        doc.text(coopNombre.toUpperCase(), 50, 22);
 
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');

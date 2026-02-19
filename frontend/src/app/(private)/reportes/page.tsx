@@ -44,6 +44,10 @@ export default function IntelligenceHubPage() {
 
     const [loading, setLoading] = useState(true);
 
+    // Cooperativa data for reports
+    const [coopNombre, setCoopNombre] = useState('Sistema de Asambleas');
+    const [coopLogo, setCoopLogo] = useState('/logo.png');
+
     // --- COLORES ---
     const COLORS = {
         primary: '#10b981', // Emerald 500
@@ -96,6 +100,15 @@ export default function IntelligenceHubPage() {
         };
 
         loadMasterData();
+
+        // Load cooperativa data
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data?.nombre) setCoopNombre(data.nombre);
+                if (data?.logo) setCoopLogo(data.logo);
+            })
+            .catch(() => { });
     }, []);
 
     // --- CARGAR USUARIOS SIN CARGA ---
@@ -244,7 +257,7 @@ export default function IntelligenceHubPage() {
         // --- RENDER HEADER ---
         // 1. Logo
         try {
-            const logoImg = await loadImage('/images/logo_coop.png');
+            const logoImg = await loadImage(coopLogo);
             if (logoImg.width > 0) {
                 const logoWidth = 35; // Un poco más pequeño para ser elegante
                 const logoHeight = (logoImg.height * logoWidth) / logoImg.width;
@@ -258,7 +271,7 @@ export default function IntelligenceHubPage() {
         doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
-        doc.text("COOPERATIVA MULTIACTIVA LAMBARÉ LTDA.", centerX, 20, { align: 'center' });
+        doc.text(coopNombre.toUpperCase(), centerX, 20, { align: 'center' });
 
         doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
@@ -495,7 +508,7 @@ export default function IntelligenceHubPage() {
             doc.setPage(i);
             doc.setFontSize(8);
             doc.setTextColor(150);
-            doc.text(`Cooperativa Multiactiva Lambaré Ltda. - Sistema SIGA`, 14, doc.internal.pageSize.getHeight() - 10);
+            doc.text(`${coopNombre} - Sistema SIGA`, 14, doc.internal.pageSize.getHeight() - 10);
             doc.text(`Pag. ${i}/${pageCount}`, pageWidth - 20, doc.internal.pageSize.getHeight() - 10, { align: 'right' });
         }
 

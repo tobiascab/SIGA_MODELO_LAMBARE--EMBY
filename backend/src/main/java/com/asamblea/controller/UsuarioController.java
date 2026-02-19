@@ -2,6 +2,9 @@ package com.asamblea.controller;
 
 import com.asamblea.model.Socio;
 import com.asamblea.model.Usuario;
+import com.asamblea.model.ListaAsignacion;
+import com.asamblea.repository.AsignacionRepository;
+import com.asamblea.repository.AsistenciaRepository;
 import com.asamblea.repository.SocioRepository;
 import com.asamblea.repository.SucursalRepository;
 import com.asamblea.repository.UsuarioRepository;
@@ -29,6 +32,9 @@ public class UsuarioController {
     private final com.asamblea.service.LogAuditoriaService auditService;
     private final com.asamblea.service.ArizarService arizarService;
     private final com.asamblea.service.PresenciaService presenciaService;
+    private final AsignacionRepository asignacionRepository;
+    private final AsistenciaRepository asistenciaRepository;
+    private final com.asamblea.repository.ListaAsignacionRepository listaAsignacionRepository;
 
     // Buscar unificado (Usuarios + Socios) con FUSIÓN INTELIGENTE
     // Buscar unificado (Usuarios + Socios) con FUSIÓN INTELIGENTE
@@ -277,6 +283,11 @@ public class UsuarioController {
 
             map.put("passwordVisible", u.getPasswordVisible()); // Contraseña visible para super admins
             map.put("tipo", "USUARIO");
+            map.put("cargo", u.getCargo());
+            map.put("meta", u.getMeta());
+            map.put("isDirigente", Boolean.TRUE.equals(u.getIsDirigente()));
+            map.put("dirigenteId", u.getDirigente() != null ? u.getDirigente().getId() : null);
+            map.put("dirigenteNombre", u.getDirigente() != null ? u.getDirigente().getNombreCompleto() : null);
 
             if (u.getSocio() != null) {
                 map.put("cedula", u.getSocio().getCedula());
@@ -519,6 +530,14 @@ public class UsuarioController {
                 }
             }
 
+            // Soporte para campo isDirigente
+            if (data.containsKey("isDirigente")) {
+                usuario.setIsDirigente(data.get("isDirigente") != null && (Boolean) data.get("isDirigente"));
+                if (usuario.getIsDirigente() && (usuario.getMeta() == null || usuario.getMeta() < 100)) {
+                    usuario.setMeta(100);
+                }
+            }
+
             usuarioRepository.save(usuario);
 
             auditService.registrar(
@@ -745,6 +764,592 @@ public class UsuarioController {
         }).collect(Collectors.toList());
 
         return ResponseEntity.ok(result);
+    }
+
+    // ====== ENDPOINTS DE DIRIGENTES Y PUNTEROS ======
+
+    /**
+     * Toggle estado dirigente de un usuario.
+     * Solo admins pueden cambiar esto.
+     */
+    @PutMapping("/{id}/toggle-dirigente")
+    public ResponseEntity<?> toggleDirigente(@PathVariable Long id, Authentication auth, HttpServletRequest request) {
+        try {
+            Optional<Usuario> opt = usuarioRepository.findById(id);
+            if (opt.isEmpty()) return ResponseEntity.notFound().build();
+
+            Usuario usuario = opt.get();
+            boolean newValue = !Boolean.TRUE.equals(usuario.getIsDirigente());
+            usuario.setIsDirigente(newValue);
+
+            // Si se activa como dirigente, meta mínima 100
+            if (newValue && (usuario.getMeta() == null || usuario.getMeta() < 100)) {
+                usuario.setMeta(100);
+            }
+
+            usuarioRepository.save(usuario);
+
+            auditService.registrar(
+                    "USUARIOS",
+                    newValue ? "ACTIVAR_DIRIGENTE" : "DESACTIVAR_DIRIGENTE",
+                    String.format("%s dirigente para '%s'", newValue ? "Activó" : "Desactivó", usuario.getUsername()),
+                    auth.getName(),
+                    request.getRemoteAddr());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", newValue ? "Dirigente activado" : "Dirigente desactivado",
+                    "isDirigente", newValue,
+                    "meta", usuario.getMeta()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Crear puntero desde un socio de la lista del dirigente.
+     * El dirigente selecciona un socio de su lista y lo habilita como puntero.
+     */
+    @PostMapping("/crear-puntero")
+    public ResponseEntity<?> crearPuntero(@RequestBody Map<String, Object> data, Authentication auth,
+            HttpServletRequest request) {
+        try {
+            Long socioId = Long.parseLong(data.get("socioId").toString());
+            Long dirigenteId = Long.parseLong(data.get("dirigenteId").toString());
+
+            // Verificar que el dirigente existe y es dirigente o SUPER_ADMIN
+            Optional<Usuario> dirOpt = usuarioRepository.findById(dirigenteId);
+            if (dirOpt.isEmpty() || (!Boolean.TRUE.equals(dirOpt.get().getIsDirigente()) && dirOpt.get().getRol() != Usuario.Rol.SUPER_ADMIN)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El usuario no es un dirigente válido"));
+            }
+
+            // Verificar que el socio existe
+            Optional<Socio> socioOpt = socioRepository.findById(socioId);
+            if (socioOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Socio no encontrado"));
+            }
+
+            Socio socio = socioOpt.get();
+
+            // Verificar que no tenga ya un usuario creado
+        Optional<Usuario> existingUser = usuarioRepository.findBySocioId(socioId);
+        if (existingUser.isPresent()) {
+            Usuario existente = existingUser.get();
+            // Si es un puntero inactivo, reactivarlo automáticamente
+            if (existente.getRol() == Usuario.Rol.PUNTERO && !existente.isActivo()) {
+                existente.setActivo(true);
+                existente.setDirigente(dirOpt.get());
+                existente.setLoginHabilitado(false);
+                usuarioRepository.save(existente);
+
+                auditService.registrar(
+                        "USUARIOS",
+                        "REACTIVAR_PUNTERO",
+                        String.format("Dirigente '%s' reactivó puntero '%s' (CI: %s)",
+                                dirOpt.get().getUsername(), existente.getNombreCompleto(), existente.getUsername()),
+                        auth.getName(),
+                        request.getRemoteAddr());
+
+                return ResponseEntity.ok(Map.of(
+                        "message", "Puntero reactivado exitosamente. Debe habilitar su inicio de sesión desde Gestión de Punteros.",
+                        "username", existente.getUsername(),
+                        "password", existente.getUsername(),
+                        "punteroId", existente.getId(),
+                        "nombreCompleto", existente.getNombreCompleto(),
+                        "loginHabilitado", false,
+                        "reactivado", true));
+            }
+            return ResponseEntity.badRequest().body(Map.of("error",
+                    "Este socio ya tiene acceso al sistema como: " + existente.getUsername()));
+        }
+
+            // Crear el usuario puntero
+            String cedula = socio.getCedula() != null ? socio.getCedula().replaceAll("\\D", "") : "";
+            if (cedula.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "El socio no tiene cédula registrada. No se puede crear el acceso."));
+            }
+
+            // Verificar username único
+            if (usuarioRepository.findByUsername(cedula).isPresent()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Ya existe un usuario con ese número de cédula como username"));
+            }
+
+            Usuario puntero = new Usuario();
+            puntero.setUsername(cedula);
+            puntero.setPassword(passwordEncoder.encode(cedula));
+            puntero.setPasswordVisible(cedula);
+            puntero.setNombreCompleto(socio.getNombreCompleto());
+            puntero.setRol(Usuario.Rol.PUNTERO);
+            puntero.setActivo(true);
+            puntero.setLoginHabilitado(false); // No puede iniciar sesión hasta que el dirigente lo habilite
+            puntero.setMeta(50); // Meta de puntero: 50
+            puntero.setSocio(socio);
+            puntero.setDirigente(dirOpt.get());
+            puntero.setPermisosEspeciales("dashboard,asignaciones,asignacion-rapida,mi-reporte,configuracion");
+            puntero.setRequiresPasswordChange(true);
+
+            // Heredar sucursal del dirigente o del socio
+            if (dirOpt.get().getSucursal() != null) {
+                puntero.setSucursal(dirOpt.get().getSucursal());
+            } else if (socio.getSucursal() != null) {
+                puntero.setSucursal(socio.getSucursal());
+            }
+
+            usuarioRepository.save(puntero);
+
+            auditService.registrar(
+                    "USUARIOS",
+                    "CREAR_PUNTERO",
+                    String.format("Dirigente '%s' creó puntero '%s' (CI: %s) - Login pendiente de habilitación",
+                            dirOpt.get().getUsername(), socio.getNombreCompleto(), cedula),
+                    auth.getName(),
+                    request.getRemoteAddr());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Puntero registrado exitosamente. Debe habilitar su inicio de sesión desde Gestión de Punteros.",
+                    "username", cedula,
+                    "password", cedula,
+                    "punteroId", puntero.getId(),
+                    "nombreCompleto", socio.getNombreCompleto(),
+                    "loginHabilitado", false));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Eliminar (desactivar) un puntero.
+     * Reasigna las listas del puntero al dirigente padre y desactiva la cuenta.
+     */
+    @DeleteMapping("/eliminar-puntero/{punteroId}")
+    public ResponseEntity<?> eliminarPuntero(@PathVariable Long punteroId, Authentication auth,
+            HttpServletRequest request) {
+        try {
+            Optional<Usuario> punteroOpt = usuarioRepository.findById(punteroId);
+            if (punteroOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Puntero no encontrado"));
+            }
+
+            Usuario puntero = punteroOpt.get();
+
+            // Verificar que sea un puntero
+            if (puntero.getRol() != Usuario.Rol.PUNTERO) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El usuario no es un puntero"));
+            }
+
+            String nombrePuntero = puntero.getNombreCompleto();
+            Long dirigenteId = puntero.getDirigente() != null ? puntero.getDirigente().getId() : null;
+
+            // Reasignar las listas del puntero al dirigente padre
+            if (dirigenteId != null) {
+                List<com.asamblea.model.ListaAsignacion> listasDelPuntero = listaAsignacionRepository.findByUsuarioId(punteroId);
+                Usuario dirigente = puntero.getDirigente();
+                for (com.asamblea.model.ListaAsignacion lista : listasDelPuntero) {
+                    lista.setUsuario(dirigente);
+                    listaAsignacionRepository.save(lista);
+                }
+            }
+
+            // Desactivar el puntero (no eliminamos para preservar historial)
+            puntero.setActivo(false);
+            usuarioRepository.save(puntero);
+
+            auditService.registrar(
+                    "USUARIOS",
+                    "ELIMINAR_PUNTERO",
+                    String.format("Se eliminó (desactivó) al puntero '%s' (ID: %d)", nombrePuntero, punteroId),
+                    auth.getName(),
+                    request.getRemoteAddr());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Puntero eliminado exitosamente",
+                    "punteroId", punteroId,
+                    "nombrePuntero", nombrePuntero));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Reactivar un puntero previamente eliminado (desactivado).
+     */
+    @PutMapping("/reactivar-puntero/{punteroId}")
+    public ResponseEntity<?> reactivarPuntero(@PathVariable Long punteroId, Authentication auth,
+            HttpServletRequest request) {
+        try {
+            Optional<Usuario> punteroOpt = usuarioRepository.findById(punteroId);
+            if (punteroOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Puntero no encontrado"));
+            }
+
+            Usuario puntero = punteroOpt.get();
+            if (puntero.getRol() != Usuario.Rol.PUNTERO) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El usuario no es un puntero"));
+            }
+
+            puntero.setActivo(true);
+            usuarioRepository.save(puntero);
+
+            auditService.registrar(
+                    "USUARIOS",
+                    "REACTIVAR_PUNTERO",
+                    String.format("Se reactivó al puntero '%s' (ID: %d)", puntero.getNombreCompleto(), punteroId),
+                    auth.getName(),
+                    request.getRemoteAddr());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Puntero reactivado exitosamente",
+                    "punteroId", punteroId,
+                    "nombrePuntero", puntero.getNombreCompleto()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Obtener los punteros de un dirigente con sus estadísticas.
+     */
+    @GetMapping("/{dirigenteId}/punteros")
+    public ResponseEntity<?> getPunteros(@PathVariable Long dirigenteId) {
+        try {
+            List<Usuario> punteros = usuarioRepository.findByDirigenteId(dirigenteId);
+
+            List<Map<String, Object>> result = punteros.stream().map(p -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", p.getId());
+                map.put("username", p.getUsername());
+                map.put("nombreCompleto", p.getNombreCompleto());
+                map.put("meta", p.getMeta());
+                map.put("activo", p.isActivo());
+                map.put("fotoPerfil", p.getFotoPerfil());
+                map.put("lastLogin", p.getLastLogin());
+                map.put("loginHabilitado", Boolean.TRUE.equals(p.getLoginHabilitado()));
+
+                // Contar asignaciones del puntero
+                long totalAsignados = listaAsignacionRepository.findByUsuarioId(p.getId())
+                        .stream()
+                        .mapToLong(lista -> asignacionRepository.countByListaAsignacionId(lista.getId()))
+                        .sum();
+
+                map.put("totalAsignados", totalAsignados);
+                map.put("cumplioMeta", totalAsignados >= (p.getMeta() != null ? p.getMeta() : 50));
+                double porcentaje = p.getMeta() != null && p.getMeta() > 0
+                        ? (totalAsignados * 100.0 / p.getMeta())
+                        : 0;
+                map.put("porcentajeMeta", Math.round(porcentaje * 10.0) / 10.0);
+
+                return map;
+            }).collect(Collectors.toList());
+
+            // Calcular totales de punteros
+            long totalPunterosActivos = punteros.stream().filter(Usuario::isActivo).count();
+            long totalTraidosPorPunteros = result.stream().mapToLong(m -> (Long) m.get("totalAsignados")).sum();
+            long punterosQueCumplieron = result.stream().filter(m -> (Boolean) m.get("cumplioMeta")).count();
+
+            // Calcular total propio del dirigente (sus propias listas)
+            long totalPropiosDirigente = listaAsignacionRepository.findByUsuarioId(dirigenteId)
+                    .stream()
+                    .mapToLong(lista -> asignacionRepository.countByListaAsignacionId(lista.getId()))
+                    .sum();
+
+            // Total combinado = propios del dirigente + traídos por punteros
+            long totalCombinado = totalPropiosDirigente + totalTraidosPorPunteros;
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("punteros", result);
+            response.put("totalPunteros", totalPunterosActivos);
+            response.put("totalTraidosPorPunteros", totalTraidosPorPunteros);
+            response.put("punterosQueCumplieron", punterosQueCumplieron);
+            response.put("totalPropiosDirigente", totalPropiosDirigente);
+            response.put("totalCombinado", totalCombinado);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Habilitar/Deshabilitar inicio de sesión de un puntero.
+     * Solo el dirigente dueño del puntero puede cambiar esto.
+     */
+    @PutMapping("/{punteroId}/toggle-login")
+    public ResponseEntity<?> toggleLoginPuntero(@PathVariable Long punteroId, Authentication auth,
+            HttpServletRequest request) {
+        try {
+            Optional<Usuario> punteroOpt = usuarioRepository.findById(punteroId);
+            if (punteroOpt.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Puntero no encontrado"));
+            }
+
+            Usuario puntero = punteroOpt.get();
+            if (puntero.getRol() != Usuario.Rol.PUNTERO) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El usuario no es un puntero"));
+            }
+
+            boolean newValue = !Boolean.TRUE.equals(puntero.getLoginHabilitado());
+            puntero.setLoginHabilitado(newValue);
+            usuarioRepository.save(puntero);
+
+            auditService.registrar(
+                    "USUARIOS",
+                    newValue ? "HABILITAR_LOGIN_PUNTERO" : "DESHABILITAR_LOGIN_PUNTERO",
+                    String.format("%s inicio de sesión para puntero '%s' (CI: %s)",
+                            newValue ? "Habilitó" : "Deshabilitó", puntero.getNombreCompleto(), puntero.getUsername()),
+                    auth.getName(),
+                    request.getRemoteAddr());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", newValue ? "Inicio de sesión habilitado" : "Inicio de sesión deshabilitado",
+                    "loginHabilitado", newValue,
+                    "punteroId", punteroId,
+                    "nombreCompleto", puntero.getNombreCompleto()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Obtener socios asignados a un puntero con estado de asistencia
+     */
+    @GetMapping("/{punteroId}/puntero-socios")
+    public ResponseEntity<?> getPunteroSocios(@PathVariable Long punteroId) {
+        try {
+            List<com.asamblea.model.ListaAsignacion> listas = listaAsignacionRepository.findByUsuarioId(punteroId);
+            
+            List<Map<String, Object>> socios = new java.util.ArrayList<>();
+            java.util.Set<Long> vistos = new java.util.HashSet<>();
+            
+            for (var lista : listas) {
+                var asignaciones = asignacionRepository.findByListaAsignacionId(lista.getId());
+                for (var asig : asignaciones) {
+                    var socio = asig.getSocio();
+                    if (socio != null && vistos.add(socio.getId())) {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("id", socio.getId());
+                        map.put("nombreCompleto", socio.getNombreCompleto());
+                        map.put("cedula", socio.getCedula());
+                        map.put("numeroSocio", socio.getNumeroSocio());
+                        map.put("telefono", socio.getTelefono());
+                        // Verificar si tiene asistencia
+                        boolean asistio = asistenciaRepository.existsBySocioId(socio.getId());
+                        map.put("asistio", asistio);
+                        map.put("listaOrigen", lista.getNombre());
+                        socios.add(map);
+                    }
+                }
+            }
+            
+            long totalSocios = socios.size();
+            long totalAsistieron = socios.stream().filter(s -> (Boolean) s.get("asistio")).count();
+            double porcentaje = totalSocios > 0 ? Math.round(totalAsistieron * 1000.0 / totalSocios) / 10.0 : 0;
+            
+            return ResponseEntity.ok(Map.of(
+                "socios", socios,
+                "totalSocios", totalSocios,
+                "totalAsistieron", totalAsistieron,
+                "porcentajeAsistencia", porcentaje
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Obtener socios de la lista del dirigente que NO están aún asignados al puntero.
+     * Permite al dirigente ver qué socios puede delegar a su puntero.
+     */
+    @GetMapping("/{punteroId}/socios-disponibles")
+    public ResponseEntity<?> getSociosDisponiblesParaPuntero(@PathVariable Long punteroId) {
+        try {
+            // Verificar que el puntero existe
+            Usuario puntero = usuarioRepository.findById(punteroId)
+                    .orElseThrow(() -> new RuntimeException("Puntero no encontrado"));
+
+            if (puntero.getRol() != Usuario.Rol.PUNTERO || puntero.getDirigente() == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El usuario no es un puntero válido con dirigente asignado"));
+            }
+
+            Long dirigenteId = puntero.getDirigente().getId();
+
+            // Obtener todos los socios asignados al DIRIGENTE
+            List<com.asamblea.model.ListaAsignacion> listasDirigente = listaAsignacionRepository.findByUsuarioId(dirigenteId);
+            java.util.Set<Long> sociosDelDirigente = new java.util.LinkedHashSet<>();
+            java.util.Map<Long, Socio> socioMap = new java.util.HashMap<>();
+
+            for (var lista : listasDirigente) {
+                var asignaciones = asignacionRepository.findByListaAsignacionId(lista.getId());
+                for (var asig : asignaciones) {
+                    if (asig.getSocio() != null) {
+                        sociosDelDirigente.add(asig.getSocio().getId());
+                        socioMap.put(asig.getSocio().getId(), asig.getSocio());
+                    }
+                }
+            }
+
+            // Obtener socios ya asignados al PUNTERO
+            List<com.asamblea.model.ListaAsignacion> listasPuntero = listaAsignacionRepository.findByUsuarioId(punteroId);
+            java.util.Set<Long> sociosDelPuntero = new java.util.HashSet<>();
+            for (var lista : listasPuntero) {
+                var asignaciones = asignacionRepository.findByListaAsignacionId(lista.getId());
+                for (var asig : asignaciones) {
+                    if (asig.getSocio() != null) {
+                        sociosDelPuntero.add(asig.getSocio().getId());
+                    }
+                }
+            }
+
+            // Filtrar: socios del dirigente que NO están en la lista del puntero
+            List<Map<String, Object>> disponibles = new java.util.ArrayList<>();
+            for (Long socioId : sociosDelDirigente) {
+                if (!sociosDelPuntero.contains(socioId)) {
+                    Socio s = socioMap.get(socioId);
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", s.getId());
+                    map.put("nombreCompleto", s.getNombreCompleto());
+                    map.put("cedula", s.getCedula());
+                    map.put("numeroSocio", s.getNumeroSocio());
+                    map.put("telefono", s.getTelefono());
+                    disponibles.add(map);
+                }
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "disponibles", disponibles,
+                    "totalDisponibles", disponibles.size(),
+                    "totalEnPuntero", sociosDelPuntero.size(),
+                    "totalDelDirigente", sociosDelDirigente.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Asignar socios de la lista del dirigente a un puntero.
+     * El dirigente delega socios de su lista para que el puntero los gestione.
+     */
+    @PostMapping("/{punteroId}/asignar-socios-puntero")
+    public ResponseEntity<?> asignarSociosAPuntero(
+            @PathVariable Long punteroId,
+            @RequestBody Map<String, Object> data,
+            Authentication auth,
+            HttpServletRequest request) {
+        try {
+            // Verificar puntero
+            Usuario puntero = usuarioRepository.findById(punteroId)
+                    .orElseThrow(() -> new RuntimeException("Puntero no encontrado"));
+
+            if (puntero.getRol() != Usuario.Rol.PUNTERO) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El usuario no es un puntero"));
+            }
+
+            // Obtener la lista de socioIds a asignar
+            @SuppressWarnings("unchecked")
+            List<Number> socioIds = (List<Number>) data.get("socioIds");
+            if (socioIds == null || socioIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Debe seleccionar al menos un socio"));
+            }
+
+            // Obtener o crear la lista de asignación del puntero
+            List<com.asamblea.model.ListaAsignacion> listasPuntero = listaAsignacionRepository.findByUsuarioId(punteroId);
+            com.asamblea.model.ListaAsignacion listaPuntero;
+
+            if (listasPuntero.isEmpty()) {
+                // Crear una lista para el puntero
+                listaPuntero = new com.asamblea.model.ListaAsignacion();
+                listaPuntero.setNombre("Lista de " + puntero.getNombreCompleto());
+                listaPuntero.setDescripcion("Socios asignados por el dirigente");
+                listaPuntero.setActiva(true);
+                listaPuntero.setUsuario(puntero);
+                listaAsignacionRepository.save(listaPuntero);
+            } else {
+                listaPuntero = listasPuntero.get(0);
+            }
+
+            int asignados = 0;
+            int yaExistentes = 0;
+            Usuario asignadoPor = usuarioRepository.findByUsername(auth.getName()).orElse(null);
+
+            for (Number socioIdNum : socioIds) {
+                Long socioId = socioIdNum.longValue();
+
+                // Verificar si ya está asignado al puntero
+                if (asignacionRepository.existsByListaAsignacionIdAndSocioId(listaPuntero.getId(), socioId)) {
+                    yaExistentes++;
+                    continue;
+                }
+
+                // Buscar el socio
+                Socio socio = socioRepository.findById(socioId).orElse(null);
+                if (socio == null) continue;
+
+                // Crear la asignación
+                com.asamblea.model.Asignacion asignacion = new com.asamblea.model.Asignacion();
+                asignacion.setListaAsignacion(listaPuntero);
+                asignacion.setSocio(socio);
+                asignacion.setAsignadoPor(asignadoPor);
+                asignacionRepository.save(asignacion);
+                asignados++;
+            }
+
+            auditService.registrar(
+                    "PUNTEROS",
+                    "ASIGNAR_SOCIOS_PUNTERO",
+                    String.format("Dirigente asignó %d socios al puntero '%s' (ID: %d)",
+                            asignados, puntero.getNombreCompleto(), punteroId),
+                    auth.getName(),
+                    request.getRemoteAddr());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", String.format("%d socio(s) asignado(s) al puntero exitosamente", asignados),
+                    "asignados", asignados,
+                    "yaExistentes", yaExistentes
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Desasignar un socio de un puntero.
+     * El dirigente puede remover socios de la lista de un puntero.
+     */
+    @DeleteMapping("/{punteroId}/desasignar-socio/{socioId}")
+    public ResponseEntity<?> desasignarSocioDePuntero(
+            @PathVariable Long punteroId,
+            @PathVariable Long socioId,
+            Authentication auth,
+            HttpServletRequest request) {
+        try {
+            List<com.asamblea.model.ListaAsignacion> listasPuntero = listaAsignacionRepository.findByUsuarioId(punteroId);
+
+            boolean removed = false;
+            for (var lista : listasPuntero) {
+                var asigOpt = asignacionRepository.findByListaAsignacionIdAndSocioId(lista.getId(), socioId);
+                if (asigOpt.isPresent()) {
+                    asignacionRepository.delete(asigOpt.get());
+                    removed = true;
+                    break;
+                }
+            }
+
+            if (!removed) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El socio no está asignado a este puntero"));
+            }
+
+            auditService.registrar(
+                    "PUNTEROS",
+                    "DESASIGNAR_SOCIO_PUNTERO",
+                    String.format("Se removió socio ID %d del puntero ID %d", socioId, punteroId),
+                    auth.getName(),
+                    request.getRemoteAddr());
+
+            return ResponseEntity.ok(Map.of("message", "Socio removido del puntero exitosamente"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
 }

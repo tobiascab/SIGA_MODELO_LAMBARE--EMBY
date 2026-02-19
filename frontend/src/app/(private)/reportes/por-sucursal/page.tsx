@@ -32,6 +32,8 @@ export default function ReportePorSucursalPage() {
     const [user, setUser] = useState<any>(null);
     const [sucursales, setSucursales] = useState<any[]>([]);
     const [selectedSucursal, setSelectedSucursal] = useState<string>("");
+    const [coopNombre, setCoopNombre] = useState('Sistema de Asambleas');
+    const [coopLogo, setCoopLogo] = useState('/logo.png');
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
@@ -40,6 +42,13 @@ export default function ReportePorSucursalPage() {
             setUser(parsedUser);
             cargarSucursales();
         }
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data?.nombre) setCoopNombre(data.nombre);
+                if (data?.logo) setCoopLogo(data.logo);
+            })
+            .catch(() => { });
     }, []);
 
     const cargarSucursales = async () => {
@@ -125,7 +134,7 @@ export default function ReportePorSucursalPage() {
         // Cargar logo
         let logoBase64 = '';
         try {
-            const response = await fetch('/logo-cooperativa.png');
+            const response = await fetch(coopLogo);
             const blob = await response.blob();
             logoBase64 = await new Promise((resolve) => {
                 const reader = new FileReader();
@@ -147,7 +156,7 @@ export default function ReportePorSucursalPage() {
         doc.setFontSize(22);
         doc.setTextColor(255, 255, 255);
         doc.setFont("helvetica", "bold");
-        doc.text("COOPERATIVA MULTIACTIVA LAMBARÉ LTDA.", 50, 18);
+        doc.text(coopNombre.toUpperCase(), 50, 18);
 
         doc.setFontSize(11);
         doc.setFont("helvetica", "normal");
@@ -189,11 +198,11 @@ export default function ReportePorSucursalPage() {
             cedula: item.cedula,
             socio: item.socioNombre,
             nro: item.socioNro,
-            fechaAsig: item.fechaAsignacion ? new Date(item.fechaAsignacion).toLocaleString():'-',
-            fechaIngreso: item.fechaHora ? new Date(item.fechaHora).toLocaleString():'-',
+            fechaAsig: item.fechaAsignacion ? new Date(item.fechaAsignacion).toLocaleString() : '-',
+            fechaIngreso: item.fechaHora ? new Date(item.fechaHora).toLocaleString() : '-',
             operador: item.operador,
             estado: item.estado,
-            condicion: item.vozVoto === 'HABILITADO' ? 'VOZ Y VOTO':'SOLO VOZ',
+            condicion: item.vozVoto === 'HABILITADO' ? 'VOZ Y VOTO' : 'SOLO VOZ',
             rawStatus: item.vozVoto,
             rawPresence: item.estado
         }));
@@ -260,10 +269,10 @@ export default function ReportePorSucursalPage() {
             "Nro Socio": item.socioNro,
             "Nombre Completo": item.socioNombre,
             "Sucursal": item.sucursal,
-            "Fecha Asignación": item.fechaAsignacion ? new Date(item.fechaAsignacion).toLocaleString():'-',
-            "Fecha Ingreso": item.fechaHora ? new Date(item.fechaHora).toLocaleString():'-',
+            "Fecha Asignación": item.fechaAsignacion ? new Date(item.fechaAsignacion).toLocaleString() : '-',
+            "Fecha Ingreso": item.fechaHora ? new Date(item.fechaHora).toLocaleString() : '-',
             "Estado": item.estado,
-            "Condición": item.vozVoto === 'HABILITADO' ? 'VOZ Y VOTO':'SOLO VOZ',
+            "Condición": item.vozVoto === 'HABILITADO' ? 'VOZ Y VOTO' : 'SOLO VOZ',
             "Operador": item.operador
         })));
 
@@ -363,7 +372,7 @@ export default function ReportePorSucursalPage() {
                     <div className="animate-spin w-12 h-12 border-4 border-violet-500 border-t-transparent rounded-full mx-auto"></div>
                     <p className="text-slate-500 mt-4">Cargando datos...</p>
                 </div>
-            ):selectedSucursal && data.length> 0 ? (
+            ) : selectedSucursal && data.length > 0 ? (
                 <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
                     <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-violet-50 to-purple-50">
                         <h3 className="font-bold text-slate-800">
@@ -401,7 +410,7 @@ export default function ReportePorSucursalPage() {
                                         <td className="px-4 py-4 text-center">
                                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.estado === 'PRESENTE'
                                                 ? 'bg-emerald-100 text-teal-500'
-                                               :'bg-red-100 text-red-700'
+                                                : 'bg-red-100 text-red-700'
                                                 }`}>
                                                 {item.estado}
                                             </span>
@@ -409,9 +418,9 @@ export default function ReportePorSucursalPage() {
                                         <td className="px-4 py-4 text-center">
                                             <span className={`px-3 py-1 rounded-full text-xs font-bold ${item.vozVoto === 'HABILITADO'
                                                 ? 'bg-blue-100 text-blue-700'
-                                               :'bg-amber-100 text-amber-700'
+                                                : 'bg-amber-100 text-amber-700'
                                                 }`}>
-                                                {item.vozVoto === 'HABILITADO' ? 'VOZ Y VOTO':'SOLO VOZ'}
+                                                {item.vozVoto === 'HABILITADO' ? 'VOZ Y VOTO' : 'SOLO VOZ'}
                                             </span>
                                         </td>
                                     </tr>
@@ -420,12 +429,12 @@ export default function ReportePorSucursalPage() {
                         </table>
                     </div>
                 </div>
-            ):selectedSucursal ? (
+            ) : selectedSucursal ? (
                 <div className="text-center py-12 bg-white rounded-3xl shadow-lg">
                     <Building2 className="w-16 h-16 mx-auto text-slate-300 mb-4" />
                     <p className="text-slate-500">No hay socios asignados en esta sucursal</p>
                 </div>
-            ):(
+            ) : (
                 <div className="text-center py-16 bg-gradient-to-br from-violet-50 to-purple-50 rounded-3xl border-2 border-dashed border-violet-200">
                     <Building2 className="w-20 h-20 mx-auto text-violet-300 mb-4" />
                     <p className="text-violet-600 font-bold text-lg">Selecciona una sucursal</p>

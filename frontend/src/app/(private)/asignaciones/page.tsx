@@ -84,6 +84,7 @@ export default function AsignacionesPage() {
     const [addingSocio, setAddingSocio] = useState(false);
     const [searchedSocio, setSearchedSocio] = useState<any>(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [searchType, setSearchType] = useState(''); // '', 'cedula', 'nroSocio', 'nombre'
 
     // Modal para socio ya asignado
     const [showAlreadyAssignedModal, setShowAlreadyAssignedModal] = useState(false);
@@ -239,7 +240,7 @@ export default function AsignacionesPage() {
         try {
             const token = localStorage.getItem("token");
             // Buscar el socio sin asignarlo todavía
-            const response = await axios.get(`/api/socios/buscar-exacto?term=${socioSearchTerm}`, {
+            const response = await axios.get(`/api/socios/buscar-exacto?term=${socioSearchTerm}${searchType ? `&tipo=${searchType}` : ''}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (response.data) {
@@ -270,7 +271,7 @@ export default function AsignacionesPage() {
         try {
             const token = localStorage.getItem("token");
             await axios.post(`/api/asignaciones/${selectedLista.id}/agregar-socio`,
-                { term: searchedSocio.cedula },
+                { term: searchedSocio.cedula, tipo: 'cedula' },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             setSocioSearchTerm("");
@@ -504,6 +505,7 @@ export default function AsignacionesPage() {
                 addingSocio={addingSocio}
                 searchedSocio={searchedSocio}
                 showConfirmModal={showConfirmModal}
+                searchType={searchType}
                 onSelectLista={handleSelectLista}
                 onCreateClick={handleCreateLista}
                 onSearchSocio={handleSearchSocio}
@@ -511,6 +513,7 @@ export default function AsignacionesPage() {
                 onCancelAdd={() => { setShowConfirmModal(false); setSearchedSocio(null); setSocioSearchTerm(""); }}
                 onRemoveSocio={handleRemoveSocio}
                 onSearchTermChange={setSocioSearchTerm}
+                onSearchTypeChange={setSearchType}
                 tieneVozYVoto={(socio) => {
                     if (socio.estadoVozVoto !== undefined) return socio.estadoVozVoto;
                     if (socio.habilitadoVozVoto) return socio.habilitadoVozVoto.toLowerCase().includes('voto');

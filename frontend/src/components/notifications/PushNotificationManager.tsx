@@ -29,7 +29,13 @@ export default function PushNotificationManager({ userRole }: { userRole?: strin
 
     useEffect(() => {
         setMounted(true);
-        // Verificar si el usuario ya descartó el prompt en esta sesión
+        // Verificar si el usuario ya descartó el prompt suficientes veces
+        const dismissCount = parseInt(localStorage.getItem('pushPromptDismissCount') || '0', 10);
+        // Mostrar solo cada 5 sesiones
+        if (dismissCount > 0 && dismissCount % 5 !== 0) {
+            setDismissed(true);
+        }
+        // También respetar el descarte de sesión actual
         const wasDismissed = sessionStorage.getItem('pushPromptDismissed');
         if (wasDismissed === 'true') {
             setDismissed(true);
@@ -57,6 +63,9 @@ export default function PushNotificationManager({ userRole }: { userRole?: strin
     const handleDismiss = () => {
         setDismissed(true);
         sessionStorage.setItem('pushPromptDismissed', 'true');
+        // Incrementar contador para mostrar cada 5 sesiones
+        const count = parseInt(localStorage.getItem('pushPromptDismissCount') || '0', 10);
+        localStorage.setItem('pushPromptDismissCount', String(count + 1));
     };
 
     const subscribeUser = async () => {

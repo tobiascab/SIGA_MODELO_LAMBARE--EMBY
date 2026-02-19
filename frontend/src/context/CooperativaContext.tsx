@@ -43,7 +43,7 @@ const defaultCooperativa: CooperativaData = {
     sitioWeb: "",
     ruc: "",
     colorPrimario: "#A8252C",
-    colorSecundario: "#600000",
+    colorSecundario: "#7B1717",
     colorAcento: "#D4AF37",
     facebookUrl: "",
     instagramUrl: "",

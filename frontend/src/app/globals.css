@@ -6,32 +6,33 @@
   --background: #f8fafc;
   --foreground: #0f172a;
 
-  /* Lambare Original Palette - Burgundy/Bordó */
-  --premium-dark: #600000;
-  /* Dark Burgundy */
+  /* MIC Palette - Bordó Brillante + Gold Contrast */
+  --premium-dark: #7B1717;
+  /* Deep Bordó */
   --premium-green: #A8252C;
-  /* Main Lambare Burgundy */
+  /* Main Bordó Brillante */
   --premium-light: #C53030;
-  /* Lighter Red */
-  --premium-gold: #d4af37;
+  /* Lighter Bordó */
+  --premium-gold: #f59e0b;
+  /* Bright Gold Accent */
 
-  /* Re-mapping legacy emerald/teal to Lambare Burgundy for consistency */
+  /* Emerald scale mapped to Bordó tones */
   --emerald-50: #FFF5F5;
-  --emerald-100: #FED7D7;
-  --emerald-200: #FEB2B2;
-  --emerald-300: #FC8181;
-  --emerald-400: #F56565;
+  --emerald-100: #FEE2E2;
+  --emerald-200: #FECACA;
+  --emerald-300: #FCA5A5;
+  --emerald-400: #F87171;
   --emerald-500: #A8252C;
-  /* MAIN LAMBARE COLOR */
-  --emerald-600: #9B2C2C;
-  --emerald-700: #822727;
-  --emerald-800: #631717;
+  /* MAIN BORDÓ */
+  --emerald-600: #9B2222;
+  --emerald-700: #7B1717;
+  --emerald-800: #651212;
   --emerald-900: #4A0E0E;
 
   --mint-500: #A8252C;
   --teal-400: #C53030;
   --teal-500: #A8252C;
-  --teal-600: #822727;
+  --teal-600: #7B1717;
 
   --card: #ffffff;
   --card-foreground: #0f172a;
@@ -43,13 +44,13 @@
   --secondary-foreground: #A8252C;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #FFF5F5;
-  --accent-foreground: #A8252C;
+  --accent: #FFFBEB;
+  --accent-foreground: #92400e;
   --destructive: #ef4444;
   --destructive-foreground: #f8fafc;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #A8252C;
+  --ring: #f59e0b;
   --radius: 0.75rem;
 }
 

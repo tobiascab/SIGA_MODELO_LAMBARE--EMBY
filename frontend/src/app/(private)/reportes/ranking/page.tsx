@@ -14,6 +14,8 @@ export default function RankingReportPage() {
 
     // Estado para búsqueda
     const [searchTerm, setSearchTerm] = useState("");
+    const [coopNombre, setCoopNombre] = useState('Sistema de Asambleas');
+    const [coopLogo, setCoopLogo] = useState('/logo-cooperativa.png');
 
     // Mapa para sucursales: { 'VILLARRICA': 5, 'CASA CENTRAL': 1 }
     const [sucursalMap, setSucursalMap] = useState<Record<string, number>>({});
@@ -68,6 +70,13 @@ export default function RankingReportPage() {
         };
 
         fetchRanking();
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data?.nombre) setCoopNombre(data.nombre);
+                if (data?.logo) setCoopLogo(data.logo);
+            })
+            .catch(() => { });
     }, []);
 
     const handlePrint = () => {
@@ -168,7 +177,7 @@ export default function RankingReportPage() {
                 {/* HEADER DEL REPORTE */}
                 <header className="flex items-center justify-between mb-12 border-b-2 border-slate-200 pb-8 print:mb-8">
                     <div className="flex items-center gap-6">
-                        <img src="/logo-cooperativa.png" alt="Logo" className="h-20 w-auto object-contain" />
+                        <img src={coopLogo} alt="Logo" className="h-20 w-auto object-contain" onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }} />
                         <div>
                             <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Ranking de Gestión</h1>
                             <p className="text-slate-500 font-medium">Asamblea General Ordinaria 2025</p>
@@ -547,7 +556,7 @@ export default function RankingReportPage() {
                 </div>
 
                 <div className="mt-8 text-center print:mt-12">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Cooperativa Multiactiva Lambaré Ltda. Ltda • Sistema de Gestión de Asambleas</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{coopNombre} • Sistema de Gestión de Asambleas</p>
                 </div>
             </div>
 

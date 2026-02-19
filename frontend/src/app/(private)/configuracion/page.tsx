@@ -1768,35 +1768,38 @@ export default function ConfiguracionPage() {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-6">
-                                                    {[
-                                                        { label: "Aporte", field: "aporteAlDia" },
-                                                        { label: "Solid.", field: "solidaridadAlDia" },
-                                                        { label: "Fondo", field: "fondoAlDia" },
-                                                        { label: "Incoop", field: "incoopAlDia" },
-                                                        { label: "Crédito", field: "creditoAlDia" }
-                                                    ].map(item => (
-                                                        <div key={item.field} className="flex flex-col items-center gap-2">
-                                                            <span className="text-[9px] uppercase font-black text-slate-400">{item.label}</span>
-                                                            <button
-                                                                onClick={() => toggleStatus(socio.id, item.field, (socio as any)[item.field])}
-                                                                className={`h-8 w-14 rounded-full p-1 transition-all flex items-center ${(socio as any)[item.field]
-                                                                    ? 'bg-emerald-500'
-                                                                    : 'bg-slate-200'
-                                                                    } group relative`}
-                                                                disabled={updatingSocioId === socio.id}
-                                                            >
-                                                                <div className={`h-6 w-6 rounded-full bg-white shadow flex items-center justify-center transition-all transform ${(socio as any)[item.field] ? 'translate-x-6' : 'translate-x-0'
-                                                                    }`}>
-                                                                    {(socio as any)[item.field] ? (
-                                                                        <Check className="h-3 w-3 text-emerald-500" />
-                                                                    ) : (
-                                                                        <X className="h-3 w-3 text-slate-300" />
-                                                                    )}
-                                                                </div>
-                                                            </button>
-                                                        </div>
-                                                    ))}
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            const current = (socio as any).habilitadoVozVoto || '';
+                                                            const isVoto = current.toUpperCase().includes('VOTO');
+                                                            const newValue = isVoto ? 'SOLO VOZ' : 'VOZ Y VOTO';
+                                                            setUpdatingSocioId(socio.id);
+                                                            try {
+                                                                const token = localStorage.getItem("token");
+                                                                await axios.patch(`/api/socios/${socio.id}/estado`,
+                                                                    { habilitadoVozVoto: newValue },
+                                                                    { headers: { Authorization: `Bearer ${token}` } }
+                                                                );
+                                                                setFoundSocios((prev: any[]) => prev.map((s: any) =>
+                                                                    s.id === socio.id ? { ...s, habilitadoVozVoto: newValue } : s
+                                                                ));
+                                                            } catch {
+                                                                alert("Error al actualizar");
+                                                            } finally {
+                                                                setUpdatingSocioId(null);
+                                                            }
+                                                        }}
+                                                        disabled={updatingSocioId === socio.id}
+                                                        className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer border-2 ${(socio as any).habilitadoVozVoto?.toUpperCase().includes('VOTO')
+                                                            ? 'bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200'
+                                                            : (socio as any).habilitadoVozVoto
+                                                                ? 'bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200'
+                                                                : 'bg-slate-100 text-slate-500 border-slate-300 hover:bg-slate-200'
+                                                            }`}
+                                                    >
+                                                        {(socio as any).habilitadoVozVoto || 'Sin estado'}
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}

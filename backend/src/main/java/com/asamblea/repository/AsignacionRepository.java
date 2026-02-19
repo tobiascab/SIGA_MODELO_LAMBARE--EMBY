@@ -30,6 +30,9 @@ public interface AsignacionRepository extends JpaRepository<Asignacion, Long> {
 
        boolean existsByListaAsignacionIdAndSocioId(Long listaId, Long socioId);
 
+       // Contar asignaciones de una lista específica
+       long countByListaAsignacionId(Long listaId);
+
        // Verificar si un socio ya está asignado a CUALQUIER lista
        boolean existsBySocioId(Long socioId);
 

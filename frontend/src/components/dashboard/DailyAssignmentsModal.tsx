@@ -21,10 +21,15 @@ export function DailyAssignmentsModal({ isOpen, onClose }: DailyAssignmentsModal
     const [loading, setLoading] = useState(false);
     const [stats, setStats] = useState<DailyStat[]>([]);
     const [dias, setDias] = useState(30);
+    const [coopNombre, setCoopNombre] = useState('Sistema de Asambleas');
 
     useEffect(() => {
         if (isOpen) {
             fetchStats();
+            fetch('/api/cooperativa/publica')
+                .then(r => r.ok ? r.json() : null)
+                .then(data => { if (data?.nombre) setCoopNombre(data.nombre); })
+                .catch(() => { });
         }
     }, [isOpen, dias]);
 
@@ -262,7 +267,7 @@ export function DailyAssignmentsModal({ isOpen, onClose }: DailyAssignmentsModal
                     </div>
 
                     <div className="p-4 bg-slate-50 border-t border-slate-100 text-center text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-                        Sistema de Seguimiento de Asignaciones • Cooperativa Multiactiva Lambaré Ltda.
+                        Sistema de Seguimiento de Asignaciones • {coopNombre}
                     </div>
                 </motion.div>
             </div>

@@ -26,6 +26,7 @@ export default function PantallaPublicaPage() {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isLoading, setIsLoading] = useState(true);
     const [totalRegistradosEnListas, setTotalRegistradosEnListas] = useState(0);
+    const [coopLogo, setCoopLogo] = useState('/logo-cooperativa.png');
 
     // View States
     const [activeLeftView, setActiveLeftView] = useState<'stats' | 'ranking'>('stats');
@@ -62,6 +63,10 @@ export default function PantallaPublicaPage() {
     useEffect(() => {
         fetchData();
         const interval = setInterval(fetchData, 10000);
+        fetch('/api/cooperativa/publica')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data?.logo) setCoopLogo(data.logo); })
+            .catch(() => { });
         return () => clearInterval(interval);
     }, [fetchData]);
 
@@ -118,7 +123,8 @@ export default function PantallaPublicaPage() {
                             initial={{ rotateY: 0 }}
                             animate={{ rotateY: [0, 10, 0] }}
                             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                            src="/logo-cooperativa.png"
+                            src={coopLogo}
+                            onError={(e: any) => { e.target.src = '/logo.png'; }}
                             alt="Logo"
                             className="h-20 md:h-24 w-auto relative drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] transform-gpu"
                         />
@@ -311,6 +317,9 @@ export default function PantallaPublicaPage() {
                                                 <div className="bg-gradient-to-b from-slate-700/80 to-slate-800/90 w-full rounded-t-2xl pt-8 md:pt-10 pb-4 px-2 md:px-3 border-t border-slate-500/30 text-center h-[140px] md:h-[160px] flex flex-col justify-end backdrop-blur-sm shadow-xl">
                                                     <p className="font-bold text-slate-100 truncate w-full text-xs md:text-base mb-1">{rankingData[1].nombre}</p>
                                                     <p className="text-[10px] md:text-xs text-slate-400 truncate w-full uppercase tracking-wider mb-2">{rankingData[1].sucursal}</p>
+                                                    {rankingData[1].esDirigente && rankingData[1].incluyePunteros > 0 && (
+                                                        <p className="text-[8px] text-amber-400/60 mb-1">👥 +{rankingData[1].incluyePunteros} punteros</p>
+                                                    )}
                                                     <div className="bg-slate-900/50 rounded-lg py-1 px-2 border border-slate-600/30 mx-auto">
                                                         <span className="font-black text-emerald-400 text-lg md:text-xl">{rankingData[1].registrados}</span>
                                                     </div>
@@ -331,6 +340,9 @@ export default function PantallaPublicaPage() {
                                                     <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_15px_rgba(251,191,36,0.8)]" />
                                                     <p className="font-black text-sm md:text-xl text-white truncate w-full mb-1 drop-shadow-md">{rankingData[0].nombre}</p>
                                                     <p className="text-[10px] md:text-xs text-amber-200/80 truncate w-full uppercase tracking-wider mb-3">{rankingData[0].sucursal}</p>
+                                                    {rankingData[0].esDirigente && rankingData[0].incluyePunteros > 0 && (
+                                                        <p className="text-[9px] text-amber-300/80 mb-1">👥 +{rankingData[0].incluyePunteros} punteros</p>
+                                                    )}
                                                     <div className="bg-amber-500/20 rounded-xl py-2 px-4 border border-amber-500/40 mx-auto shadow-[0_0_15px_rgba(245,158,11,0.2)]">
                                                         <span className="font-black text-amber-400 text-2xl md:text-3xl drop-shadow-sm">{rankingData[0].registrados}</span>
                                                     </div>
@@ -349,6 +361,9 @@ export default function PantallaPublicaPage() {
                                                 <div className="bg-gradient-to-b from-amber-900/30 to-slate-800/90 w-full rounded-t-2xl pt-8 md:pt-10 pb-4 px-2 md:px-3 border-t border-amber-800/30 text-center h-[120px] md:h-[140px] flex flex-col justify-end backdrop-blur-sm shadow-xl">
                                                     <p className="font-bold text-slate-200 truncate w-full text-xs md:text-base mb-1">{rankingData[2].nombre}</p>
                                                     <p className="text-[10px] md:text-xs text-slate-500 truncate w-full uppercase tracking-wider mb-2">{rankingData[2].sucursal}</p>
+                                                    {rankingData[2].esDirigente && rankingData[2].incluyePunteros > 0 && (
+                                                        <p className="text-[8px] text-amber-400/60 mb-1">👥 +{rankingData[2].incluyePunteros} punteros</p>
+                                                    )}
                                                     <div className="bg-slate-900/50 rounded-lg py-1 px-2 border border-slate-600/30 mx-auto">
                                                         <span className="font-black text-emerald-400 text-lg md:text-xl">{rankingData[2].registrados}</span>
                                                     </div>
@@ -373,6 +388,9 @@ export default function PantallaPublicaPage() {
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-bold text-slate-200 truncate group-hover:text-amber-200 transition-colors">{user.nombre}</p>
                                                     <p className="text-[10px] text-slate-500 truncate uppercase tracking-wider">{user.sucursal}</p>
+                                                    {user.esDirigente && user.incluyePunteros > 0 && (
+                                                        <p className="text-[9px] text-amber-400/70 mt-0.5">👥 +{user.incluyePunteros} punteros</p>
+                                                    )}
                                                 </div>
                                                 <div className="text-right">
                                                     <span className="font-mono font-black text-emerald-400 text-xl drop-shadow-sm">{user.registrados}</span>

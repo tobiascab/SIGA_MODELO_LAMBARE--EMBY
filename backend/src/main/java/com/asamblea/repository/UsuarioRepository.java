@@ -126,4 +126,20 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
             ORDER BY u.nombreCompleto
             """)
     List<Usuario> findAsesoresSinAsignacionesBySucursal(@Param("sucursalId") Long sucursalId);
+
+    // ====== Queries para Dirigentes y Punteros ======
+
+    // Encontrar todos los punteros de un dirigente específico
+    List<Usuario> findByDirigenteIdAndActivoTrue(Long dirigenteId);
+
+    // Encontrar todos los punteros de un dirigente (activos e inactivos)
+    List<Usuario> findByDirigenteId(Long dirigenteId);
+
+    // Encontrar todos los dirigentes activos
+    @Query("SELECT u FROM Usuario u WHERE u.isDirigente = true AND u.activo = true")
+    List<Usuario> findDirigentesActivos();
+
+    // Contar punteros de un dirigente
+    @Query("SELECT COUNT(u) FROM Usuario u WHERE u.dirigente.id = :dirigenteId AND u.activo = true")
+    Long countPunterosByDirigenteId(@Param("dirigenteId") Long dirigenteId);
 }

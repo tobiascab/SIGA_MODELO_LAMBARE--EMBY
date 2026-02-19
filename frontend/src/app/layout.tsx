@@ -5,6 +5,7 @@ import { ConfigProvider } from "@/context/ConfigContext";
 import { CooperativaProvider } from "@/context/CooperativaContext";
 
 import { MaintenanceGuard } from "@/components/MaintenanceGuard";
+import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,7 +70,7 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#A8252C",
+  themeColor: "#8B1A1A",
 };
 
 export default function RootLayout({
@@ -90,7 +91,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="SIGA" />
         <link rel="apple-touch-icon" href="/logo.png" />
         <meta name="msapplication-TileImage" content="/logo.png" />
-        <meta name="msapplication-TileColor" content="#A8252C" />
+        <meta name="msapplication-TileColor" content="#8B1A1A" />
         {/* Schema.org Structured Data */}
         <script
           type="application/ld+json"
@@ -130,6 +131,7 @@ export default function RootLayout({
         <CooperativaProvider>
           <ConfigProvider>
             <MaintenanceGuard>
+              <ServiceWorkerRegistrar />
               {children}
             </MaintenanceGuard>
           </ConfigProvider>
