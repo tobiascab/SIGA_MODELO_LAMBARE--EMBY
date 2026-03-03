@@ -287,7 +287,7 @@ public class AuthController {
                         // Generar token para el usuario objetivo
                         var jwtToken = jwtService.generateToken(targetUser);
 
-                        return ResponseEntity.ok(AuthResponse.builder()
+                return ResponseEntity.ok(AuthResponse.builder()
                                         .token(jwtToken)
                                         .id(targetUser.getId())
                                         .username(targetUser.getUsername())
@@ -298,6 +298,51 @@ public class AuthController {
                                         .fotoPerfil(targetUser.getFotoPerfil())
                                         .telefono(targetUser.getTelefono())
                                         .isDirigente(Boolean.TRUE.equals(targetUser.getIsDirigente()))
+                                        .build());
+                } catch (Exception e) {
+                        return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+                }
+        }
+
+        /**
+         * Renovar token JWT.
+         * El usuario envía su token actual (aún válido) y recibe uno nuevo con
+         * expiración extendida. Esto permite mantener la sesión activa sin
+         * re-ingresar credenciales.
+         */
+        @PostMapping("/refresh")
+        public ResponseEntity<?> refreshToken(HttpServletRequest httpRequest) {
+                try {
+                        var auth = SecurityContextHolder.getContext().getAuthentication();
+                        if (auth == null || !auth.isAuthenticated()) {
+                                return ResponseEntity.status(401).body(Map.of("error", "No autenticado"));
+                        }
+
+                        String username = auth.getName();
+                        Usuario user = usuarioRepository.findByUsername(username).orElseThrow();
+
+                        if (!user.isActivo()) {
+                                return ResponseEntity.status(403).body(Map.of("error", "Usuario desactivado"));
+                        }
+
+                        // Generar nuevo token
+                        var newToken = jwtService.generateToken(user);
+
+                        auditService.registrar("USUARIOS", "TOKEN_REFRESH",
+                                        "Renovó su sesión (token refresh).",
+                                        user.getUsername(), httpRequest.getRemoteAddr());
+
+                        return ResponseEntity.ok(AuthResponse.builder()
+                                        .token(newToken)
+                                        .id(user.getId())
+                                        .username(user.getUsername())
+                                        .nombreCompleto(user.getNombreCompleto())
+                                        .rol(user.getRol().name())
+                                        .permisosEspeciales(user.getPermisosEspeciales())
+                                        .requiresPasswordChange(user.getRequiresPasswordChange())
+                                        .fotoPerfil(user.getFotoPerfil())
+                                        .telefono(user.getTelefono())
+                                        .isDirigente(Boolean.TRUE.equals(user.getIsDirigente()))
                                         .build());
                 } catch (Exception e) {
                         return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));

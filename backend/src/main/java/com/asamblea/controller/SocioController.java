@@ -1,4 +1,4 @@
-package com.asamblea.controller;
+ package com.asamblea.controller;
 
 import com.asamblea.model.ImportacionHistorial;
 import com.asamblea.model.Socio;
@@ -553,61 +553,153 @@ public class SocioController {
     @GetMapping("/export/excel")
     public void exportToExcel(jakarta.servlet.http.HttpServletResponse response) throws Exception {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=padron_socios.xlsx");
+        response.setHeader("Content-Disposition", "attachment; filename=padron_completo_socios.xlsx");
 
         List<Socio> socios = socioRepository.findAll();
 
         try (org.apache.poi.xssf.usermodel.XSSFWorkbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
-            org.apache.poi.xssf.usermodel.XSSFSheet sheet = workbook.createSheet("Padrón de Socios");
+            org.apache.poi.xssf.usermodel.XSSFSheet sheet = workbook.createSheet("Padrón Completo");
 
-            // Header style
-            org.apache.poi.xssf.usermodel.XSSFCellStyle headerStyle = workbook.createCellStyle();
-            org.apache.poi.xssf.usermodel.XSSFFont headerFont = workbook.createFont();
-            headerFont.setBold(true);
-            headerStyle.setFont(headerFont);
-            headerStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.LIGHT_GREEN.getIndex());
-            headerStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+            // ── Estilos de cabecera por sección ──
+            // Verde: Datos Básicos & Identificación
+            org.apache.poi.xssf.usermodel.XSSFCellStyle styleBasicos = createHeaderStyle(workbook, new byte[]{(byte)16, (byte)185, (byte)129});
+            // Azul: Contacto
+            org.apache.poi.xssf.usermodel.XSSFCellStyle styleContacto = createHeaderStyle(workbook, new byte[]{(byte)59, (byte)130, (byte)246});
+            // Naranja: Ubicación
+            org.apache.poi.xssf.usermodel.XSSFCellStyle styleUbicacion = createHeaderStyle(workbook, new byte[]{(byte)245, (byte)158, (byte)11});
+            // Morado: Datos Personales
+            org.apache.poi.xssf.usermodel.XSSFCellStyle stylePersonales = createHeaderStyle(workbook, new byte[]{(byte)139, (byte)92, (byte)246});
+            // Cyan: Fechas
+            org.apache.poi.xssf.usermodel.XSSFCellStyle styleFechas = createHeaderStyle(workbook, new byte[]{(byte)6, (byte)182, (byte)212});
+            // Rojo: Deudas
+            org.apache.poi.xssf.usermodel.XSSFCellStyle styleDeudas = createHeaderStyle(workbook, new byte[]{(byte)239, (byte)68, (byte)68});
+            // Verde oscuro: Estado Electoral
+            org.apache.poi.xssf.usermodel.XSSFCellStyle styleElectoral = createHeaderStyle(workbook, new byte[]{(byte)5, (byte)150, (byte)105});
 
-            // Create header row
+            // ── Definir columnas con sus estilos ──
+            String[] columns = {
+                // Datos Básicos (0-2)
+                "N° Socio", "Nombre Completo", "Cédula",
+                // Contacto (3-5)
+                "Teléfono", "Móvil", "Email",
+                // Ubicación (6-10)
+                "Dirección", "Barrio", "Ciudad", "Sucursal", "Clasificación",
+                // Datos Personales (11-14)
+                "Edad", "Profesión", "Ocupación", "Grado Instrucción",
+                // Fechas (15-16)
+                "Fecha Ingreso", "Fecha Padrón",
+                // Deudas (17-26)
+                "Deuda Aporte", "Aporte Cubierto", "Deuda Solidaridad", "Solidaridad Cubierto",
+                "Deuda Sede Social", "Sede Social Cubierto", "Deuda Préstamo",
+                "Mayor Día Atraso Préstamo", "Deuda Tarjeta Crédito", "Mayor Día Atraso TC",
+                // Estado Electoral (27-31)
+                "Habilitado Voz/Voto", "Estado Voz y Voto", "Mesa", "Nro Orden Padrón", "En Padrón Actual"
+            };
+
+            org.apache.poi.xssf.usermodel.XSSFCellStyle[] columnStyles = new org.apache.poi.xssf.usermodel.XSSFCellStyle[columns.length];
+            for (int i = 0; i <= 2; i++) columnStyles[i] = styleBasicos;
+            for (int i = 3; i <= 5; i++) columnStyles[i] = styleContacto;
+            for (int i = 6; i <= 10; i++) columnStyles[i] = styleUbicacion;
+            for (int i = 11; i <= 14; i++) columnStyles[i] = stylePersonales;
+            for (int i = 15; i <= 16; i++) columnStyles[i] = styleFechas;
+            for (int i = 17; i <= 26; i++) columnStyles[i] = styleDeudas;
+            for (int i = 27; i < columns.length; i++) columnStyles[i] = styleElectoral;
+
+            // ── Crear fila de cabecera ──
             org.apache.poi.ss.usermodel.Row headerRow = sheet.createRow(0);
-            String[] columns = { "N° Socio", "Nombre Completo", "Cédula", "Teléfono", "Sucursal", "Aporte",
-                    "Solidaridad", "Fondo", "INCOOP", "Crédito", "Voz y Voto" };
             for (int i = 0; i < columns.length; i++) {
                 org.apache.poi.ss.usermodel.Cell cell = headerRow.createCell(i);
                 cell.setCellValue(columns[i]);
-                cell.setCellStyle(headerStyle);
+                cell.setCellStyle(columnStyles[i]);
             }
 
-            // Data rows
+            // ── Filas de datos ──
             int rowNum = 1;
             for (Socio socio : socios) {
                 org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(socio.getNumeroSocio());
-                row.createCell(1).setCellValue(socio.getNombreCompleto());
-                row.createCell(2).setCellValue(socio.getCedula());
-                row.createCell(3).setCellValue(socio.getTelefono() != null ? socio.getTelefono() : "");
-                row.createCell(4).setCellValue(socio.getSucursal() != null ? socio.getSucursal().getNombre() : "");
-                row.createCell(5).setCellValue(socio.isAporteAlDia() ? "SI" : "NO");
-                row.createCell(6).setCellValue(socio.isSolidaridadAlDia() ? "SI" : "NO");
-                row.createCell(7).setCellValue(socio.isFondoAlDia() ? "SI" : "NO");
-                row.createCell(8).setCellValue(socio.isIncoopAlDia() ? "SI" : "NO");
-                row.createCell(9).setCellValue(socio.isCreditoAlDia() ? "SI" : "NO");
-                row.createCell(10).setCellValue(socio.isEstadoVozVoto() ? "SI" : "NO");
+                int col = 0;
+                // Datos Básicos
+                row.createCell(col++).setCellValue(safe(socio.getNumeroSocio()));
+                row.createCell(col++).setCellValue(safe(socio.getNombreCompleto()));
+                row.createCell(col++).setCellValue(safe(socio.getCedula()));
+                // Contacto
+                row.createCell(col++).setCellValue(safe(socio.getTelefono()));
+                row.createCell(col++).setCellValue(safe(socio.getMovil()));
+                row.createCell(col++).setCellValue(safe(socio.getEmail()));
+                // Ubicación
+                row.createCell(col++).setCellValue(safe(socio.getDireccion()));
+                row.createCell(col++).setCellValue(safe(socio.getBarrio()));
+                row.createCell(col++).setCellValue(safe(socio.getCiudad()));
+                row.createCell(col++).setCellValue(socio.getSucursal() != null && socio.getSucursal().getNombre() != null ? socio.getSucursal().getNombre() : "Casa Central");
+                row.createCell(col++).setCellValue(safe(socio.getClasificacion()));
+                // Datos Personales
+                row.createCell(col++).setCellValue(safe(socio.getEdad()));
+                row.createCell(col++).setCellValue(safe(socio.getProfesion()));
+                row.createCell(col++).setCellValue(safe(socio.getOcupacion()));
+                row.createCell(col++).setCellValue(safe(socio.getGradoInstruccion()));
+                // Fechas
+                row.createCell(col++).setCellValue(safe(socio.getFechaIngreso()));
+                row.createCell(col++).setCellValue(safe(socio.getFechaPadron()));
+                // Deudas
+                row.createCell(col++).setCellValue(safe(socio.getDeudaAporte()));
+                row.createCell(col++).setCellValue(safe(socio.getAporteCubierto()));
+                row.createCell(col++).setCellValue(safe(socio.getDeudaSolidaridad()));
+                row.createCell(col++).setCellValue(safe(socio.getSolidaridadCubierto()));
+                row.createCell(col++).setCellValue(safe(socio.getDeudaSedeSocial()));
+                row.createCell(col++).setCellValue(safe(socio.getSedeSocialCubierto()));
+                row.createCell(col++).setCellValue(safe(socio.getDeudaPrestamo()));
+                row.createCell(col++).setCellValue(safe(socio.getMayorDiaAtrasoPmo()));
+                row.createCell(col++).setCellValue(safe(socio.getDeudaTarjetaCredito()));
+                row.createCell(col++).setCellValue(safe(socio.getMayorDiaAtrasoTc()));
+                // Estado Electoral
+                row.createCell(col++).setCellValue(safe(socio.getHabilitadoVozVoto()));
+                row.createCell(col++).setCellValue(socio.isEstadoVozVoto() ? "VOZ Y VOTO" : "SOLO VOZ");
+                row.createCell(col++).setCellValue(safe(socio.getMesa()));
+                row.createCell(col++).setCellValue(safe(socio.getNroOrdenPadron()));
+                row.createCell(col++).setCellValue(socio.isEnPadronActual() ? "SI" : "NO");
             }
 
-            // Auto-size columns
+            // Auto-size columns (limitar a 60 chars para evitar lentitud con 30k filas)
             for (int i = 0; i < columns.length; i++) {
-                sheet.autoSizeColumn(i);
+                sheet.setColumnWidth(i, Math.min(columns[i].length() * 400 + 1500, 15000));
             }
+
+            // Congelar fila de cabecera
+            sheet.createFreezePane(0, 1);
+            // Filtro automático
+            sheet.setAutoFilter(new org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, columns.length - 1));
 
             workbook.write(response.getOutputStream());
         }
     }
 
+    // Helper: valor seguro para celdas (evitar null)
+    private String safe(String value) {
+        return value != null ? value : "";
+    }
+
+    // Helper: crear estilo de cabecera con color RGB
+    private org.apache.poi.xssf.usermodel.XSSFCellStyle createHeaderStyle(
+            org.apache.poi.xssf.usermodel.XSSFWorkbook workbook, byte[] rgb) {
+        org.apache.poi.xssf.usermodel.XSSFCellStyle style = workbook.createCellStyle();
+        org.apache.poi.xssf.usermodel.XSSFFont font = workbook.createFont();
+        font.setBold(true);
+        font.setColor(org.apache.poi.ss.usermodel.IndexedColors.WHITE.getIndex());
+        style.setFont(font);
+        style.setFillForegroundColor(new org.apache.poi.xssf.usermodel.XSSFColor(rgb, null));
+        style.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+        style.setBorderBottom(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+        style.setBorderTop(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+        style.setBorderLeft(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+        style.setBorderRight(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+        style.setAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.CENTER);
+        return style;
+    }
+
     @GetMapping("/export/pdf")
     public void exportToPdf(jakarta.servlet.http.HttpServletResponse response) throws Exception {
         response.setContentType("application/pdf");
-        response.setHeader("Content-Disposition", "attachment; filename=padron_socios.pdf");
+        response.setHeader("Content-Disposition", "attachment; filename=padron_completo_socios.pdf");
 
         List<Socio> socios = socioRepository.findAll();
 
@@ -616,62 +708,106 @@ public class SocioController {
         document.open();
 
         // Title
-        com.lowagie.text.Font titleFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 18,
+        com.lowagie.text.Font titleFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 16,
                 com.lowagie.text.Font.BOLD);
-        com.lowagie.text.Paragraph title = new com.lowagie.text.Paragraph("Padrón de Socios - Cooperativa Multiactiva Lambaré Ltda.",
-                titleFont);
+        com.lowagie.text.Paragraph title = new com.lowagie.text.Paragraph(
+                "Padrón Completo de Socios - Cooperativa Multiactiva Lambaré Ltda.", titleFont);
         title.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
-        title.setSpacingAfter(20);
+        title.setSpacingAfter(5);
         document.add(title);
 
-        // Table
-        com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(8);
+        // Subtitle with date
+        com.lowagie.text.Font subtitleFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 10,
+                com.lowagie.text.Font.ITALIC);
+        com.lowagie.text.Paragraph subtitle = new com.lowagie.text.Paragraph(
+                "Generado: " + java.time.LocalDateTime.now()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                        + " | Total: " + socios.size() + " socios",
+                subtitleFont);
+        subtitle.setAlignment(com.lowagie.text.Element.ALIGN_CENTER);
+        subtitle.setSpacingAfter(15);
+        document.add(subtitle);
+
+        // Table with more columns
+        String[] headers = { "N° Socio", "Nombre Completo", "Cédula", "Teléfono", "Email",
+                "Dirección", "Barrio/Ciudad", "Sucursal", "Edad", "Profesión", "Estado V&V" };
+        float[] widths = { 6f, 16f, 7f, 9f, 10f, 14f, 10f, 8f, 4f, 8f, 8f };
+
+        com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(headers.length);
         table.setWidthPercentage(100);
+        table.setWidths(widths);
         table.setSpacingBefore(10);
 
         // Header style
-        com.lowagie.text.Font headerFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 9,
+        com.lowagie.text.Font headerFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 7,
                 com.lowagie.text.Font.BOLD, java.awt.Color.WHITE);
-        java.awt.Color headerBg = new java.awt.Color(16, 185, 129); // Emerald-500
+        java.awt.Color headerBg = new java.awt.Color(16, 185, 129);
 
-        String[] headers = { "N° Socio", "Nombre", "Cédula", "Teléfono", "Sucursal", "Aporte", "Crédito", "V&V" };
         for (String header : headers) {
             com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell(
                     new com.lowagie.text.Phrase(header, headerFont));
             cell.setBackgroundColor(headerBg);
-            cell.setPadding(8);
+            cell.setPadding(5);
             cell.setHorizontalAlignment(com.lowagie.text.Element.ALIGN_CENTER);
+            cell.setVerticalAlignment(com.lowagie.text.Element.ALIGN_MIDDLE);
             table.addCell(cell);
         }
 
         // Data rows
-        com.lowagie.text.Font dataFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 8);
+        com.lowagie.text.Font dataFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 6.5f);
+        com.lowagie.text.Font dataFontBold = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 6.5f,
+                com.lowagie.text.Font.BOLD);
+        java.awt.Color altRowColor = new java.awt.Color(240, 253, 244); // light green tint
+
+        int rowIdx = 0;
         for (Socio socio : socios) {
-            table.addCell(new com.lowagie.text.Phrase(socio.getNumeroSocio(), dataFont));
-            table.addCell(new com.lowagie.text.Phrase(socio.getNombreCompleto(), dataFont));
-            table.addCell(new com.lowagie.text.Phrase(socio.getCedula(), dataFont));
-            table.addCell(
-                    new com.lowagie.text.Phrase(socio.getTelefono() != null ? socio.getTelefono() : "-", dataFont));
-            table.addCell(new com.lowagie.text.Phrase(
-                    socio.getSucursal() != null ? socio.getSucursal().getNombre() : "-", dataFont));
-            table.addCell(new com.lowagie.text.Phrase(socio.isAporteAlDia() ? "SI" : "NO", dataFont));
-            table.addCell(new com.lowagie.text.Phrase(socio.isCreditoAlDia() ? "SI" : "NO", dataFont));
-            table.addCell(new com.lowagie.text.Phrase(socio.isEstadoVozVoto() ? "SI" : "NO", dataFont));
+            java.awt.Color rowBg = (rowIdx % 2 == 0) ? java.awt.Color.WHITE : altRowColor;
+
+            addPdfCell(table, safe(socio.getNumeroSocio()), dataFont, rowBg);
+            addPdfCell(table, safe(socio.getNombreCompleto()), dataFontBold, rowBg);
+            addPdfCell(table, safe(socio.getCedula()), dataFont, rowBg);
+            addPdfCell(table, safe(socio.getTelefono()), dataFont, rowBg);
+            addPdfCell(table, safe(socio.getEmail()), dataFont, rowBg);
+            addPdfCell(table, safe(socio.getDireccion()), dataFont, rowBg);
+            String barrioCity = safe(socio.getBarrio());
+            if (socio.getCiudad() != null && !socio.getCiudad().isEmpty()) {
+                barrioCity += barrioCity.isEmpty() ? socio.getCiudad() : ", " + socio.getCiudad();
+            }
+            addPdfCell(table, barrioCity, dataFont, rowBg);
+            addPdfCell(table, socio.getSucursal() != null ? socio.getSucursal().getNombre() : "-", dataFont, rowBg);
+            addPdfCell(table, safe(socio.getEdad()), dataFont, rowBg);
+            addPdfCell(table, safe(socio.getProfesion()), dataFont, rowBg);
+
+            // Estado V&V con color
+            String estadoVV = socio.isEstadoVozVoto() ? "VOZ Y VOTO" : "SOLO VOZ";
+            java.awt.Color estadoColor = socio.isEstadoVozVoto()
+                    ? new java.awt.Color(5, 150, 105) : new java.awt.Color(245, 158, 11);
+            com.lowagie.text.Font estadoFont = new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 6,
+                    com.lowagie.text.Font.BOLD, java.awt.Color.WHITE);
+            com.lowagie.text.pdf.PdfPCell estadoCell = new com.lowagie.text.pdf.PdfPCell(
+                    new com.lowagie.text.Phrase(estadoVV, estadoFont));
+            estadoCell.setBackgroundColor(estadoColor);
+            estadoCell.setPadding(3);
+            estadoCell.setHorizontalAlignment(com.lowagie.text.Element.ALIGN_CENTER);
+            estadoCell.setVerticalAlignment(com.lowagie.text.Element.ALIGN_MIDDLE);
+            table.addCell(estadoCell);
+
+            rowIdx++;
         }
 
         document.add(table);
-
-        // Footer
-        com.lowagie.text.Paragraph footer = new com.lowagie.text.Paragraph(
-                "Total: " + socios.size() + " socios | Generado: "
-                        + java.time.LocalDateTime.now()
-                                .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                new com.lowagie.text.Font(com.lowagie.text.Font.HELVETICA, 10, com.lowagie.text.Font.ITALIC));
-        footer.setSpacingBefore(20);
-        footer.setAlignment(com.lowagie.text.Element.ALIGN_RIGHT);
-        document.add(footer);
-
         document.close();
+    }
+
+    // Helper: agregar celda al PDF
+    private void addPdfCell(com.lowagie.text.pdf.PdfPTable table, String text,
+            com.lowagie.text.Font font, java.awt.Color bgColor) {
+        com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell(
+                new com.lowagie.text.Phrase(text != null ? text : "-", font));
+        cell.setBackgroundColor(bgColor);
+        cell.setPadding(3);
+        cell.setVerticalAlignment(com.lowagie.text.Element.ALIGN_MIDDLE);
+        table.addCell(cell);
     }
 
     // =========================================================================

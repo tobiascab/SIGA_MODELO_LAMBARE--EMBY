@@ -48,6 +48,7 @@ function ImpersonateBridge() {
                     }
 
                     localStorage.setItem("user", JSON.stringify(userData));
+                    localStorage.setItem("session-start", Date.now().toString());
 
                     // Pequeña pausa para asegurar storage
                     setTimeout(() => {

@@ -21,6 +21,8 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { InactivityGuard } from "@/components/auth/InactivityGuard";
 import { CandidateSpotlight } from "@/components/dashboard/CandidateSpotlight";
 import { WelcomeStatsModal } from "@/components/modals/WelcomeStatsModal";
+// Importar para registrar el interceptor global de axios (detecta sesión expirada)
+import "@/lib/api";
 
 // Componente wrapper para el TourWelcome que necesita acceso al contexto
 function TourWelcomeWrapper({ userRole }: { userRole?: string }) {

@@ -415,8 +415,17 @@ public class UsuarioController {
             usuario.setPermisosEspeciales((String) data.get("permisosEspeciales"));
 
             // Nuevos campos
-            usuario.setCargo((String) data.get("cargo"));
+            String cargoValue = (String) data.get("cargo");
+            usuario.setCargo(cargoValue);
             usuario.setMeta(data.get("meta") != null ? ((Number) data.get("meta")).intValue() : 50);
+
+            // SYNC: Si cargo es "Dirigente", activar isDirigente automáticamente
+            if ("Dirigente".equalsIgnoreCase(cargoValue)) {
+                usuario.setIsDirigente(true);
+                if (usuario.getMeta() == null || usuario.getMeta() < 100) {
+                    usuario.setMeta(100);
+                }
+            }
 
             if (data.containsKey("idSocio") && data.get("idSocio") != null) {
                 Long idSocio = Long.parseLong(data.get("idSocio").toString());
@@ -515,7 +524,19 @@ public class UsuarioController {
             }
 
             if (data.containsKey("cargo")) {
-                usuario.setCargo((String) data.get("cargo"));
+                String cargoValue = (String) data.get("cargo");
+                usuario.setCargo(cargoValue);
+
+                // SYNC: Si cargo es "Dirigente", activar isDirigente automáticamente
+                if ("Dirigente".equalsIgnoreCase(cargoValue)) {
+                    usuario.setIsDirigente(true);
+                    if (usuario.getMeta() == null || usuario.getMeta() < 100) {
+                        usuario.setMeta(100);
+                    }
+                } else if (cargoValue != null) {
+                    // Si cambió a otro cargo, desactivar isDirigente
+                    usuario.setIsDirigente(false);
+                }
             }
             if (data.containsKey("meta")) {
                 usuario.setMeta(data.get("meta") != null ? ((Number) data.get("meta")).intValue() : 50);
@@ -530,11 +551,16 @@ public class UsuarioController {
                 }
             }
 
-            // Soporte para campo isDirigente
+            // Soporte para campo isDirigente (toggle manual desde UI)
             if (data.containsKey("isDirigente")) {
-                usuario.setIsDirigente(data.get("isDirigente") != null && (Boolean) data.get("isDirigente"));
-                if (usuario.getIsDirigente() && (usuario.getMeta() == null || usuario.getMeta() < 100)) {
+                boolean isDirValue = data.get("isDirigente") != null && (Boolean) data.get("isDirigente");
+                usuario.setIsDirigente(isDirValue);
+                if (isDirValue && (usuario.getMeta() == null || usuario.getMeta() < 100)) {
                     usuario.setMeta(100);
+                }
+                // Sync cargo si se activa isDirigente manualmente
+                if (isDirValue && (usuario.getCargo() == null || !"Dirigente".equalsIgnoreCase(usuario.getCargo()))) {
+                    usuario.setCargo("Dirigente");
                 }
             }
 

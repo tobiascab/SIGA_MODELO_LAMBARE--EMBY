@@ -73,6 +73,7 @@ export default function LoginPage() {
             const userData = response.data;
             localStorage.setItem("token", userData.token);
             localStorage.setItem("user", JSON.stringify(userData));
+            localStorage.setItem("session-start", Date.now().toString());
 
             if (userData.requiresPasswordChange) {
                 setShowChangePassword(true);
@@ -151,6 +152,7 @@ export default function LoginPage() {
                 const userData = response.data;
                 localStorage.setItem("token", userData.token);
                 localStorage.setItem("user", JSON.stringify(userData));
+                localStorage.setItem("session-start", Date.now().toString());
                 // Update stored credentials in case password changed
                 saveBiometricCredentials(creds.username, creds.password);
                 router.push("/dashboard");

@@ -833,8 +833,8 @@ export default function VerPunterosPage() {
                     </motion.div>
                 )}
 
-                {/* Stats */}
-                {punterosData && (
+                {/* Stats - solo mostrar desglose cuando hay punteros */}
+                {punterosData && punterosData.totalPunteros > 0 && (
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -844,27 +844,27 @@ export default function VerPunterosPage() {
                         <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm text-center" style={{ borderColor: `${cp}25`, borderWidth: 1 }}>
                             <Users className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1" style={{ color: cp }} />
                             <p className="text-xl sm:text-2xl font-black text-slate-800">{punterosData.totalPunteros}</p>
-                            <p className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase">Punteros</p>
+                            <p className="text-[7px] sm:text-[9px] font-bold uppercase leading-tight" style={{ color: cp }}>Punteros<br />Activos</p>
                         </div>
                         <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-blue-100 text-center">
                             <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 mx-auto mb-0.5 sm:mb-1" />
                             <p className="text-xl sm:text-2xl font-black text-slate-800">{punterosData.totalPropiosDirigente}</p>
-                            <p className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase">Propios</p>
+                            <p className="text-[7px] sm:text-[9px] font-bold text-blue-500 uppercase leading-tight">Socios en<br />Mi Lista</p>
                         </div>
                         <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-teal-100 text-center">
                             <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-teal-500 mx-auto mb-0.5 sm:mb-1" />
                             <p className="text-xl sm:text-2xl font-black text-slate-800">{punterosData.totalTraidosPorPunteros}</p>
-                            <p className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase">Por Punteros</p>
+                            <p className="text-[7px] sm:text-[9px] font-bold text-teal-500 uppercase leading-tight">Asignados a<br />Punteros</p>
                         </div>
                         <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm text-center" style={{ borderColor: `${cp}40`, borderWidth: 2, background: `linear-gradient(135deg, ${cp}08, ${cp}15)` }}>
                             <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1" style={{ color: cp }} />
                             <p className="text-xl sm:text-2xl font-black" style={{ color: cp }}>{punterosData.totalCombinado}</p>
-                            <p className="text-[8px] sm:text-[10px] font-bold uppercase" style={{ color: cp }}>TOTAL</p>
+                            <p className="text-[7px] sm:text-[9px] font-bold uppercase leading-tight" style={{ color: cp }}>Total Socios<br />Gestionados</p>
                         </div>
                         <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-emerald-100 text-center">
                             <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 mx-auto mb-0.5 sm:mb-1" />
                             <p className="text-xl sm:text-2xl font-black text-slate-800">{punterosData.punterosQueCumplieron}</p>
-                            <p className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase">Cumplieron</p>
+                            <p className="text-[7px] sm:text-[9px] font-bold text-emerald-500 uppercase leading-tight">Punteros que<br />Cumplieron Meta</p>
                         </div>
                     </motion.div>
                 )}
