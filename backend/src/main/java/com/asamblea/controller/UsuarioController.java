@@ -1296,7 +1296,19 @@ public class UsuarioController {
 
             int asignados = 0;
             int yaExistentes = 0;
+            int yaEnOtraLista = 0;
+            List<String> sociosRechazados = new java.util.ArrayList<>();
             Usuario asignadoPor = usuarioRepository.findByUsername(auth.getName()).orElse(null);
+
+            // Obtener las listas del dirigente que está asignando
+            List<com.asamblea.model.ListaAsignacion> listasDirigente = asignadoPor != null
+                ? listaAsignacionRepository.findByUsuarioId(asignadoPor.getId())
+                : java.util.Collections.emptyList();
+            java.util.Set<Long> idListasDirigente = listasDirigente.stream()
+                .map(com.asamblea.model.ListaAsignacion::getId)
+                .collect(java.util.stream.Collectors.toSet());
+            // Incluir también la lista del puntero como válida
+            idListasDirigente.add(listaPuntero.getId());
 
             for (Number socioIdNum : socioIds) {
                 Long socioId = socioIdNum.longValue();
@@ -1305,6 +1317,24 @@ public class UsuarioController {
                 if (asignacionRepository.existsByListaAsignacionIdAndSocioId(listaPuntero.getId(), socioId)) {
                     yaExistentes++;
                     continue;
+                }
+
+                // Verificar si ya está asignado a ALGUNA lista
+                Optional<com.asamblea.model.Asignacion> asignacionExistente = asignacionRepository.findBySocioId(socioId);
+                if (asignacionExistente.isPresent()) {
+                    Long listaExistenteId = asignacionExistente.get().getListaAsignacion().getId();
+                    // Si está en la lista del propio dirigente → OK, puede delegarlo al puntero
+                    if (idListasDirigente.contains(listaExistenteId)) {
+                        // Permitir: es su propio socio
+                    } else {
+                        // BLOQUEAR: está en la lista de OTRA persona
+                        Socio socioRechazado = socioRepository.findById(socioId).orElse(null);
+                        if (socioRechazado != null) {
+                            sociosRechazados.add(socioRechazado.getNombreCompleto());
+                        }
+                        yaEnOtraLista++;
+                        continue;
+                    }
                 }
 
                 // Buscar el socio
@@ -1323,16 +1353,18 @@ public class UsuarioController {
             auditService.registrar(
                     "PUNTEROS",
                     "ASIGNAR_SOCIOS_PUNTERO",
-                    String.format("Dirigente asignó %d socios al puntero '%s' (ID: %d)",
-                            asignados, puntero.getNombreCompleto(), punteroId),
+                    String.format("Dirigente asignó %d socios al puntero '%s' (ID: %d). Rechazados por duplicado: %d",
+                            asignados, puntero.getNombreCompleto(), punteroId, yaEnOtraLista),
                     auth.getName(),
                     request.getRemoteAddr());
 
-            return ResponseEntity.ok(Map.of(
-                    "message", String.format("%d socio(s) asignado(s) al puntero exitosamente", asignados),
-                    "asignados", asignados,
-                    "yaExistentes", yaExistentes
-            ));
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("message", String.format("%d socio(s) asignado(s) al puntero exitosamente", asignados));
+            response.put("asignados", asignados);
+            response.put("yaExistentes", yaExistentes);
+            response.put("yaEnOtraLista", yaEnOtraLista);
+            response.put("sociosRechazados", sociosRechazados);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'siga-pwa-v1';
+const CACHE_NAME = 'siga-pwa-v2';
 const STATIC_ASSETS = [
     '/logo.png',
     '/logo-cooperativa.png',
@@ -37,6 +37,9 @@ self.addEventListener('fetch', (event) => {
 
     // Ignorar requests a APIs (siempre ir a red)
     if (event.request.url.includes('/api/')) return;
+
+    // No cachear archivos de Next.js (chunks JS/CSS) - siempre frescos del servidor
+    if (event.request.url.includes('/_next/')) return;
 
     event.respondWith(
         fetch(event.request)

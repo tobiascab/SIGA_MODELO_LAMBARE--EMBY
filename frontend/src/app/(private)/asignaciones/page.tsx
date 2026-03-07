@@ -374,6 +374,9 @@ export default function AsignacionesPage() {
             else {
                 alert(error.response?.data?.error || error.response?.data?.message || "Error al agregar socio");
             }
+            // Re-lanzar error para que el componente SocioAssignments sepa que falló
+            // y NO muestre el mensaje "Agregado exitosamente"
+            throw error;
         }
     };
 

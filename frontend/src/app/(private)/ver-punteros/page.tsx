@@ -562,33 +562,47 @@ export default function VerPunterosPage() {
         setAsignandoSocios(true);
         try {
             const token = localStorage.getItem("token");
-            await axios.post(`/api/usuarios/${punteroId}/asignar-socios-puntero`, {
+            const res = await axios.post(`/api/usuarios/${punteroId}/asignar-socios-puntero`, {
                 socioIds: Array.from(selectedSocioIds)
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            Swal.fire({
-                icon: "success",
-                title: `${selectedSocioIds.size} socio(s) asignado(s)`,
-                text: "Los socios fueron asignados al puntero exitosamente.",
-                toast: true,
-                position: "top-end",
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-            });
+            const { asignados, yaEnOtraLista, sociosRechazados } = res.data;
+
+            if (yaEnOtraLista > 0) {
+                // Algunos fueron rechazados
+                const rechazadosTexto = sociosRechazados?.length > 0
+                    ? sociosRechazados.join(", ")
+                    : `${yaEnOtraLista} socio(s)`;
+                Swal.fire({
+                    icon: asignados > 0 ? "warning" : "error",
+                    title: asignados > 0 ? `${asignados} asignado(s), ${yaEnOtraLista} rechazado(s)` : "No se pudieron asignar",
+                    html: `<p style="font-size:14px">Los siguientes socios <b>ya pertenecen a la lista de otra persona</b> y no se pueden duplicar:</p><p style="font-size:13px; color:#e65100; margin-top:8px"><b>${rechazadosTexto}</b></p>`,
+                    confirmButtonColor: '#f59e0b',
+                });
+            } else if (asignados > 0) {
+                Swal.fire({
+                    icon: "success",
+                    title: `${asignados} socio(s) asignado(s)`,
+                    text: "Los socios fueron asignados al puntero exitosamente.",
+                    toast: true,
+                    position: "top-end",
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                });
+            }
 
             // Refrescar disponibles y lista del puntero
             fetchSociosDisponibles(punteroId);
-            // Refrescar la lista expandida del puntero
             if (expandedPunteroId === punteroId) {
                 setLoadingPunteroSocios(true);
                 const tokenR = localStorage.getItem("token");
-                const res = await axios.get(`/api/usuarios/${punteroId}/puntero-socios`, {
+                const resP = await axios.get(`/api/usuarios/${punteroId}/puntero-socios`, {
                     headers: { Authorization: `Bearer ${tokenR}` }
                 });
-                setPunteroSocios(res.data);
+                setPunteroSocios(resP.data);
                 setLoadingPunteroSocios(false);
             }
             fetchPunteros(); // actualizar stats
@@ -626,22 +640,36 @@ export default function VerPunterosPage() {
         setAsignandoPadron(true);
         try {
             const token = localStorage.getItem("token");
-            await axios.post(`/api/usuarios/${punteroId}/asignar-socios-puntero`, {
+            const response = await axios.post(`/api/usuarios/${punteroId}/asignar-socios-puntero`, {
                 socioIds: Array.from(selectedPadronIds)
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            Swal.fire({
-                icon: "success",
-                title: `${selectedPadronIds.size} socio(s) asignado(s) del padrón`,
-                text: "Socios asignados al puntero exitosamente.",
-                toast: true,
-                position: "top-end",
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true,
-            });
+            const { asignados, yaEnOtraLista, sociosRechazados } = response.data;
+
+            if (yaEnOtraLista > 0) {
+                const rechazadosTexto = sociosRechazados?.length > 0
+                    ? sociosRechazados.join(", ")
+                    : `${yaEnOtraLista} socio(s)`;
+                Swal.fire({
+                    icon: asignados > 0 ? "warning" : "error",
+                    title: asignados > 0 ? `${asignados} asignado(s), ${yaEnOtraLista} rechazado(s)` : "No se pudieron asignar",
+                    html: `<p style="font-size:14px">Los siguientes socios <b>ya pertenecen a la lista de otra persona</b> y no se pueden duplicar:</p><p style="font-size:13px; color:#e65100; margin-top:8px"><b>${rechazadosTexto}</b></p>`,
+                    confirmButtonColor: '#f59e0b',
+                });
+            } else if (asignados > 0) {
+                Swal.fire({
+                    icon: "success",
+                    title: `${asignados} socio(s) asignado(s) del padrón`,
+                    text: "Socios asignados al puntero exitosamente.",
+                    toast: true,
+                    position: "top-end",
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                });
+            }
 
             setSelectedPadronIds(new Set());
             setResultadosPadron([]);
@@ -650,10 +678,10 @@ export default function VerPunterosPage() {
             // Refrescar lista del puntero
             if (expandedPunteroId === punteroId) {
                 const tokenR = localStorage.getItem("token");
-                const res = await axios.get(`/api/usuarios/${punteroId}/puntero-socios`, {
+                const resP = await axios.get(`/api/usuarios/${punteroId}/puntero-socios`, {
                     headers: { Authorization: `Bearer ${tokenR}` }
                 });
-                setPunteroSocios(res.data);
+                setPunteroSocios(resP.data);
             }
             fetchPunteros();
         } catch (error: any) {

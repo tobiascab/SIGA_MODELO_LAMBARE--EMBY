@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Users, Loader2, Plus, Shield, CheckCircle2, AlertTriangle, Trash2, Clock, Zap } from "lucide-react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
@@ -41,6 +41,7 @@ export default function AsignacionRapidaPage() {
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [adding, setAdding] = useState(false);
+    const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [searchType, setSearchType] = useState(''); // '', 'cedula', 'nroSocio', 'nombre'
 
     // Modal para socio ya asignado
@@ -168,6 +169,13 @@ export default function AsignacionRapidaPage() {
     const handleAddSocio = async () => {
         if (!miLista || !searchedSocio || adding) return;
         setAdding(true);
+        // Cancelar cualquier timeout de éxito pendiente y limpiar mensajes
+        if (successTimeoutRef.current) {
+            clearTimeout(successTimeoutRef.current);
+            successTimeoutRef.current = null;
+        }
+        setSuccessMessage("");
+        setErrorMessage("");
         try {
             const token = localStorage.getItem("token");
             await axios.post(`/api/asignaciones/${miLista.id}/agregar-socio`,
@@ -183,10 +191,15 @@ export default function AsignacionRapidaPage() {
             await loadSocios(miLista.id);
             fetchData(); // Actualizar contadores
 
-            // Limpiar mensaje después de 3 segundos
-            setTimeout(() => setSuccessMessage(""), 3000);
+            // Limpiar mensaje después de 3 segundos (guardando ref para poder cancelar)
+            successTimeoutRef.current = setTimeout(() => {
+                setSuccessMessage("");
+                successTimeoutRef.current = null;
+            }, 3000);
 
         } catch (error: any) {
+            // SIEMPRE limpiar mensaje de éxito en caso de error
+            setSuccessMessage("");
             if (error.response?.status === 409 && error.response?.data?.error === 'SOCIO_YA_ASIGNADO') {
                 setAlreadyAssignedInfo({
                     socioNombre: error.response.data.socioNombre,
@@ -602,6 +615,9 @@ export default function AsignacionRapidaPage() {
                                 onClick={() => {
                                     setShowAlreadyAssignedModal(false);
                                     setAlreadyAssignedInfo(null);
+                                    setSuccessMessage("");
+                                    setErrorMessage("⚡ ¡Intentá con otro socio! Sé más veloz 💪");
+                                    setTimeout(() => setErrorMessage(""), 4000);
                                 }}
                                 className="w-full mt-6 py-4 bg-slate-800 hover:bg-slate-900 text-white rounded-2xl font-bold transition-all"
                             >

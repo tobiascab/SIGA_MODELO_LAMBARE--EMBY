@@ -81,6 +81,17 @@ export default function PrivateLayout({
                 setUser(JSON.parse(userData));
             }
             setAuthorized(true);
+            // Resetear modal de sesión expirada si hay token válido
+            // (el usuario acaba de hacer login)
+            if (isSessionExpired) {
+                setIsSessionExpired(false);
+            }
+            // Si hay token pero session-start es viejo o no existe, renovarlo
+            const sessionStart = parseInt(localStorage.getItem("session-start") || "0", 10);
+            const elapsed = Date.now() - sessionStart;
+            if (!sessionStart || elapsed > 60 * 60 * 1000) {
+                localStorage.setItem("session-start", Date.now().toString());
+            }
         }
     }, [pathname, router]);
 

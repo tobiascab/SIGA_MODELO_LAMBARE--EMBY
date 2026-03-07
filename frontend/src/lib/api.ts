@@ -15,20 +15,26 @@ export const api = axios.create({
 function isSessionExpired(error: any): boolean {
     if (!error.response) return false;
     const status = error.response.status;
+
+    // 401 siempre indica sesión expirada/inválida
     if (status === 401) return true;
+
+    // 403 solo si es claramente un JWT expirado, NO un error de negocio
     if (status === 403) {
         const data = error.response.data;
-        // Spring Security devuelve "Forbidden" como texto plano cuando el JWT expiró
-        if (typeof data === 'string' && data.toLowerCase().includes('forbidden')) return true;
-        // También detectar mensajes específicos en objetos JSON
-        const message = data?.message || data?.error || "";
-        if (typeof message === 'string' &&
-            (message.toLowerCase().includes("vencido") ||
-                message.toLowerCase().includes("expired") ||
-                message.toLowerCase().includes("jwt") ||
-                message.toLowerCase().includes("forbidden"))) return true;
-        // 403 genérico sin body (respuesta vacía) también indica sesión expirada
-        if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) return true;
+
+        // Si tiene campos de negocio (bloqueado, error, etc), NO es sesión expirada
+        if (data && typeof data === 'object') {
+            if (data.bloqueado || data.error || data.mensaje || data.message) return false;
+        }
+
+        // Spring Security devuelve "Forbidden" como texto plano SIN body de negocio
+        // cuando el JWT expiró — solo ese caso específico
+        if (typeof data === 'string' && data.trim() === '') return true;
+        if (typeof data === 'string' && data === 'Forbidden') return true;
+
+        // Body completamente vacío/null = JWT rechazado por Spring Security
+        if (data === null || data === undefined) return true;
     }
     return false;
 }

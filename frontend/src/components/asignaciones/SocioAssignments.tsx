@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Users, Loader2, ClipboardList, Trash2, Plus, Shield, CheckCircle2, UserPlus, Bell, X } from "lucide-react";
+import { Search, Users, Loader2, ClipboardList, Trash2, Plus, Shield, CheckCircle2, UserPlus, Bell, X, Zap } from "lucide-react";
 
 interface Socio {
     id: number;
@@ -74,6 +74,7 @@ export function SocioAssignments({
     const [toastMessage, setToastMessage] = useState("");
     const [isConfirming, setIsConfirming] = useState(false);
     const [justAdded, setJustAdded] = useState<string | null>(null);
+    const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
     const handleConfirmClick = async () => {
         if (isConfirming) return;
@@ -81,8 +82,16 @@ export function SocioAssignments({
         try {
             const socioName = searchedSocio?.nombreCompleto || 'Socio';
             await onConfirmAddSocio();
+            // Solo mostrar éxito si onConfirmAddSocio NO lanzó error
             setJustAdded(socioName);
             setTimeout(() => setJustAdded(null), 3000);
+        } catch {
+            // Error ya manejado por el padre (modal de "Ya Asignado", etc.)
+            // Mostrar mensaje motivacional inline (misma posición que "Agregado exitosamente")
+            setTimeout(() => {
+                setWarningMessage("⚡ ¡Intentá con otro socio! Sé más veloz 💪");
+                setTimeout(() => setWarningMessage(null), 4000);
+            }, 500);
         } finally {
             setIsConfirming(false);
         }
@@ -321,6 +330,25 @@ export function SocioAssignments({
                                     <div>
                                         <p className="text-white font-black text-sm">✓ Agregado exitosamente</p>
                                         <p className="text-emerald-100 text-xs font-medium">{justAdded}</p>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Mensaje motivacional cuando socio ya asignado */}
+                        <AnimatePresence>
+                            {warningMessage && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                    className="mt-4 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-4 flex items-center gap-3 shadow-lg shadow-amber-200/50"
+                                >
+                                    <div className="p-2 bg-white/20 rounded-xl">
+                                        <Zap className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="text-white font-black text-sm">{warningMessage}</p>
                                     </div>
                                 </motion.div>
                             )}
