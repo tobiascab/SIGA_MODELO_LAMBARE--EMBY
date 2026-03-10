@@ -12,30 +12,26 @@ export const api = axios.create({
 });
 
 // Lógica centralizada de detección de sesión expirada
+// NOTA: Solo 401 es tratado como sesión expirada definitiva.
+// Los 403 NO se tratan como sesión expirada porque Spring Security devuelve 403
+// tanto para JWT expirado como para @PreAuthorize denegado (falta de permisos),
+// y no hay forma confiable de distinguirlos desde el frontend.
+// En el backend, el JwtAuthenticationFilter simplemente continúa la cadena sin
+// autenticar si el token es inválido, lo que produce 403 (no 401).
 function isSessionExpired(error: any): boolean {
     if (!error.response) return false;
     const status = error.response.status;
 
-    // 401 siempre indica sesión expirada/inválida
+    // 401 siempre indica sesión expirada/inválida — esto es definitivo
     if (status === 401) return true;
 
-    // 403 solo si es claramente un JWT expirado, NO un error de negocio
-    if (status === 403) {
-        const data = error.response.data;
+    // 403: NO forzar logout. Un 403 puede ser:
+    //  - Falta de permisos del rol (@PreAuthorize)
+    //  - Modo mantenimiento activo
+    //  - JWT expirado (Spring Security default)
+    // Como NO podemos distinguirlos de forma confiable, no cerramos sesión.
+    // El InactivityGuard con su timer de 60 min se encarga del cierre correcto.
 
-        // Si tiene campos de negocio (bloqueado, error, etc), NO es sesión expirada
-        if (data && typeof data === 'object') {
-            if (data.bloqueado || data.error || data.mensaje || data.message) return false;
-        }
-
-        // Spring Security devuelve "Forbidden" como texto plano SIN body de negocio
-        // cuando el JWT expiró — solo ese caso específico
-        if (typeof data === 'string' && data.trim() === '') return true;
-        if (typeof data === 'string' && data === 'Forbidden') return true;
-
-        // Body completamente vacío/null = JWT rechazado por Spring Security
-        if (data === null || data === undefined) return true;
-    }
     return false;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Users, Loader2, Plus, Shield, CheckCircle2, AlertTriangle, Trash2, Clock, Zap } from "lucide-react";
+import { Search, Users, Loader2, Plus, Shield, CheckCircle2, AlertTriangle, Trash2, Clock, Zap, MessageCircle } from "lucide-react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from 'sweetalert2';
@@ -18,6 +18,7 @@ interface Socio {
     creditoAlDia: boolean;
     estadoVozVoto?: boolean;
     habilitadoVozVoto?: string;
+    telefono?: string;
 }
 
 interface ListaAsignacion {
@@ -62,6 +63,27 @@ export default function AsignacionRapidaPage() {
         cedula: string;
         requisitosIncumplidos: string[];
     } | null>(null);
+
+    const getWhatsAppLinkWithMessage = (socio: Socio, currentUser: any) => {
+        if (!socio.telefono) return null;
+        let cleanPhone = socio.telefono.replace(/\D/g, '');
+        if (cleanPhone.startsWith('09')) {
+            cleanPhone = '595' + cleanPhone.substring(1);
+        }
+
+        // Determinar nombre y genero
+        const firstNames = socio.nombreCompleto.split(', ')[1] || socio.nombreCompleto.split(' ')[0] || '';
+        const name = firstNames.split(' ')[0] || '';
+        const isFemale = name.endsWith('A') || name.endsWith('a') || name.endsWith('IA');
+        const greeting = isFemale ? 'Sra.' : 'Sr.';
+
+        const userNameParts = currentUser?.nombre?.split(' ') || ['Asesor'];
+        const userNameStr = userNameParts[0] + (userNameParts.length > 1 ? ' ' + userNameParts[userNameParts.length - 1] : '');
+
+        const message = `¡Hola! Buenos días ${greeting} *${name}* 👋\n\nTe saluda *${userNameStr}* de la *Cooperativa Lambaré* 🟢 para invitarte cordialmente a nuestra asamblea que será el día *sábado 21 de marzo de 2026*.\n\n¡Contamos con tu apoyo y participación! ✨ Si tienes alguna duda, puedes responderme por aquí mismo.`;
+
+        return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    };
 
     const tieneVozYVoto = (socio: Socio) => {
         if (socio.estadoVozVoto !== undefined) return socio.estadoVozVoto;
@@ -525,7 +547,22 @@ export default function AsignacionRapidaPage() {
                                                 {index + 1}
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <p className="font-bold text-slate-800 text-sm sm:text-base truncate">{socio.nombreCompleto}</p>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <p className="font-bold text-slate-800 text-sm sm:text-base truncate">{socio.nombreCompleto}</p>
+                                                    {socio.telefono && getWhatsAppLinkWithMessage(socio, user) && (
+                                                        <a
+                                                            href={getWhatsAppLinkWithMessage(socio, user)!}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-[#25D366] text-white rounded-lg hover:bg-[#128C7E] transition-all shadow-lg hover:shadow-green-500/30 transform hover:scale-105 border border-green-400"
+                                                            title="Enviar Mensaje de WhatsApp"
+                                                        >
+                                                            <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                                                            <span className="hidden sm:inline text-xs font-bold">WhatsApp</span>
+                                                        </a>
+                                                    )}
+                                                </div>
                                                 <p className="text-[10px] sm:text-sm text-slate-500 truncate">
                                                     CI: {socio.cedula} | Nro: {socio.numeroSocio}
                                                 </p>

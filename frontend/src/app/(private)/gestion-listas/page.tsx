@@ -24,7 +24,8 @@ import {
     UserSearch,
     ShieldAlert,
     Download,
-    FileText
+    FileText,
+    MessageCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
@@ -52,6 +53,7 @@ interface SocioDetalle {
     aprobado: boolean;
     fechaAsignacion: string;
     fechaHoraIngreso: string | null;
+    telefono?: string;
 }
 
 export default function GestionListasPage() {
@@ -65,12 +67,35 @@ export default function GestionListasPage() {
     const [socioSearchTerm, setSocioSearchTerm] = useState("");
     const [hasAccess, setHasAccess] = useState<boolean | null>(null);
     const [downloadingPdf, setDownloadingPdf] = useState<"general" | number | null>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+
+    const getWhatsAppLinkWithMessage = (socio: any) => {
+        if (!socio.telefono) return null;
+        let cleanPhone = socio.telefono.replace(/\D/g, '');
+        if (cleanPhone.startsWith('09')) {
+            cleanPhone = '595' + cleanPhone.substring(1);
+        }
+
+        // Determinar nombre y genero
+        const firstNames = socio.nombreCompleto.split(', ')[1] || socio.nombreCompleto.split(' ')[0] || '';
+        const name = firstNames.split(' ')[0] || '';
+        const isFemale = name.endsWith('A') || name.endsWith('a') || name.endsWith('IA');
+        const greeting = isFemale ? 'Sra.' : 'Sr.';
+
+        const userNameParts = currentUser?.nombre?.split(' ') || ['Asesor'];
+        const userNameStr = userNameParts[0] + (userNameParts.length > 1 ? ' ' + userNameParts[userNameParts.length - 1] : '');
+
+        const message = `¡Hola! Buenos días ${greeting} *${name}* 👋\n\nTe saluda *${userNameStr}* de la *Cooperativa Lambaré* 🟢 para invitarte cordialmente a nuestra próxima asamblea institucional que será el día *sábado 21 de marzo de 2026*.\n\n¡Contamos con tu apoyo y participación! ✨ Si tienes alguna duda, puedes responderme por este medio.`;
+
+        return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    };
 
     useEffect(() => {
         // Verificar permisos del usuario
         const userData = localStorage.getItem("user");
         if (userData) {
             const user = JSON.parse(userData);
+            setCurrentUser(user);
             const isSuperAdmin = user.rol === "SUPER_ADMIN";
             const hasGranularPermission = user.permisosEspeciales?.split(',').includes("gestion-listas");
             if (isSuperAdmin || hasGranularPermission) {
@@ -489,7 +514,22 @@ export default function GestionListasPage() {
                                                                                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                                                                                 )}
                                                                             </div>
-                                                                            <p className="text-xs font-bold text-slate-700 truncate">{socio.nombreCompleto}</p>
+                                                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                                                <p className="text-xs font-bold text-slate-700 truncate">{socio.nombreCompleto}</p>
+                                                                                {socio.telefono && getWhatsAppLinkWithMessage(socio) && (
+                                                                                    <a
+                                                                                        href={getWhatsAppLinkWithMessage(socio)!}
+                                                                                        target="_blank"
+                                                                                        rel="noopener noreferrer"
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                        className="inline-flex items-center gap-1.5 px-2 py-1 bg-[#25D366] text-white rounded-lg hover:bg-[#128C7E] transition-all shadow-lg hover:shadow-green-500/30 transform hover:scale-105 border border-green-400"
+                                                                                        title="Enviar Mensaje de WhatsApp"
+                                                                                    >
+                                                                                        <MessageCircle className="h-3 w-3" />
+                                                                                        <span className="text-[10px] font-bold">WhatsApp</span>
+                                                                                    </a>
+                                                                                )}
+                                                                            </div>
                                                                             <p className="text-[10px] text-slate-400">CI: {socio.cedula}</p>
                                                                         </div>
                                                                         <button
@@ -504,7 +544,7 @@ export default function GestionListasPage() {
                                                         </div>
 
                                                         {/* Vista Desktop - Tabla */}
-                                                        <div className="hidden sm:block bg-white rounded-[1.5rem] border border-slate-200 overflow-hidden shadow-inner">
+                                                        < div className="hidden sm:block bg-white rounded-[1.5rem] border border-slate-200 overflow-hidden shadow-inner" >
                                                             <table className="w-full text-left border-collapse">
                                                                 <thead>
                                                                     <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -531,8 +571,23 @@ export default function GestionListasPage() {
                                                                                 </span>
                                                                             </td>
                                                                             <td className="px-6 py-4">
-                                                                                <div>
-                                                                                    <p className="text-sm font-bold text-slate-700">{socio.nombreCompleto}</p>
+                                                                                <div className="flex flex-col gap-1 items-start">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <p className="text-sm font-bold text-slate-700">{socio.nombreCompleto}</p>
+                                                                                        {socio.telefono && getWhatsAppLinkWithMessage(socio) && (
+                                                                                            <a
+                                                                                                href={getWhatsAppLinkWithMessage(socio)!}
+                                                                                                target="_blank"
+                                                                                                rel="noopener noreferrer"
+                                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                                className="inline-flex items-center gap-1.5 px-2 py-1 bg-[#25D366] text-white rounded-lg hover:bg-[#128C7E] transition-all shadow-lg hover:shadow-green-500/30 transform hover:scale-105 border border-green-400"
+                                                                                                title="Enviar Mensaje de WhatsApp"
+                                                                                            >
+                                                                                                <MessageCircle className="h-4 w-4" />
+                                                                                                <span className="hidden lg:inline text-xs font-bold">WhatsApp</span>
+                                                                                            </a>
+                                                                                        )}
+                                                                                    </div>
                                                                                     <p className="text-[10px] text-slate-400">CI: {socio.cedula}</p>
                                                                                 </div>
                                                                             </td>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Users, Loader2, ClipboardList, Trash2, Plus, Shield, CheckCircle2, UserPlus, Bell, X, Zap } from "lucide-react";
+import { Search, Users, Loader2, ClipboardList, Trash2, Plus, Shield, CheckCircle2, UserPlus, Bell, X, Zap, MessageCircle } from "lucide-react";
 
 interface Socio {
     id: number;
@@ -16,6 +16,7 @@ interface Socio {
     creditoAlDia: boolean;
     estadoVozVoto?: boolean;
     habilitadoVozVoto?: string;
+    telefono?: string;
 }
 
 interface ListaAsignacion {
@@ -75,6 +76,49 @@ export function SocioAssignments({
     const [isConfirming, setIsConfirming] = useState(false);
     const [justAdded, setJustAdded] = useState<string | null>(null);
     const [warningMessage, setWarningMessage] = useState<string | null>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null);
+
+    useEffect(() => {
+        const stored = localStorage.getItem("user");
+        if (stored) {
+            setCurrentUser(JSON.parse(stored));
+        }
+    }, []);
+
+    const FEMALE_NAMES = new Set(['maria', 'ana', 'carmen', 'rosa', 'julia', 'laura', 'lucia', 'andrea', 'patricia', 'gabriela', 'sandra', 'monica', 'claudia', 'silvia', 'susana', 'veronica', 'adriana', 'elena', 'alicia', 'teresa', 'beatriz', 'lorena', 'carolina', 'liliana', 'alejandra', 'cecilia', 'marta', 'miriam', 'natalia', 'graciela', 'norma', 'irene', 'gladys', 'blanca', 'raquel', 'ruth', 'olga', 'esther', 'estela', 'dora', 'ester', 'martha', 'nilda', 'mirta', 'elsa', 'elvira', 'hilda', 'edith', 'celsa', 'juana', 'isabel', 'liz', 'luz', 'sol', 'eva', 'alba', 'perla', 'gloria', 'nancy', 'delia', 'ramona', 'lidia', 'victoria', 'celia', 'elba', 'stella', 'sara', 'lilian', 'sonia', 'emma', 'dora', 'nora', 'catalina', 'viviana', 'rocio', 'diana', 'paola', 'noemi', 'cristina', 'florencia', 'romina', 'valeria', 'yolanda', 'cinthia', 'jessica', 'vanessa', 'maribel', 'mariel', 'marlene', 'soledad', 'fatima', 'marcela', 'pamela', 'daniela', 'micaela', 'antonella', 'agustina', 'camila', 'sofia', 'valentina', 'martina', 'milagros', 'pilar', 'luciana', 'brenda', 'silvana', 'karina', 'margarita', 'francisca', 'antonia', 'josefina', 'magdalena', 'celeste', 'dahiana', 'daisy']);
+    const isFemale = (name: string): boolean => {
+        if (!name) return false;
+        const parts = name.toLowerCase().trim().split(/[,\s]+/).filter(Boolean);
+        const commaIdx = name.indexOf(',');
+        let firstName = '';
+        if (commaIdx > 0) {
+            firstName = name.substring(commaIdx + 1).trim().split(/\s+/)[0].toLowerCase();
+        } else {
+            firstName = parts[0] || '';
+        }
+        firstName = firstName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return FEMALE_NAMES.has(firstName);
+    };
+
+    const getWhatsAppLinkWithMessage = (socio: any) => {
+        if (!socio.telefono) return null;
+        let cleanPhone = socio.telefono.replace(/\D/g, '');
+        if (cleanPhone.startsWith('09')) {
+            cleanPhone = '595' + cleanPhone.substring(1);
+        }
+
+        const firstNames = socio.nombreCompleto?.split(', ')[1] || socio.nombreCompleto?.split(' ')[0] || '';
+        const name = firstNames.split(' ')[0] || '';
+        const female = isFemale(socio.nombreCompleto);
+        const greeting = female ? 'Sra.' : 'Sr.';
+
+        const userNameParts = currentUser?.nombre?.split(' ') || currentUser?.nombreCompleto?.split(' ') || ['Asesor'];
+        const userNameStr = userNameParts[0] + (userNameParts.length > 1 ? ' ' + userNameParts[userNameParts.length - 1] : '');
+
+        const message = `¡Hola! Buenos días ${greeting} *${name}* 👋\n\nTe saluda *${userNameStr}* de la *Cooperativa Lambaré* 🟢 para invitarte cordialmente a nuestra próxima asamblea institucional que será el día *sábado 21 de marzo de 2026*.\n\n¡Contamos con tu apoyo y participación! ✨ Si tienes alguna duda, puedes responderme por este medio.`;
+
+        return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    };
 
     const handleConfirmClick = async () => {
         if (isConfirming) return;
@@ -496,9 +540,24 @@ export function SocioAssignments({
                                                 {/* Información Principal */}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-0.5 md:gap-1 mb-1">
-                                                        <p className="font-black text-slate-800 text-sm md:text-lg leading-tight truncate tracking-tight">
-                                                            {socio.nombreCompleto}
-                                                        </p>
+                                                        <div className="flex flex-row items-center gap-2 mb-0.5 flex-wrap">
+                                                            <p className="font-black text-slate-800 text-sm md:text-lg leading-tight truncate tracking-tight">
+                                                                {socio.nombreCompleto}
+                                                            </p>
+                                                            {socio.telefono && getWhatsAppLinkWithMessage(socio) && (
+                                                                <a
+                                                                    href={getWhatsAppLinkWithMessage(socio)!}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="inline-flex items-center gap-1.5 px-2 py-0.5 md:py-1 bg-[#25D366] text-white rounded-lg hover:bg-[#128C7E] transition-all shadow-md hover:shadow-green-500/30 transform hover:scale-105 border border-green-400"
+                                                                    title="Enviar Mensaje de WhatsApp"
+                                                                >
+                                                                    <MessageCircle className="h-3 w-3 md:h-4 md:w-4" />
+                                                                    <span className="text-[10px] md:text-xs font-bold">WhatsApp</span>
+                                                                </a>
+                                                            )}
+                                                        </div>
                                                         <div className="flex items-center">
                                                             <span className={`px-1.5 py-0.5 rounded-lg text-[8px] md:text-xs font-black uppercase tracking-wider border-2 ${esVyV
                                                                 ? 'bg-emerald-50 text-emerald-500 border-emerald-100'

@@ -152,11 +152,8 @@ export default function AsignacionesPage() {
                     }
                 } catch (err: any) {
                     console.error("Error cargando listas:", err);
-                    if (err.response?.status === 403) {
-                        localStorage.removeItem("token");
-                        localStorage.removeItem("user");
-                        window.location.href = "/login";
-                    }
+                    // 403 = sin permisos para este módulo, NO significa sesión expirada
+                    // El interceptor global de axios en api.ts ya maneja JWT expirado
                 }
 
                 // Admin/Directivo: TAMBIÉN cargar sucursales + ranking (para otras funcionalidades)
@@ -176,11 +173,8 @@ export default function AsignacionesPage() {
             }
         } catch (error: any) {
             console.error("Error:", error);
-            if (error.response?.status === 403) {
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
-                window.location.href = "/login";
-            }
+            // El interceptor global de axios en api.ts maneja JWT expirado
+            // No forzar logout aquí — un 403 puede ser solo falta de permisos
         } finally {
             setLoading(false);
         }

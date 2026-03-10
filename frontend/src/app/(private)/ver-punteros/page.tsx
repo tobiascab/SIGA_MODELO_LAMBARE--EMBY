@@ -34,6 +34,7 @@ import {
     Lock,
     Unlock,
     RotateCcw,
+    MessageCircle,
 } from "lucide-react";
 
 interface Puntero {
@@ -144,6 +145,26 @@ export default function VerPunterosPage() {
     const [searchAsignar, setSearchAsignar] = useState("");
     const [removingSocioId, setRemovingSocioId] = useState<number | null>(null);
     const [togglingLoginId, setTogglingLoginId] = useState<number | null>(null);
+
+    const getWhatsAppLinkWithMessage = (socio: any) => {
+        if (!socio.telefono) return null;
+        let cleanPhone = socio.telefono.replace(/\D/g, '');
+        if (cleanPhone.startsWith('09')) {
+            cleanPhone = '595' + cleanPhone.substring(1);
+        }
+
+        const firstNames = socio.nombreCompleto?.split(', ')[1] || socio.nombreCompleto?.split(' ')[0] || '';
+        const name = firstNames.split(' ')[0] || '';
+        const female = isFemale(socio.nombreCompleto);
+        const greeting = female ? 'Sra.' : 'Sr.';
+
+        const userNameParts = user?.nombre?.split(' ') || user?.nombreCompleto?.split(' ') || ['Asesor'];
+        const userNameStr = userNameParts[0] + (userNameParts.length > 1 ? ' ' + userNameParts[userNameParts.length - 1] : '');
+
+        const message = `¡Hola! Buenos días ${greeting} *${name}* 👋\n\nTe saluda *${userNameStr}* de la *Cooperativa Lambaré* 🟢 para invitarte cordialmente a nuestra próxima asamblea institucional que será el día *sábado 21 de marzo de 2026*.\n\n¡Contamos con tu apoyo y participación! ✨ Si tienes alguna duda, puedes responderme por este medio.`;
+
+        return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    };
 
     // Asignar socios del padrón general
     const [showAsignarPadron, setShowAsignarPadron] = useState<number | null>(null);
@@ -1311,17 +1332,32 @@ export default function VerPunterosPage() {
                                                                     </div>
 
                                                                     <div className="flex-1 min-w-0">
-                                                                        <p className={`font-bold truncate text-[11px] ${socio.asistio ? 'text-slate-800' : 'text-slate-500'}`}>
-                                                                            {socio.nombreCompleto}
-                                                                        </p>
-                                                                        <div className="flex items-center gap-2">
+                                                                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                                                            <p className={`font-bold truncate text-[11px] ${socio.asistio ? 'text-slate-800' : 'text-slate-500'}`}>
+                                                                                {socio.nombreCompleto}
+                                                                            </p>
+                                                                            {socio.telefono && getWhatsAppLinkWithMessage(socio) && (
+                                                                                <a
+                                                                                    href={getWhatsAppLinkWithMessage(socio)!}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#25D366] text-white rounded hover:bg-[#128C7E] transition-all shadow-sm hover:shadow-green-500/30 transform hover:scale-105 border border-green-400"
+                                                                                    title="Enviar Mensaje de WhatsApp"
+                                                                                >
+                                                                                    <MessageCircle className="h-2.5 w-2.5" />
+                                                                                    <span className="text-[9px] font-bold">WhatsApp</span>
+                                                                                </a>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2 flex-wrap">
                                                                             {socio.cedula && (
-                                                                                <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
+                                                                                <span className="text-[10px] text-slate-400 flex items-center gap-0.5 whitespace-nowrap">
                                                                                     <CreditCard className="h-2.5 w-2.5" /> {socio.cedula}
                                                                                 </span>
                                                                             )}
                                                                             {socio.telefono && (
-                                                                                <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
+                                                                                <span className="text-[10px] text-slate-400 flex items-center gap-0.5 whitespace-nowrap">
                                                                                     <Phone className="h-2.5 w-2.5" /> {socio.telefono}
                                                                                 </span>
                                                                             )}
@@ -1485,15 +1521,30 @@ export default function VerPunterosPage() {
                                                                                                             }}
                                                                                                         />
                                                                                                         <div className="flex-1 min-w-0">
-                                                                                                            <p className="text-[11px] font-bold text-slate-700 truncate">{s.nombreCompleto}</p>
-                                                                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                                                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                                                                                                <p className="text-[11px] font-bold text-slate-700 truncate">{s.nombreCompleto}</p>
+                                                                                                                {s.telefono && getWhatsAppLinkWithMessage(s) && (
+                                                                                                                    <a
+                                                                                                                        href={getWhatsAppLinkWithMessage(s)!}
+                                                                                                                        target="_blank"
+                                                                                                                        rel="noopener noreferrer"
+                                                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#25D366] text-white rounded hover:bg-[#128C7E] transition-all shadow-sm hover:shadow-green-500/30 transform hover:scale-105 border border-green-400"
+                                                                                                                        title="Enviar Mensaje de WhatsApp"
+                                                                                                                    >
+                                                                                                                        <MessageCircle className="h-2.5 w-2.5" />
+                                                                                                                        <span className="text-[9px] font-bold">WhatsApp</span>
+                                                                                                                    </a>
+                                                                                                                )}
+                                                                                                            </div>
+                                                                                                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                                                                                                 {s.cedula && (
-                                                                                                                    <span className="text-[9px] text-slate-400 flex items-center gap-0.5">
+                                                                                                                    <span className="text-[9px] text-slate-400 flex items-center gap-0.5 whitespace-nowrap">
                                                                                                                         <CreditCard className="h-2.5 w-2.5" /> {s.cedula}
                                                                                                                     </span>
                                                                                                                 )}
                                                                                                                 {s.telefono && (
-                                                                                                                    <span className="text-[9px] text-slate-400 flex items-center gap-0.5">
+                                                                                                                    <span className="text-[9px] text-slate-400 flex items-center gap-0.5 whitespace-nowrap">
                                                                                                                         <Phone className="h-2.5 w-2.5" /> {s.telefono}
                                                                                                                     </span>
                                                                                                                 )}
