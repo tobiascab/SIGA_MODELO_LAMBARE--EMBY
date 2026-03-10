@@ -80,7 +80,7 @@ export default function AsignacionRapidaPage() {
         const userNameParts = currentUser?.nombre?.split(' ') || ['Asesor'];
         const userNameStr = userNameParts[0] + (userNameParts.length > 1 ? ' ' + userNameParts[userNameParts.length - 1] : '');
 
-        const message = `¡Hola! Buenos días ${greeting} *${name}* 👋\n\nTe saluda *${userNameStr}* de la *Cooperativa Lambaré* ✅ para invitarte cordialmente a nuestra asamblea que será el día *sábado 21 de marzo de 2026*.\n\n¡Contamos con tu apoyo y participación! 🌟 Si tienes alguna duda, puedes responderme por aquí mismo.`;
+        const message = `¡Hola! Buenos días ${greeting} *${name}* \uD83D\uDC4B\n\nTe saluda *${userNameStr}* de la *Cooperativa Lambaré* \u2705 para invitarte cordialmente a nuestra asamblea que será el día *sábado 21 de marzo de 2026*.\n\n¡Contamos con tu apoyo y participación! \uD83C\uDF1F Si tienes alguna duda, puedes responderme por aquí mismo.`;
 
         return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     };
