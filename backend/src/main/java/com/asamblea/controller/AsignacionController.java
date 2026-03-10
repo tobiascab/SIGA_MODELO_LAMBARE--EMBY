@@ -869,6 +869,7 @@ public class AsignacionController {
         m.put("cedula", socio.getCedula());
         m.put("nombreCompleto", socio.getNombreCompleto());
         m.put("numeroSocio", socio.getNumeroSocio());
+        m.put("telefono", socio.getTelefono());
         m.put("fechaAsignacion", fechaRef); // Usamos fecha de asignacion o de registro como referencia
         m.put("esVyV", socio.isEstadoVozVoto());
         m.put("condicion", socio.isEstadoVozVoto() ? "VOZ Y VOTO" : "SOLO VOZ");
@@ -910,6 +911,7 @@ public class AsignacionController {
                     socioMap.put("nombreCompleto",
                             socio.getNombreCompleto() != null ? socio.getNombreCompleto() : "Sin Nombre");
                     socioMap.put("numeroSocio", socio.getNumeroSocio() != null ? socio.getNumeroSocio() : "-");
+                    socioMap.put("telefono", socio.getTelefono());
                     socioMap.put("fechaAsignacion", asignacion.getFechaAsignacion());
                     socioMap.put("condicion", esVyV ? "VOZ Y VOTO" : "SOLO VOZ");
                     socioMap.put("esVyV", esVyV);
@@ -994,6 +996,7 @@ public class AsignacionController {
                                     socioMap.put("numeroSocio",
                                             socio.getNumeroSocio() != null ? socio.getNumeroSocio() : "N/A");
                                     socioMap.put("cedula", socio.getCedula() != null ? socio.getCedula() : "N/A");
+                                    socioMap.put("telefono", socio.getTelefono());
                                     socioMap.put("presente", presente);
                                     socioMap.put("lista",
                                             lista.getNombre() != null ? lista.getNombre() : "Lista sin nombre");

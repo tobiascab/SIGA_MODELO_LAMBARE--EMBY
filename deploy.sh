@@ -19,7 +19,7 @@ echo "================================"
 deploy_frontend() {
     BUILD_START=$(date +%s)
     echo -e "${YELLOW}📦 Rebuilding and deploying frontend container...${NC}"
-    cd /home/SIGA
+    cd /home/sigalam/asamblea.cloud
     
     # Force rebuild to pick up source changes
     docker compose up -d --build frontend
@@ -34,7 +34,7 @@ deploy_frontend() {
 deploy_backend() {
     BUILD_START=$(date +%s)
     echo -e "${YELLOW}📦 Building backend...${NC}"
-    cd /home/SIGA/backend
+    cd /home/sigalam/asamblea.cloud/backend
     
     ./mvnw package -DskipTests -B -q
     
@@ -43,7 +43,7 @@ deploy_backend() {
     echo -e "${CYAN}   Build took ${BUILD_TIME}s${NC}"
     
     echo -e "${YELLOW}🔄 Rebuilding and restarting backend container...${NC}"
-    cd /home/SIGA
+    cd /home/sigalam/asamblea.cloud
     docker compose up -d --build backend
     
     echo -e "${GREEN}✅ Backend deployed!${NC}"

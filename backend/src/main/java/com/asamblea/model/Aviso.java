@@ -84,6 +84,6 @@ public class Aviso {
     }
 
     public enum EstadoAviso {
-        CREADO, ENVIADO, FINALIZADO
+        CREADO, ENVIADO, FINALIZADO, CANCELADO
     }
 }

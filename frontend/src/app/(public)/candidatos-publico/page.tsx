@@ -622,7 +622,7 @@ function CandidateModal({ candidate, onClose, coopNombre = 'Cooperativa' }: { ca
 ${fotoUrl}
 ${candidate.biografia ? `📝 "${candidate.biografia}"` : ""}
 
-✨ *¡Conoce a todos los candidatos!*
+🌟 *¡Conoce a todos los candidatos!*
 🔗 https://asamblea.asamblea.cloud/candidatos-publico
 
 ━━━━━━━━━━━━━━━━━━━

@@ -269,7 +269,10 @@ public class AvisosController {
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (AvisoDestinatario ad : avisos) {
-            result.add(mapAvisoUsuario(ad));
+            // Solo mostrar avisos que no estén cancelados
+            if (ad.getAviso().getEstadoGeneral() != Aviso.EstadoAviso.CANCELADO) {
+                result.add(mapAvisoUsuario(ad));
+            }
         }
 
         return ResponseEntity.ok(result);
@@ -407,6 +410,144 @@ public class AvisosController {
                 auth.getName(), request.getRemoteAddr());
 
         return ResponseEntity.ok(Map.of("success", true, "message", "Aviso eliminado correctamente"));
+    }
+
+    /**
+     * Cancelar/Desactivar aviso (solo admin)
+     */
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<?> cancelarAviso(@PathVariable Long id, Authentication auth, HttpServletRequest request) {
+        Usuario current = getCurrentUser(auth);
+        if (current == null || !isAdmin(current)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Solo administradores pueden cancelar avisos"));
+        }
+
+        Optional<Aviso> avisoOpt = avisoRepository.findById(id);
+        if (avisoOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Aviso aviso = avisoOpt.get();
+        aviso.setEstadoGeneral(Aviso.EstadoAviso.CANCELADO);
+        avisoRepository.save(aviso);
+
+        // Auditoría
+        auditService.registrar("AVISOS", "CANCELAR_AVISO",
+                String.format("Canceló/Desactivó aviso #%d: %s", id, aviso.getTitulo()),
+                auth.getName(), request.getRemoteAddr());
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Aviso desactivado correctamente"));
+    }
+
+    /**
+     * Activar aviso (solo admin)
+     */
+    @PutMapping("/{id}/activar")
+    public ResponseEntity<?> activarAviso(@PathVariable Long id, Authentication auth, HttpServletRequest request) {
+        Usuario current = getCurrentUser(auth);
+        if (current == null || !isAdmin(current)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Solo administradores pueden activar avisos"));
+        }
+
+        Optional<Aviso> avisoOpt = avisoRepository.findById(id);
+        if (avisoOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Aviso aviso = avisoOpt.get();
+        aviso.setEstadoGeneral(Aviso.EstadoAviso.ENVIADO);
+        avisoRepository.save(aviso);
+
+        // Auditoría
+        auditService.registrar("AVISOS", "ACTIVAR_AVISO",
+                String.format("Activó aviso #%d: %s", id, aviso.getTitulo()),
+                auth.getName(), request.getRemoteAddr());
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Aviso activado correctamente"));
+    }
+
+    /**
+     * Reenviar aviso (clonar y enviar de nuevo)
+     */
+    @PostMapping("/{id}/reenviar")
+    public ResponseEntity<?> reenviarAviso(@PathVariable Long id, Authentication auth, HttpServletRequest request) {
+        Usuario current = getCurrentUser(auth);
+        if (current == null || !isAdmin(current)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Solo administradores pueden reenviar avisos"));
+        }
+
+        Optional<Aviso> avisoOriginalOpt = avisoRepository.findById(id);
+        if (avisoOriginalOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Aviso original = avisoOriginalOpt.get();
+        
+        // Clonar aviso
+        Aviso nuevo = new Aviso();
+        nuevo.setTipo(original.getTipo());
+        nuevo.setPrioridad(original.getPrioridad());
+        nuevo.setTitulo(original.getTitulo().startsWith("(Copia)") ? original.getTitulo() : "(Copia) " + original.getTitulo());
+        nuevo.setContenido(original.getContenido());
+        nuevo.setEmisor(current);
+        nuevo.setMostrarModal(original.getMostrarModal());
+        nuevo.setRequiereConfirmacion(original.getRequiereConfirmacion());
+        nuevo.setRequiereRespuesta(original.getRequiereRespuesta());
+        nuevo.setImagenUrl(original.getImagenUrl());
+        nuevo.setFiltroRol(original.getFiltroRol());
+        nuevo.setFiltroSucursalId(original.getFiltroSucursalId());
+        nuevo.setIpEmisor(request.getRemoteAddr());
+        nuevo.setUserAgentEmisor(request.getHeader("User-Agent"));
+        
+        avisoRepository.save(nuevo);
+
+        // Buscar destinatarios según el tipo del aviso original
+        List<Usuario> destinatarios = new ArrayList<>();
+        if (nuevo.getTipo() == Aviso.TipoAviso.INDIVIDUAL) {
+            // En caso de individual, reenviar al mismo usuario si es posible
+            List<AvisoDestinatario> originalDests = destinatarioRepository.findByAvisoId(id);
+            if (!originalDests.isEmpty()) {
+                destinatarios.add(originalDests.get(0).getUsuario());
+            }
+        } else if (nuevo.getTipo() == Aviso.TipoAviso.MASIVO) {
+            destinatarios = usuarioRepository.findAll().stream()
+                    .filter(u -> !u.getId().equals(current.getId()))
+                    .toList();
+        } else if (nuevo.getTipo() == Aviso.TipoAviso.POR_FILTRO) {
+            String role = nuevo.getFiltroRol();
+            Long sucursalId = nuevo.getFiltroSucursalId();
+            destinatarios = usuarioRepository.findAll().stream()
+                    .filter(u -> !u.getId().equals(current.getId()))
+                    .filter(u -> role == null || role.equals(u.getRol().name()))
+                    .filter(u -> sucursalId == null || (u.getSucursal() != null && sucursalId.equals(u.getSucursal().getId())))
+                    .toList();
+        }
+
+        // Crear destinatarios
+        LocalDateTime now = LocalDateTime.now();
+        List<AvisoDestinatario> destinatariosEntities = new ArrayList<>();
+        for (Usuario dest : destinatarios) {
+            AvisoDestinatario ad = new AvisoDestinatario();
+            ad.setAviso(nuevo);
+            ad.setUsuario(dest);
+            ad.setEnviadoAt(now);
+            ad.setEstado(AvisoDestinatario.EstadoDestinatario.PENDIENTE);
+            destinatariosEntities.add(ad);
+        }
+        destinatarioRepository.saveAll(destinatariosEntities);
+
+        nuevo.setEstadoGeneral(Aviso.EstadoAviso.ENVIADO);
+        avisoRepository.save(nuevo);
+
+        // Auditoría
+        auditService.registrar("AVISOS", "REENVIAR_AVISO",
+                String.format("Reenvió aviso #%d como #%d", id, nuevo.getId()),
+                auth.getName(), request.getRemoteAddr());
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "avisoId", nuevo.getId(),
+                "destinatarios", destinatarios.size()));
     }
 
     // ========================================================================

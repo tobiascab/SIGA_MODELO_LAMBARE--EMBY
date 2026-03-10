@@ -115,7 +115,7 @@ export function SocioAssignments({
         const userNameParts = currentUser?.nombre?.split(' ') || currentUser?.nombreCompleto?.split(' ') || ['Asesor'];
         const userNameStr = userNameParts[0] + (userNameParts.length > 1 ? ' ' + userNameParts[userNameParts.length - 1] : '');
 
-        const message = `¡Hola! Buenos días ${greeting} *${name}* 👋\n\nTe saluda *${userNameStr}* de la *Cooperativa Lambaré* 🟢 para invitarte cordialmente a nuestra próxima asamblea institucional que será el día *sábado 21 de marzo de 2026*.\n\n¡Contamos con tu apoyo y participación! ✨ Si tienes alguna duda, puedes responderme por este medio.`;
+        const message = `¡Hola! Buenos días ${greeting} *${name}* 👋\n\nTe saluda *${userNameStr}* de la *Cooperativa Lambaré* ✅ para invitarte cordialmente a nuestra próxima asamblea institucional que será el día *sábado 21 de marzo de 2026*.\n\n¡Contamos con tu apoyo y participación! 🌟 Si tienes alguna duda, puedes responderme por este medio.`;
 
         return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     };
@@ -151,7 +151,7 @@ export function SocioAssignments({
         "📊 Recordatorio amable: Con {n} socios más llegarás a la meta recomendada.",
         "🎯 ¡Sigue así! Solo necesitas agregar {n} socios más a tu lista.",
         "💪 ¡Casi llegas! Agrega {n} socios más para una distribución óptima.",
-        "✨ ¡Excelente trabajo! Solo faltan {n} socios para completar tu meta."
+        "🌟 ¡Excelente trabajo! Solo faltan {n} socios para completar tu meta."
     ];
 
     // Notificación periódica amable (cada 2 minutos)

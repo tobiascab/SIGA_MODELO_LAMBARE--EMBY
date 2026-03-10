@@ -71,12 +71,12 @@ const ORGANO_INFO: Record<string, { label: string, icon: React.ComponentType<{ c
 
 // Mensajes creativos para compartir en WhatsApp
 const SHARE_MESSAGES = [
-    "🌟 ¡Este es MI candidato! {nombre} representa los valores que nuestra cooperativa necesita. ¡Te invito a conocerlo! 🗳️✨",
+    "🌟 ¡Este es MI candidato! {nombre} representa los valores que nuestra cooperativa necesita. ¡Te invito a conocerlo! 🗳️🌟",
     "💪 ¡Apoyo total a {nombre}! Una persona comprometida con el futuro de nuestra cooperativa. ¡Juntos hacemos la diferencia! 🤝",
     "🎯 {nombre} tiene mi voto de confianza. ¡Su visión y compromiso son justo lo que necesitamos! ¡Conócelo/a! 💚",
     "⭐ ¡Mi candidato/a {nombre} merece tu atención! Liderazgo, transparencia y compromiso. ¡Vota con confianza! 📣",
     "🏆 ¡{nombre} para el Consejo! Un verdadero líder cooperativista que trabajará por todos nosotros. ¡Comparte y apoya! 💪",
-    "✨ ¡Conoce a {nombre}! Una persona íntegra y comprometida con nuestra cooperativa. ¡Mi voto es para él/ella! 🎉",
+    "🌟 ¡Conoce a {nombre}! Una persona íntegra y comprometida con nuestra cooperativa. ¡Mi voto es para él/ella! 🎉",
     "💚 ¡Estoy con {nombre}! Porque la cooperativa merece líderes que realmente trabajen por los socios. ¡Únete! 🤲",
     "🗳️ Este año mi voto es para {nombre}. ¡Confío en su capacidad y compromiso! ¿Tú a quién apoyas? 🌟"
 ];

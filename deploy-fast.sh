@@ -17,7 +17,7 @@ echo "================================"
 # Function to deploy frontend
 deploy_frontend() {
     echo "📦 Rebuilding and deploying frontend container..."
-    cd /home/SIGA
+    cd /home/sigalam/asamblea.cloud
     docker compose up -d --build frontend
     echo "✅ Frontend deployed with latest changes!"
 }
@@ -25,7 +25,7 @@ deploy_frontend() {
 # Function to deploy backend
 deploy_backend() {
     echo "📦 Rebuilding and deploying backend container..."
-    cd /home/SIGA
+    cd /home/sigalam/asamblea.cloud
     docker compose up -d --build backend
     echo "✅ Backend deployed with latest changes!"
 }

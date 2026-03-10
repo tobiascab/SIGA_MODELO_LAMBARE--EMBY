@@ -55,6 +55,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Token Bearer está presente — si falla validación, DEBE ser 401 (no 403)
         try {
             jwt = authHeader.substring(7).trim();
             username = jwtService.extractUsername(jwt);
@@ -85,11 +86,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authToken.setDetails(
                             new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    // Token presente pero inválido (expirado o tokenVersion no coincide)
+                    // → devolver 401 explícito para que el frontend distinga de 403 (permisos)
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"Token expirado o inválido. Inicie sesión nuevamente.\"}");
+                    return;
                 }
             }
         } catch (Exception e) {
+            // Error al parsear/verificar JWT (firma inválida, token corrupto, expirado)
+            // → devolver 401 explícito
             System.err.println("JWT Authentication Error: " + e.getMessage());
-            // don't stack trace to keep logs clean in prod
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Sesión expirada.\"}");
+            return;
         }
 
         filterChain.doFilter(request, response);
