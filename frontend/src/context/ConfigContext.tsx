@@ -13,6 +13,7 @@ interface TestModeInfo {
 interface ConfigState {
     nombreAsamblea: string;
     fechaAsamblea: string;
+    mensajeWhatsApp: string;
     isMaintenanceMode: boolean;
     isTestMode: boolean;
     testModeInfo: TestModeInfo | null;
@@ -123,6 +124,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
 
     const nombreAsamblea = config["ASAMBLEA_NOMBRE"] || "ASAMBLEA GENERAL ORDINARIA 2026";
     const fechaAsamblea = config["ASAMBLEA_FECHA"] || "2026-01-15";
+    const mensajeWhatsApp = config["MENSAJE_WHATSAPP"] || "¡Hola! Buenos días {SALUDO} *{NOMBRE}* 👋\n\nTe saluda *{ASESOR}* de la *Cooperativa Lambaré* ✅ para invitarte cordialmente a nuestra próxima asamblea institucional que será el día *{FECHA_ASAMBLEA}*.\n\n¡Contamos con tu apoyo y participación! 🌟 Si tienes alguna duda, puedes responderme por este medio.";
     const isMaintenanceMode = config["MODO_MANTENIMIENTO"] === "true";
     const isTestMode = testModeInfo?.active || config["MODO_PRUEBA"] === "true";
 
@@ -130,6 +132,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         <ConfigContext.Provider value={{
             nombreAsamblea,
             fechaAsamblea,
+            mensajeWhatsApp,
             isMaintenanceMode,
             isTestMode,
             testModeInfo,

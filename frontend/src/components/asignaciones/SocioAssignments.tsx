@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Users, Loader2, ClipboardList, Trash2, Plus, Shield, CheckCircle2, UserPlus, Bell, X, Zap, MessageCircle } from "lucide-react";
+import { useConfig } from "@/context/ConfigContext";
 
 interface Socio {
     id: number;
@@ -70,6 +71,8 @@ export function SocioAssignments({
     tieneVozYVoto,
 }: SocioAssignmentsProps) {
 
+    const { mensajeWhatsApp, fechaAsamblea } = useConfig();
+
     // Estado para notificación toast
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
@@ -84,6 +87,23 @@ export function SocioAssignments({
             setCurrentUser(JSON.parse(stored));
         }
     }, []);
+
+    // Función para formatear la fecha de la asamblea con día de la semana
+    const formatearFechaAsamblea = () => {
+        if (!fechaAsamblea) return "";
+        try {
+            const fecha = new Date(fechaAsamblea + 'T00:00:00');
+            const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+            const diaSemana = diasSemana[fecha.getDay()];
+            const dia = fecha.getDate();
+            const mes = meses[fecha.getMonth()];
+            const anio = fecha.getFullYear();
+            return `${diaSemana} ${dia} de ${mes} de ${anio}`;
+        } catch (e) {
+            return "";
+        }
+    };
 
     const FEMALE_NAMES = new Set(['maria', 'ana', 'carmen', 'rosa', 'julia', 'laura', 'lucia', 'andrea', 'patricia', 'gabriela', 'sandra', 'monica', 'claudia', 'silvia', 'susana', 'veronica', 'adriana', 'elena', 'alicia', 'teresa', 'beatriz', 'lorena', 'carolina', 'liliana', 'alejandra', 'cecilia', 'marta', 'miriam', 'natalia', 'graciela', 'norma', 'irene', 'gladys', 'blanca', 'raquel', 'ruth', 'olga', 'esther', 'estela', 'dora', 'ester', 'martha', 'nilda', 'mirta', 'elsa', 'elvira', 'hilda', 'edith', 'celsa', 'juana', 'isabel', 'liz', 'luz', 'sol', 'eva', 'alba', 'perla', 'gloria', 'nancy', 'delia', 'ramona', 'lidia', 'victoria', 'celia', 'elba', 'stella', 'sara', 'lilian', 'sonia', 'emma', 'dora', 'nora', 'catalina', 'viviana', 'rocio', 'diana', 'paola', 'noemi', 'cristina', 'florencia', 'romina', 'valeria', 'yolanda', 'cinthia', 'jessica', 'vanessa', 'maribel', 'mariel', 'marlene', 'soledad', 'fatima', 'marcela', 'pamela', 'daniela', 'micaela', 'antonella', 'agustina', 'camila', 'sofia', 'valentina', 'martina', 'milagros', 'pilar', 'luciana', 'brenda', 'silvana', 'karina', 'margarita', 'francisca', 'antonia', 'josefina', 'magdalena', 'celeste', 'dahiana', 'daisy']);
     const isFemale = (name: string): boolean => {
@@ -115,7 +135,12 @@ export function SocioAssignments({
         const userNameParts = currentUser?.nombre?.split(' ') || currentUser?.nombreCompleto?.split(' ') || ['Asesor'];
         const userNameStr = userNameParts[0] + (userNameParts.length > 1 ? ' ' + userNameParts[userNameParts.length - 1] : '');
 
-        const message = `¡Hola! Buenos días ${greeting} *${name}* \uD83D\uDC4B\n\nTe saluda *${userNameStr}* de la *Cooperativa Lambaré* \u2705 para invitarte cordialmente a nuestra próxima asamblea institucional que será el día *sábado 21 de marzo de 2026*.\n\n¡Contamos con tu apoyo y participación! \uD83C\uDF1F Si tienes alguna duda, puedes responderme por este medio.`;
+        // Usar el mensaje configurado y reemplazar placeholders
+        const message = mensajeWhatsApp
+            .replace(/{SALUDO}/g, greeting)
+            .replace(/{NOMBRE}/g, name)
+            .replace(/{ASESOR}/g, userNameStr)
+            .replace(/{FECHA_ASAMBLEA}/g, formatearFechaAsamblea());
 
         return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     };
@@ -144,45 +169,6 @@ export function SocioAssignments({
     // Usar selectedLista para estadísticas (el padre selecciona la lista con más socios)
     // Fallback a la primera lista solo si no hay ninguna seleccionada
     const miLista = selectedLista || (misListas.length > 0 ? misListas[0] : null);
-
-    // Mensajes amables rotativos
-    const mensajesAmables = [
-        "¡Hola! 👋 Te faltan {n} socios para alcanzar tu meta de 10. ¡Tú puedes!",
-        "📊 Recordatorio amable: Con {n} socios más llegarás a la meta recomendada.",
-        "🎯 ¡Sigue así! Solo necesitas agregar {n} socios más a tu lista.",
-        "💪 ¡Casi llegas! Agrega {n} socios más para una distribución óptima.",
-        "🌟 ¡Excelente trabajo! Solo faltan {n} socios para completar tu meta."
-    ];
-
-    // Notificación periódica amable (cada 2 minutos)
-    useEffect(() => {
-        if (!miLista || miLista.total >= 10) return;
-
-        const interval = setInterval(() => {
-            const faltantes = 10 - miLista.total;
-            const mensajeRandom = mensajesAmables[Math.floor(Math.random() * mensajesAmables.length)];
-            setToastMessage(mensajeRandom.replace("{n}", faltantes.toString()));
-            setShowToast(true);
-
-            // Auto-ocultar después de 8 segundos
-            setTimeout(() => setShowToast(false), 8000);
-        }, 120000); // 2 minutos
-
-        // Mostrar primera notificación después de 30 segundos
-        const initialTimeout = setTimeout(() => {
-            if (miLista.total < 10) {
-                const faltantes = 10 - miLista.total;
-                setToastMessage(`¡Hola! 👋 Te recomendamos agregar ${faltantes} socios más para llegar a 10. ¡Tú puedes!`);
-                setShowToast(true);
-                setTimeout(() => setShowToast(false), 8000);
-            }
-        }, 30000);
-
-        return () => {
-            clearInterval(interval);
-            clearTimeout(initialTimeout);
-        };
-    }, [miLista?.total]);
 
     // Búsqueda automática (Debounce) - Requiere mínimo 3 caracteres
     useEffect(() => {
@@ -243,43 +229,7 @@ export function SocioAssignments({
             </div>
 
             <div className="mx-auto space-y-4" style={{ maxWidth: 'clamp(320px, 95vw, 900px)', padding: 'clamp(0.75rem, 2vw, 1.5rem)' }}>
-                {/* Mensaje Amable: Mínimo 5 Socios */}
-                {miLista && miLista.total < 10 && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bg-gradient-to-r from-blue-50 via-indigo-50 to-violet-50 rounded-3xl border-2 border-indigo-200 p-6 shadow-lg shadow-indigo-100"
-                        data-tour="meta-indicator"
-                    >
-                        <div className="flex items-start gap-4">
-                            <div className="p-3 bg-indigo-500 rounded-xl shadow-lg">
-                                <ClipboardList className="w-6 h-6 text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="text-lg font-black text-indigo-900 mb-1">
-                                    ¡Estás comenzando bien! 🎯
-                                </h3>
-                                <p className="text-sm text-indigo-700 mb-3 leading-relaxed">
-                                    Para asegurar una distribución efectiva del trabajo, <span className="font-bold">te recomendamos agregar al menos 10 socios</span> a tu lista.
-                                    Actualmente tienes <span className="font-bold text-indigo-900">{miLista.total}</span> {miLista.total === 1 ? 'socio' : 'socios'}.
-                                </p>
-                                <div className="flex items-center gap-2">
-                                    <div className="flex-1 bg-white/50 rounded-full h-3 overflow-hidden">
-                                        <motion.div
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${Math.min((miLista.total / 10) * 100, 100)}%` }}
-                                            transition={{ duration: 0.5, ease: "easeOut" }}
-                                            className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
-                                        />
-                                    </div>
-                                    <span className="text-xs font-bold text-indigo-600 min-w-[60px] text-right">
-                                        {miLista.total} /10
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
+
 
                 {/* Buscador Principal */}
                 {miLista && (
@@ -339,6 +289,7 @@ export function SocioAssignments({
                                     value={socioSearchTerm}
                                     onChange={(e) => onSearchTermChange(e.target.value)}
                                     autoComplete="off"
+                                    autoFocus
                                 />
                             </div>
                             <motion.button

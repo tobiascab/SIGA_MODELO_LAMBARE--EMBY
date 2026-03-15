@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { useCooperativa } from "@/context/CooperativaContext";
+import { useConfig } from "@/context/ConfigContext";
 import {
     Target,
     Users,
@@ -102,6 +103,7 @@ function getAvatarSvg(name: string, size = 40): string {
 
 export default function VerPunterosPage() {
     const { cooperativa } = useCooperativa();
+    const { mensajeWhatsApp, fechaAsamblea } = useConfig();
     // Punteros module uses its own orange palette
     const cp = '#f59e0b';
     const cs = '#ea580c';
@@ -146,6 +148,23 @@ export default function VerPunterosPage() {
     const [removingSocioId, setRemovingSocioId] = useState<number | null>(null);
     const [togglingLoginId, setTogglingLoginId] = useState<number | null>(null);
 
+    // Función para formatear la fecha de la asamblea con día de la semana
+    const formatearFechaAsamblea = () => {
+        if (!fechaAsamblea) return "sábado 21 de marzo de 2026";
+        try {
+            const fecha = new Date(fechaAsamblea + 'T00:00:00');
+            const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+            const diaSemana = diasSemana[fecha.getDay()];
+            const dia = fecha.getDate();
+            const mes = meses[fecha.getMonth()];
+            const anio = fecha.getFullYear();
+            return `${diaSemana} ${dia} de ${mes} de ${anio}`;
+        } catch (e) {
+            return "sábado 21 de marzo de 2026";
+        }
+    };
+
     const getWhatsAppLinkWithMessage = (socio: any) => {
         if (!socio.telefono) return null;
         let cleanPhone = socio.telefono.replace(/\D/g, '');
@@ -161,7 +180,12 @@ export default function VerPunterosPage() {
         const userNameParts = user?.nombre?.split(' ') || user?.nombreCompleto?.split(' ') || ['Asesor'];
         const userNameStr = userNameParts[0] + (userNameParts.length > 1 ? ' ' + userNameParts[userNameParts.length - 1] : '');
 
-        const message = `¡Hola! Buenos días ${greeting} *${name}* \uD83D\uDC4B\n\nTe saluda *${userNameStr}* de la *Cooperativa Lambaré* \u2705 para invitarte cordialmente a nuestra próxima asamblea institucional que será el día *sábado 21 de marzo de 2026*.\n\n¡Contamos con tu apoyo y participación! \uD83C\uDF1F Si tienes alguna duda, puedes responderme por este medio.`;
+        // Usar el mensaje configurado y reemplazar placeholders
+        const message = mensajeWhatsApp
+            .replace(/{SALUDO}/g, greeting)
+            .replace(/{NOMBRE}/g, name)
+            .replace(/{ASESOR}/g, userNameStr)
+            .replace(/{FECHA_ASAMBLEA}/g, formatearFechaAsamblea());
 
         return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     };

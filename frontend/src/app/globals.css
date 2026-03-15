@@ -479,3 +479,28 @@
     margin: 0 auto 0.5rem;
   }
 }
+
+/* ============================================================
+   PWA STANDALONE MODE - Safe Area & Status Bar Fix
+   Ensures TopBar is visible when installed as PWA on mobile
+   ============================================================ */
+@media all and (display-mode: standalone) {
+  /* Add safe area padding to the body for status bar */
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Ensure the sticky header accounts for safe area */
+  header.sticky {
+    top: 0;
+  }
+
+  /* Fixed elements need safe area offset */
+  .fixed.bottom-4,
+  .fixed.bottom-0 {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}

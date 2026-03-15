@@ -43,7 +43,7 @@ export default function DirectAssignmentMaster() {
     // INPUTS
     const [searchResponsable, setSearchResponsable] = useState("");
     const [searchSocio, setSearchSocio] = useState("");
-    const [searchType, setSearchType] = useState(''); // '', 'cedula', 'nroSocio', 'nombre'
+    const [searchType, setSearchType] = useState('cedula'); // 'cedula', 'nroSocio', '' (todos)
 
     // UI
     const [loading, setLoading] = useState(false);

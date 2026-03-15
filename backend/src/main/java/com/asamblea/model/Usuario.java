@@ -62,8 +62,9 @@ public class Usuario implements UserDetails {
 
     private Socio socio;
 
-    @Column(name = "password_visible")
-    private String passwordVisible; // Contraseña en texto plano para visualización administrativa
+    // CAMPO ELIMINADO POR SEGURIDAD: passwordVisible
+    // NUNCA almacenar contraseñas en texto plano
+    // Si necesitas resetear contraseñas, usa tokens temporales
 
     @Column(name = "requires_password_change")
     private Boolean requiresPasswordChange = true;

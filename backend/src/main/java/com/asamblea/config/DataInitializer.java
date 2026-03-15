@@ -6,6 +6,7 @@ import com.asamblea.model.Asamblea;
 import com.asamblea.repository.AsambleaRepository;
 import com.asamblea.repository.SucursalRepository;
 import com.asamblea.repository.UsuarioRepository;
+import com.asamblea.service.ConfiguracionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -21,6 +22,7 @@ public class DataInitializer {
     private final AsambleaRepository asambleaRepository;
     private final SucursalRepository sucursalRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ConfiguracionService configuracionService;
 
     @Bean
     public CommandLineRunner initData() {
@@ -34,7 +36,7 @@ public class DataInitializer {
                 Usuario admin = new Usuario();
                 admin.setUsername("admin");
                 admin.setPassword(passwordEncoder.encode("admin"));
-                admin.setPasswordVisible("admin"); // Visible para gestión
+                // CAMPO passwordVisible ELIMINADO POR SEGURIDAD
                 admin.setNombreCompleto("Super Administrador");
                 admin.setRol(Usuario.Rol.SUPER_ADMIN);
                 admin.setActivo(true);
@@ -42,17 +44,8 @@ public class DataInitializer {
                 usuarioRepository.save(admin);
                 System.out.println("✅ Usuario ADMIN creado con éxito (user: admin / pass: admin)");
             } else {
-                System.out.println("ℹ️ El usuario ADMIN ya existe. Verificando consistencia...");
-
-                // REPARACIÓN AUTOMÁTICA: Si la contraseña real es "admin" pero el visible está
-                // mal (bug anterior), corregirlo.
-                Usuario admin = existingAdmin.get();
-                if (passwordEncoder.matches("admin", admin.getPassword())
-                        && !"admin".equals(admin.getPasswordVisible())) {
-                    admin.setPasswordVisible("admin");
-                    usuarioRepository.save(admin);
-                    System.out.println("✅ MANTENIMIENTO: Se corrigió la contraseña visible del Admin a 'admin'");
-                }
+                System.out.println("ℹ️ El usuario ADMIN ya existe.");
+                // Reparación automática eliminada - passwordVisible ya no existe
             }
 
             // ==========================================
@@ -101,6 +94,18 @@ public class DataInitializer {
                     asambleaRepository.save(asamblea);
                     System.out.println("✅ Asamblea de emergencia creada y activada.");
                 }
+            }
+
+            // ==========================================
+            // 5. INICIALIZAR MENSAJE DE WHATSAPP POR DEFECTO
+            // ==========================================
+            String mensajeWhatsApp = configuracionService.obtener("MENSAJE_WHATSAPP", null);
+            if (mensajeWhatsApp == null || mensajeWhatsApp.isEmpty()) {
+                String mensajePorDefecto = "¡Hola! Buenos días {SALUDO} *{NOMBRE}* 👋\n\n" +
+                        "Te saluda *{ASESOR}* de la *Cooperativa Lambaré* ✅ para invitarte cordialmente a nuestra próxima asamblea institucional que será el día *{FECHA_ASAMBLEA}*.\n\n" +
+                        "¡Contamos con tu apoyo y participación! 🌟 Si tienes alguna duda, puedes responderme por este medio.";
+                configuracionService.guardar("MENSAJE_WHATSAPP", mensajePorDefecto);
+                System.out.println("✅ Mensaje de WhatsApp por defecto inicializado con placeholders.");
             }
         };
     }

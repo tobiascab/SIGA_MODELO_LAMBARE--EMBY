@@ -29,6 +29,8 @@ public class SecurityConfiguration {
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
                 http
+                                // CSRF deshabilitado para API REST stateless con JWT
+                                // Esto es seguro porque usamos JWT en Authorization header
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                                 .headers(headers -> headers
@@ -61,10 +63,29 @@ public class SecurityConfiguration {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                configuration.setAllowedOriginPatterns(List.of("*"));
+
+                // CONFIGURACIÓN SEGURA DE CORS: Dominios específicos desde variable de entorno
+                String allowedOriginsEnv = System.getenv("CORS_ALLOWED_ORIGINS");
+                List<String> allowedOrigins;
+
+                if (allowedOriginsEnv != null && !allowedOriginsEnv.isEmpty()) {
+                        // Usar dominios desde variable de entorno
+                        allowedOrigins = Arrays.asList(allowedOriginsEnv.split(","));
+                } else {
+                        // Valores por defecto (CAMBIAR SEGÚN TU DOMINIO DE PRODUCCIÓN)
+                        allowedOrigins = Arrays.asList(
+                                "https://asamblea.cloud",
+                                "https://www.asamblea.cloud",
+                                "http://localhost:6001" // Solo para desarrollo
+                        );
+                }
+
+                configuration.setAllowedOrigins(allowedOrigins);
                 configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                 configuration.setAllowedHeaders(List.of("*"));
                 configuration.setAllowCredentials(true);
+                configuration.setMaxAge(3600L); // Cache preflight por 1 hora
+
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
                 source.registerCorsConfiguration("/**", configuration);
                 return source;

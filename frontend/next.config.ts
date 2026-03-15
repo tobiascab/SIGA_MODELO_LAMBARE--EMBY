@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  async redirects() {
+    return [
+      {
+        source: '/candidatos',
+        destination: '/candidatos-publico',
+        permanent: false,
+      },
+    ]
+  },
   async rewrites() {
     return [
       {

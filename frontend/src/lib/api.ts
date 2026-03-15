@@ -11,27 +11,27 @@ export const api = axios.create({
     },
 });
 
+// Verificar si el token JWT está expirado (sin hacer request al servidor)
+function isTokenExpired(): boolean {
+    if (typeof window === 'undefined') return false;
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        // Expirado si le quedan menos de 30 segundos
+        return payload.exp * 1000 < Date.now() + 30000;
+    } catch {
+        return false;
+    }
+}
+
 // Lógica centralizada de detección de sesión expirada
-// NOTA: Solo 401 es tratado como sesión expirada definitiva.
-// Los 403 NO se tratan como sesión expirada porque Spring Security devuelve 403
-// tanto para JWT expirado como para @PreAuthorize denegado (falta de permisos),
-// y no hay forma confiable de distinguirlos desde el frontend.
-// En el backend, el JwtAuthenticationFilter simplemente continúa la cadena sin
-// autenticar si el token es inválido, lo que produce 403 (no 401).
 function isSessionExpired(error: any): boolean {
     if (!error.response) return false;
     const status = error.response.status;
-
-    // 401 siempre indica sesión expirada/inválida — esto es definitivo
     if (status === 401) return true;
-
-    // 403: NO forzar logout. Un 403 puede ser:
-    //  - Falta de permisos del rol (@PreAuthorize)
-    //  - Modo mantenimiento activo
-    //  - JWT expirado (Spring Security default)
-    // Como NO podemos distinguirlos de forma confiable, no cerramos sesión.
-    // El InactivityGuard con su timer de 60 min se encarga del cierre correcto.
-
+    // 403 con token expirado: verificar si el token realmente expiró
+    if (status === 403 && isTokenExpired()) return true;
     return false;
 }
 
@@ -39,32 +39,46 @@ let sessionExpiredFired = false;
 function fireSessionExpired() {
     if (typeof window !== 'undefined' && !sessionExpiredFired) {
         sessionExpiredFired = true;
+        // Limpiar token para evitar más requests con token expirado
+        // (no borrar 'user' para que SessionExpiredModal pueda mostrarlo)
+        localStorage.removeItem('token');
         window.dispatchEvent(new CustomEvent('session-expired'));
-        // Reset después de 3 segundos para permitir re-disparo si es necesario
         setTimeout(() => { sessionExpiredFired = false; }, 3000);
     }
 }
 
-// Add a response interceptor to handle session expiration (instancia api)
+// Request interceptor: evitar enviar requests con token expirado
+const requestInterceptor = (config: any) => {
+    if (typeof window !== 'undefined' && isTokenExpired()) {
+        fireSessionExpired();
+        // Cancelar el request
+        const controller = new AbortController();
+        controller.abort();
+        config.signal = controller.signal;
+    }
+    return config;
+};
+
+// Response interceptor para detectar sesión expirada
+const responseErrorInterceptor = (error: any) => {
+    if (isSessionExpired(error)) {
+        fireSessionExpired();
+    }
+    return Promise.reject(error);
+};
+
+// Interceptors para instancia api
+api.interceptors.request.use(requestInterceptor);
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (isSessionExpired(error)) {
-            fireSessionExpired();
-        }
-        return Promise.reject(error);
-    }
+    responseErrorInterceptor
 );
 
-// Interceptor global en axios default para páginas que usan `axios` directamente
+// Interceptors globales para páginas que usan `axios` directamente
+axios.interceptors.request.use(requestInterceptor);
 axios.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (isSessionExpired(error)) {
-            fireSessionExpired();
-        }
-        return Promise.reject(error);
-    }
+    responseErrorInterceptor
 );
 
 // For use with axios instances

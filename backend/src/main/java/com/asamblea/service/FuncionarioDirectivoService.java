@@ -325,7 +325,7 @@ public class FuncionarioDirectivoService {
         // Esto evita resetear la contraseña de usuarios que ya la cambiaron
         if (usuario.getId() == null) {
             usuario.setPassword(passwordEncoder.encode(cedulaSanitized)); // Password encriptada
-            usuario.setPasswordVisible(cedulaSanitized); // Contraseña visible para admin
+            // CAMPO passwordVisible ELIMINADO POR SEGURIDAD
             usuario.setActivo(true);
         } else {
             // SAFEGUARD: Preservar lastLogin si el usuario ya existe

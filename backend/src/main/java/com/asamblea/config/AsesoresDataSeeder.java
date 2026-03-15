@@ -141,7 +141,7 @@ public class AsesoresDataSeeder implements CommandLineRunner {
                                     Usuario u = new Usuario();
                                     u.setUsername(socio.getCedula());
                                     u.setPassword(passwordEncoder.encode(socio.getCedula())); // Default pass = cedula
-                                    u.setPasswordVisible(socio.getCedula());
+                                    // CAMPO passwordVisible ELIMINADO POR SEGURIDAD
                                     u.setNombreCompleto(socio.getNombreCompleto()); // Usar nombre del socio o del
                                                                                     // archivo? Socio es mas fiable
                                     u.setRol(Usuario.Rol.ASESOR_DE_CREDITO);

@@ -38,22 +38,19 @@ public class AuthController {
         @PostMapping("/login")
         public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
                 try {
-                        System.out.println("DEBUG: Intento de login para usuario: " + request.getUsername());
+                        // Log sin información sensible (solo username, no password)
                         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
                                         request.getUsername(), request.getPassword()));
                         var user = usuarioRepository.findByUsername(request.getUsername()).orElseThrow();
 
                         // Verificar si el puntero tiene login habilitado
                         if (user.getRol() == Usuario.Rol.PUNTERO && !Boolean.TRUE.equals(user.getLoginHabilitado())) {
-                                System.out.println("DEBUG: Puntero " + user.getUsername() + " no tiene login habilitado");
                                 return ResponseEntity.status(403).body(
                                         AuthResponse.builder()
                                                 .error("Tu cuenta aún no fue habilitada para iniciar sesión. Contactá a tu dirigente para que habilite tu acceso.")
                                                 .build()
                                 );
                         }
-
-                        System.out.println("DEBUG: Usuario autenticado con éxito, generando token...");
 
                         auditService.registrar("USUARIOS", "LOGIN", "Inició sesión exitosamente en el sistema.",
                                         user.getUsername(), httpRequest.getRemoteAddr());
@@ -70,8 +67,7 @@ public class AuthController {
                                         .fotoPerfil(user.getFotoPerfil()).telefono(user.getTelefono())
                                         .isDirigente(Boolean.TRUE.equals(user.getIsDirigente())).build());
                 } catch (Exception e) {
-                        System.err.println("DEBUG: Error en login: " + e.getMessage());
-                        e.printStackTrace();
+                        // Log de error sin exponer detalles internos al cliente
                         return ResponseEntity.status(401).body(null);
                 }
         }
@@ -137,7 +133,7 @@ public class AuthController {
                         var user = usuarioRepository.findByUsername(username).orElseThrow();
 
                         user.setPassword(passwordEncoder.encode(newPassword));
-                        user.setPasswordVisible(newPassword); // Mantener sincronizada la contraseña visible
+                        // CAMPO passwordVisible ELIMINADO POR SEGURIDAD
                         user.setRequiresPasswordChange(false);
                         usuarioRepository.save(user);
 
@@ -180,22 +176,21 @@ public class AuthController {
         }
 
         /**
-         * Reset completo del sistema - PÚBLICO (solo para desarrollo)
-         * Requiere código de autorización 226118
+         * Reset completo del sistema - SOLO PARA DESARROLLO
+         * IMPORTANTE: Este endpoint está deshabilitado en producción por seguridad.
+         * Para habilitar en ambiente de desarrollo, cambiar el @Profile a "dev"
          */
+        @org.springframework.context.annotation.Profile("dev") // SOLO disponible en desarrollo
+        @org.springframework.security.access.prepost.PreAuthorize("hasRole('SUPER_ADMIN')") // Requiere autenticación como SUPER_ADMIN
         @Transactional
         @PostMapping("/system-reset")
         public ResponseEntity<?> systemReset(@RequestBody(required = false) Map<String, String> body,
                         HttpServletRequest httpRequest) {
-                String code = body != null ? body.get("code") : null;
-                System.out.println("DEBUG system-reset: body=" + body);
-                System.out.println("DEBUG system-reset: code='" + code + "'");
 
-                // Validar código de autorización
-                if (!"226118".equals(code)) {
-                        System.out.println("DEBUG: Código RECHAZADO");
-                        return ResponseEntity.status(403)
-                                        .body(Map.of("success", false, "error", "Código de autorización inválido"));
+                // SEGURIDAD: Validar que el usuario autenticado sea SUPER_ADMIN
+                var auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth == null || !auth.isAuthenticated()) {
+                        return ResponseEntity.status(401).body(Map.of("success", false, "error", "No autenticado"));
                 }
 
                 try {
@@ -224,9 +219,10 @@ public class AuthController {
 
                         System.out.println("✅ RESET COMPLETADO!");
 
-                        auditService.registrar("CONFIGURACION", "SYSTEM_RESET_CODE",
-                                        "Ejecutó un reinicio total de datos usando código de autorización 226118.",
-                                        "ADMIN_BY_CODE", httpRequest.getRemoteAddr());
+                        String username = auth.getName();
+                        auditService.registrar("CONFIGURACION", "SYSTEM_RESET",
+                                        "Ejecutó un reinicio total de datos del sistema (solo disponible en desarrollo).",
+                                        username, httpRequest.getRemoteAddr());
                         System.out.println("   - Socios: " + socios);
                         System.out.println("   - Asistencias: " + asistencias);
                         System.out.println("   - Asignaciones: " + asignaciones);
@@ -275,8 +271,6 @@ public class AuthController {
                                 return ResponseEntity.badRequest()
                                                 .body(Map.of("error", "No se puede entrar en un perfil inactivo."));
                         }
-
-                        System.out.println("DEBUG: Impersonando a: " + targetUser.getUsername());
 
                         auditService.registrar("USUARIOS", "IMPERSONATE",
                                         String.format("Super Admin '%s' inició sesión como '%s' (ID: %d)",

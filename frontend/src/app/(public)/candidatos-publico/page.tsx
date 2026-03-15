@@ -65,6 +65,87 @@ const ORGANO_INFO: Record<string, { label: string, icon: React.ComponentType<{ c
     }
 };
 
+// Convierte "APELLIDO, NOMBRE" → "Nombre Apellido" (capitalizado)
+function formatNombreNatural(nombreCompleto: string): string {
+    const parts = nombreCompleto.split(",");
+    if (parts.length < 2) return capitalize(nombreCompleto);
+    const apellido = parts[0].trim();
+    const nombre = parts[1].trim();
+    return `${capitalize(nombre)} ${capitalize(apellido)}`;
+}
+
+function capitalize(text: string): string {
+    return text
+        .toLowerCase()
+        .split(" ")
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+}
+
+// Función para generar el texto persuasivo de compartir con biografía
+function buildShareText(candidato: Candidato): string {
+    const nombreRaw = candidato.socio?.nombreCompleto || "mi candidato";
+    const nombre = formatNombreNatural(nombreRaw);
+    const organoInfo = ORGANO_INFO[candidato.organo];
+    const organoLabel = organoInfo ? organoInfo.label : "la cooperativa";
+    const bio = candidato.biografia ? candidato.biografia.trim() : "";
+
+    let texto = `🗳️✨ *¡Conocé a ${nombre}!*\n`;
+    texto += `📋 Candidato/a para *${organoLabel}* — ${candidato.tipo === "TITULAR" ? "Titular" : "Suplente"}\n\n`;
+
+    if (bio) {
+        const primerNombre = nombre.split(" ")[0];
+        texto += `📖 *Sobre ${primerNombre}:*\n`;
+        texto += `"${bio}"\n\n`;
+    }
+
+    texto += `💚 ¡Te invito a apoyar a este/a gran candidato/a en las elecciones de nuestra Cooperativa Lambaré!\n`;
+    texto += `👉 Conocé a todos los candidatos en: https://asamblea.cloud/candidatos\n\n`;
+    texto += `🤝 *¡Tu voto cuenta! Compartí con otros socios.*`;
+
+    return texto;
+}
+
+// Función para compartir con imagen (Web Share API) o fallback a WhatsApp
+async function shareCandidate(candidato: Candidato) {
+    const texto = buildShareText(candidato);
+
+    // Intentar usar Web Share API con imagen
+    if (candidato.foto && navigator.share) {
+        try {
+            const response = await fetch(candidato.foto);
+            const blob = await response.blob();
+            const fileName = `candidato_${candidato.socio?.nombreCompleto?.replace(/[^a-zA-Z0-9]/g, '_') || 'foto'}.jpg`;
+            const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    text: texto,
+                    files: [file],
+                });
+                return;
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error && err.name === 'AbortError') return;
+            console.log("Web Share con imagen no disponible, usando fallback");
+        }
+    }
+
+    // Fallback: Web Share sin imagen
+    if (navigator.share) {
+        try {
+            await navigator.share({ text: texto });
+            return;
+        } catch (err: unknown) {
+            if (err instanceof Error && err.name === 'AbortError') return;
+        }
+    }
+
+    // Fallback final: WhatsApp directo
+    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    window.open(url, '_blank');
+}
+
 export default function CandidatosPage() {
     const [candidatos, setCandidatos] = useState<Candidato[]>([]);
     const [loading, setLoading] = useState(true);
@@ -611,25 +692,7 @@ function CandidateModal({ candidate, onClose, coopNombre = 'Cooperativa' }: { ca
     const IconComponent = info.icon;
 
     const handleShare = () => {
-        const organoLabel = info.label;
-        const fotoUrl = candidate.foto ? `\n📷 Ver foto: ${candidate.foto}\n` : "";
-        const message = `🗳️ *ASAMBLEA GENERAL ORDINARIA 2026*
-━━━━━━━━━━━━━━━━━━━
-🏆 *CANDIDATO ${candidate.tipo}*
-
-👤 *${candidate.socio?.nombreCompleto}*
-🏛️ ${organoLabel}
-${fotoUrl}
-${candidate.biografia ? `📝 "${candidate.biografia}"` : ""}
-
-🌟 *¡Conoce a todos los candidatos!*
-🔗 https://asamblea.asamblea.cloud/candidatos-publico
-
-━━━━━━━━━━━━━━━━━━━
-*${coopNombre} - Tu voto cuenta*`;
-
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
+        shareCandidate(candidate);
     };
 
     return (

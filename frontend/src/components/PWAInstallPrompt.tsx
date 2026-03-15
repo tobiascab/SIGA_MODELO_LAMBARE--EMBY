@@ -42,8 +42,14 @@ export function PWAInstallPrompt() {
         // Detectar dispositivo
         setDevice(detectDevice());
 
-        // Ya está instalada
+        // Ya está instalada (abierta como PWA)
         if (isStandalone()) {
+            setIsInstalled(true);
+            return;
+        }
+
+        // Ya fue instalada previamente (abierta desde navegador pero ya la tiene instalada)
+        if (localStorage.getItem("pwa-installed") === "true") {
             setIsInstalled(true);
             return;
         }

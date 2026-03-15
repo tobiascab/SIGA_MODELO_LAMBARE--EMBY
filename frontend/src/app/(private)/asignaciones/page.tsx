@@ -84,7 +84,7 @@ export default function AsignacionesPage() {
     const [addingSocio, setAddingSocio] = useState(false);
     const [searchedSocio, setSearchedSocio] = useState<any>(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [searchType, setSearchType] = useState(''); // '', 'cedula', 'nroSocio', 'nombre'
+    const [searchType, setSearchType] = useState('cedula'); // 'cedula', 'nroSocio', '' (todos)
 
     // Modal para socio ya asignado
     const [showAlreadyAssignedModal, setShowAlreadyAssignedModal] = useState(false);

@@ -105,7 +105,7 @@ public class UsuarioController {
             if (sName == null || sName.equalsIgnoreCase("Sucursal 5") || sName.equalsIgnoreCase("Central")) sName = "CASA CENTRAL";
             map.put("sucursal", sName);
 
-            map.put("passwordVisible", u.getPasswordVisible()); 
+            // CAMPO passwordVisible ELIMINADO POR SEGURIDAD
             map.put("tipo", "USUARIO");
 
             // FUSIÓN: Si tiene socio vinculado, agregar detalles de estado
@@ -281,7 +281,7 @@ public class UsuarioController {
             if (sNameAll == null || sNameAll.equalsIgnoreCase("Sucursal 5") || sNameAll.equalsIgnoreCase("Central")) sNameAll = "CASA CENTRAL";
             map.put("sucursal", sNameAll);
 
-            map.put("passwordVisible", u.getPasswordVisible()); // Contraseña visible para super admins
+            // CAMPO passwordVisible ELIMINADO POR SEGURIDAD
             map.put("tipo", "USUARIO");
             map.put("cargo", u.getCargo());
             map.put("meta", u.getMeta());
@@ -406,7 +406,7 @@ public class UsuarioController {
             Usuario usuario = new Usuario();
             usuario.setUsername(username);
             usuario.setPassword(passwordEncoder.encode(password));
-            usuario.setPasswordVisible(password); // Guardar contraseña visible para admins
+            // CAMPO passwordVisible ELIMINADO POR SEGURIDAD
             usuario.setNombreCompleto(nombreCompleto);
             usuario.setEmail(email);
             usuario.setTelefono(telefono);
@@ -509,7 +509,7 @@ public class UsuarioController {
                     && !((String) data.get("password")).isEmpty()) {
                 String newPassword = (String) data.get("password");
                 usuario.setPassword(passwordEncoder.encode(newPassword));
-                usuario.setPasswordVisible(newPassword); // Actualizar contraseña visible
+                // CAMPO passwordVisible ELIMINADO POR SEGURIDAD
             }
             if (data.containsKey("permisosEspeciales")) {
                 usuario.setPermisosEspeciales((String) data.get("permisosEspeciales"));
@@ -684,7 +684,7 @@ public class UsuarioController {
 
             // Actualizar contraseña
             usuario.setPassword(passwordEncoder.encode(newPassword));
-            usuario.setPasswordVisible(newPassword);
+            // CAMPO passwordVisible ELIMINADO POR SEGURIDAD
             usuario.setRequiresPasswordChange(false);
             usuarioRepository.save(usuario);
 
@@ -904,7 +904,7 @@ public class UsuarioController {
             Usuario puntero = new Usuario();
             puntero.setUsername(cedula);
             puntero.setPassword(passwordEncoder.encode(cedula));
-            puntero.setPasswordVisible(cedula);
+            // CAMPO passwordVisible ELIMINADO POR SEGURIDAD
             puntero.setNombreCompleto(socio.getNombreCompleto());
             puntero.setRol(Usuario.Rol.PUNTERO);
             puntero.setActivo(true);

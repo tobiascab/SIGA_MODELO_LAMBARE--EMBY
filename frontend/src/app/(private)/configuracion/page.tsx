@@ -41,7 +41,7 @@ import { configuracionTour } from "@/components/tour/tourSteps";
 import { useRouter } from "next/navigation";
 
 const ConfiguracionEvento = () => {
-    const { nombreAsamblea, fechaAsamblea, updateConfig } = useConfig();
+    const { nombreAsamblea, fechaAsamblea, mensajeWhatsApp, updateConfig } = useConfig();
     const [nombre, setNombre] = useState(nombreAsamblea);
     const [fecha, setFecha] = useState(fechaAsamblea);
     const [saving, setSaving] = useState(false);
@@ -182,6 +182,149 @@ const ConfiguracionMantenimiento = () => {
                     {saving && <Loader2 className="h-4 w-4 m-1 animate-spin text-amber-500" />}
                 </span>
             </button>
+        </div>
+    );
+};
+
+// Componente para Configurar Mensaje de WhatsApp
+const ConfiguracionMensajeWhatsApp = () => {
+    const { mensajeWhatsApp, fechaAsamblea, updateConfig } = useConfig();
+    const [mensaje, setMensaje] = useState(mensajeWhatsApp);
+    const [saving, setSaving] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
+
+    useEffect(() => {
+        setMensaje(mensajeWhatsApp);
+    }, [mensajeWhatsApp]);
+
+    // Función para formatear la fecha de la asamblea con día de la semana
+    const formatearFechaAsamblea = () => {
+        if (!fechaAsamblea) return "sábado 21 de marzo de 2026";
+        try {
+            const fecha = new Date(fechaAsamblea + 'T00:00:00');
+            const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+            const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+            const diaSemana = diasSemana[fecha.getDay()];
+            const dia = fecha.getDate();
+            const mes = meses[fecha.getMonth()];
+            const anio = fecha.getFullYear();
+            return `${diaSemana} ${dia} de ${mes} de ${anio}`;
+        } catch (e) {
+            return "sábado 21 de marzo de 2026";
+        }
+    };
+
+    // Vista previa del mensaje con placeholders reemplazados
+    const getMensajePreview = () => {
+        return mensaje
+            .replace('{SALUDO}', 'Sr./Sra.')
+            .replace('{NOMBRE}', 'Juan')
+            .replace('{ASESOR}', 'María López')
+            .replace('{FECHA_ASAMBLEA}', formatearFechaAsamblea());
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await updateConfig("MENSAJE_WHATSAPP", mensaje);
+            Swal.fire({
+                title: '¡Mensaje Actualizado!',
+                text: 'El mensaje de WhatsApp se ha guardado correctamente.',
+                icon: 'success',
+                confirmButtonText: 'Excelente',
+                confirmButtonColor: '#10b981',
+                padding: '2em',
+                customClass: {
+                    popup: 'rounded-[2rem] shadow-2xl'
+                }
+            });
+        } catch (error) {
+            Swal.fire({
+                title: 'Error al Guardar',
+                text: 'Hubo un problema al guardar el mensaje.',
+                icon: 'error',
+                confirmButtonText: 'Intentar De Nuevo',
+                confirmButtonColor: '#ef4444',
+                padding: '2em',
+                customClass: {
+                    popup: 'rounded-[2rem] shadow-2xl'
+                }
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const restaurarMensajePorDefecto = () => {
+        const mensajePorDefecto = "¡Hola! Buenos días {SALUDO} *{NOMBRE}* 👋\n\nTe saluda *{ASESOR}* de la *Cooperativa Lambaré* ✅ para invitarte cordialmente a nuestra próxima asamblea institucional que será el día *{FECHA_ASAMBLEA}*.\n\n¡Contamos con tu apoyo y participación! 🌟 Si tienes alguna duda, puedes responderme por este medio.";
+        setMensaje(mensajePorDefecto);
+    };
+
+    return (
+        <div className="space-y-4 pt-6 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2 italic uppercase">
+                    <MessageCircle className="h-5 w-5 text-green-500" />
+                    Mensaje de WhatsApp
+                </h2>
+                <button
+                    onClick={() => setShowPreview(!showPreview)}
+                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                >
+                    {showPreview ? 'Ocultar' : 'Ver'} Vista Previa
+                </button>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <p className="text-xs text-amber-800 font-medium">
+                    <strong>Placeholders disponibles:</strong> {'{SALUDO}'} (Sr./Sra.), {'{NOMBRE}'} (nombre del socio),
+                    {'{ASESOR}'} (nombre del asesor), {'{FECHA_ASAMBLEA}'} (fecha configurada: {formatearFechaAsamblea()})
+                </p>
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-xs font-black text-slate-500 uppercase">Mensaje Personalizado</label>
+                <textarea
+                    value={mensaje}
+                    onChange={(e) => setMensaje(e.target.value)}
+                    rows={6}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-emerald-500 outline-none transition-all font-medium resize-none"
+                    placeholder="Escribe tu mensaje..."
+                />
+                <p className="text-xs text-slate-400">Caracteres: {mensaje.length}</p>
+            </div>
+
+            <AnimatePresence>
+                {showPreview && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-green-50 border border-green-200 rounded-xl p-4"
+                    >
+                        <h4 className="text-xs font-black text-green-800 uppercase mb-2">Vista Previa del Mensaje:</h4>
+                        <div className="bg-white rounded-lg p-3 text-sm text-slate-700 whitespace-pre-wrap border border-green-100">
+                            {getMensajePreview()}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <div className="flex gap-3 justify-end pt-2">
+                <button
+                    onClick={restaurarMensajePorDefecto}
+                    className="rounded-xl bg-slate-200 px-6 py-2.5 font-bold text-slate-700 hover:bg-slate-300 transition-all active:scale-95"
+                >
+                    Restaurar Por Defecto
+                </button>
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="rounded-xl bg-slate-900 px-8 py-2.5 font-bold text-white hover:bg-black shadow-lg shadow-slate-200 transition-all active:scale-95 disabled:opacity-50"
+                >
+                    {saving ? "Guardando..." : "Guardar Mensaje"}
+                </button>
+            </div>
         </div>
     );
 };
@@ -1685,6 +1828,7 @@ export default function ConfiguracionPage() {
                     {/* Otras Configuraciones de Asamblea */}
                     <div className="rounded-2xl bg-white p-8 shadow-sm border border-slate-100 space-y-6">
                         <ConfiguracionEvento />
+                        <ConfiguracionMensajeWhatsApp />
                         <ConfiguracionCheckin />
                         <ConfiguracionMantenimiento />
                         <ConfiguracionNotificaciones />
