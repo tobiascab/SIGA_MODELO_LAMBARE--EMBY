@@ -18,11 +18,11 @@ services:
     networks:
       - asamblea-network
     command: >
-      --innodb-buffer-pool-size=2G --innodb-flush-log-at-trx-commit=2 --innodb-flush-method=O_DIRECT --max-connections=300 --thread-cache-size=32 --table-open-cache=4000 --sort-buffer-size=8M --read-buffer-size=2M --performance-schema=OFF --default-time-zone=-03:00
+      --innodb-buffer-pool-size=512M --innodb-flush-log-at-trx-commit=2 --innodb-flush-method=O_DIRECT --max-connections=200 --thread-cache-size=16 --table-open-cache=2000 --sort-buffer-size=4M --read-buffer-size=1M --performance-schema=OFF --default-time-zone=-03:00
     deploy:
       resources:
         limits:
-          memory: 3G
+          memory: 1536M
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}" ]
       interval: 10s
@@ -47,11 +47,11 @@ services:
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       BACKUP_DIRECTORY: /app/uploads/backups
-      JAVA_OPTS: "-Xms2048m -Xmx2048m -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -Dbackup.directory=/app/uploads/backups"
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+UseStringDeduplication -Dbackup.directory=/app/uploads/backups"
     deploy:
       resources:
         limits:
-          memory: 2500M
+          memory: 1536M
     volumes:
       - ./uploads:/app/uploads
     depends_on:

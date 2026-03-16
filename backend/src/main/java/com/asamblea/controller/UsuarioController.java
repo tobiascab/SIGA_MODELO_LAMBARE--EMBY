@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,6 +41,7 @@ public class UsuarioController {
     // Buscar unificado (Usuarios + Socios) con FUSIÓN INTELIGENTE
     // Este método maneja la búsqueda explícita.
     @GetMapping("/unificados")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> buscarUnificado(@RequestParam(required = false) String term) {
         String query = (term != null) ? term.trim() : "";
 
@@ -248,6 +250,7 @@ public class UsuarioController {
     // Listar todos los usuarios + Funcionarios importados (Punto de entrada
     // principal)
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> listar(@RequestParam(required = false) String term) {
         // Si hay término de búsqueda, delegamos a la búsqueda unificada
         if (term != null && !term.trim().isEmpty()) {
